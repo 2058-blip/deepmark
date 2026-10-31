@@ -1,4 +1,4 @@
-import type {Draft,DraftIndex,Identity,Operation} from './collaborationTypes.ts';
+import type {Draft,DraftIndex,Identity,Operation,ViewState} from './collaborationTypes.ts';
 let connection:Promise<IDBDatabase>|null=null;
 let migration:Promise<void>|null=null;
 const legacyKeys=new Set<string>();
@@ -16,7 +16,7 @@ async function transaction<T>(names:string[],mode:IDBTransactionMode,run:(tx:IDB
 export function writeLocal({operation,operations,draft,removeOp}:{operation?:Operation;operations?:Operation[];draft?:Draft;removeOp?:string}){
   const write=transaction<void>(['queue','drafts','draftIndex'],'readwrite',tx=>{
     if(operations)for(const op of operations)tx.objectStore('queue').put(op);if(operation)tx.objectStore('queue').put(operation);if(removeOp)tx.objectStore('queue').delete(removeOp);
-    if(draft){tx.objectStore('drafts').put(draft);const index:DraftIndex={key:draft.key,author:draft.author,name:draft.name,updated:draft.updated,needsCheckpoint:draft.needsCheckpoint,projectId:draft.project.id,datasetId:draft.project.datasetId};tx.objectStore('draftIndex').put(index);}
+    if(draft){tx.objectStore('drafts').put(draft);const index:DraftIndex={key:draft.key,author:draft.author,name:draft.name,updated:draft.updated,needsCheckpoint:draft.needsCheckpoint,projectId:draft.project.id,datasetId:draft.project.datasetId,view:draft.view,viewUpdated:draft.updated};tx.objectStore('draftIndex').put(index);}
   });
   return write.then(async()=>{if(removeOp&&legacyKeys.has(removeOp)){const old=await legacy();if(old.objectStoreNames.contains('queue'))await new Promise<void>((resolve,reject)=>{const tx=old.transaction('queue','readwrite');tx.objectStore('queue').delete(removeOp);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});old.close();legacyKeys.delete(removeOp);}});
 }
@@ -27,7 +27,8 @@ async function migrateLegacy(){
   if(rows.length)await transaction<void>(['queue'],'readwrite',tx=>{for(const op of rows){legacyKeys.add(op.key);const store=tx.objectStore('queue'),request=store.get(op.key);request.onsuccess=()=>{if(!request.result)store.put(op);};}});
 }
 export const allOperations=async()=>{await (migration??=migrateLegacy());return transaction<Operation[]>(['queue'],'readonly',tx=>tx.objectStore('queue').getAll());};
-export const readDraft=(key:string)=>transaction<Draft|undefined>(['drafts'],'readonly',tx=>tx.objectStore('drafts').get(key));
+export const readDraft=async(key:string)=>{const draft=await transaction<Draft|undefined>(['drafts'],'readonly',tx=>tx.objectStore('drafts').get(key));if(!draft)return undefined;const meta=await transaction<DraftIndex|undefined>(['draftIndex'],'readonly',tx=>tx.objectStore('draftIndex').get(key));return meta?.view&&(meta.viewUpdated||0)>=draft.updated?{...draft,view:meta.view,updated:Math.max(draft.updated,meta.updated)}:draft;};
+export const writeView=(key:string,view:ViewState)=>transaction<void>(['draftIndex'],'readwrite',tx=>{const store=tx.objectStore('draftIndex'),request=store.get(key);request.onsuccess=()=>{if(request.result)store.put({...request.result,view,viewUpdated:Date.now(),updated:Date.now()});};});
 export const listDrafts=()=>transaction<DraftIndex[]>(['draftIndex'],'readonly',tx=>tx.objectStore('draftIndex').getAll());
 export const cacheDataset=(key:string,file:File)=>transaction<void>(['datasets'],'readwrite',tx=>{tx.objectStore('datasets').put({key,name:file.name,file});});
 export const readDataset=(key:string)=>transaction<{key:string;name:string;file:File}|undefined>(['datasets'],'readonly',tx=>tx.objectStore('datasets').get(key));

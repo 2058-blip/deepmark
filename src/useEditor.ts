@@ -3,6 +3,8 @@ import { applyThreshold, exportNifti, makeDemo, paint } from './core.ts';
 import type { Axis, Change, ThresholdRange, Volume } from './core.ts';
 import { colors, download, initialSegments, readFile } from './view.ts';
 import type { Segment, Tool } from './view.ts';
+import {fillSliceRegion} from './sliceData.ts';
+import type {GrayMode} from './grayRegions.ts';
 
 export function useEditor() {
   const volume=shallowRef<Volume|null>(null),mask=shallowRef<Uint16Array>(new Uint16Array());
@@ -11,6 +13,7 @@ export function useEditor() {
   const center=ref(40),width=ref(400),thresholdMin=ref('0'),thresholdMax=ref('100'),previewEnabled=ref(true);
   const showDatasets=ref(false),status=ref('打开 NIfTI 影像，开始分割标注'),busy=ref(false),dirty=ref(false);
   const readOnly=ref(false),strokeActive=ref(false),viewBusy=computed(()=>busy.value||readOnly.value);
+  const hoverPreview=ref(true),regionWidth=ref(100),regionMode=ref<GrayMode>('bands');
   const history=shallowRef<Change[]>([]),future=shallowRef<Change[]>([]),pending=new Map<number,number>();
   const active=computed(()=>segments.value.find(s=>s.id===selected.value)!);
   const minimum=computed(()=>Number(thresholdMin.value)),maximum=computed(()=>Number(thresholdMax.value));
@@ -65,6 +68,11 @@ export function useEditor() {
       status.value=`阈值分割完成：${minimum.value}～${maximum.value}，选中 ${matched.toLocaleString()} 个体素，${change?'已更新当前标签，可撤销':'标注无需修改'}。`;
     }catch(error){status.value=`阈值分割失败：${(error as Error).message}`;}finally{busy.value=false;}
   }
+  function selectRegion(axis:Axis,slice:number,pixels:Uint32Array){
+    if(!volume.value||busy.value||readOnly.value)return;if(!active.value.visible){status.value='请先显示当前标签。';return;}
+    try{const change=fillSliceRegion(mask.value,volume.value.dims,axis,slice,pixels,selected.value,!!onChange);if(change)rememberChange(change);status.value=`本切片灰度区域已加入“${active.value.name}”：${pixels.length.toLocaleString()} 个像素，可撤销。`;}
+    catch(reason){status.value=(reason as Error).message;}
+  }
   function undo(redo=false){
     if(readOnly.value)return;
     endStroke();const from=redo?future:history,to=redo?history:future,change=from.value.pop();if(!change)return;
@@ -94,9 +102,9 @@ export function useEditor() {
     if((e.target as HTMLElement).matches('input,textarea,select')||busy.value||readOnly.value||showDatasets.value)return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);}
     else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);}
-    else if(e.key.toLowerCase()==='b')tool.value='paint';else if(e.key.toLowerCase()==='e')tool.value='erase';else if(e.key.toLowerCase()==='v')tool.value='navigate';
+    else if(e.key.toLowerCase()==='b')tool.value='paint';else if(e.key.toLowerCase()==='e')tool.value='erase';else if(e.key.toLowerCase()==='v')tool.value='navigate';else if(e.key.toLowerCase()==='g')tool.value='region';
   }
   onMounted(()=>{window.addEventListener('beforeunload',before);window.addEventListener('keydown',key);});
   onBeforeUnmount(()=>{window.removeEventListener('beforeunload',before);window.removeEventListener('keydown',key);});
-  return {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,install,canReplace,load,startStroke,endStroke,pendingChange,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler};
+  return {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,install,canReplace,load,startStroke,endStroke,pendingChange,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler};
 }

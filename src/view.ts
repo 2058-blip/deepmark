@@ -1,7 +1,7 @@
 import { parseNifti } from './core.ts';
 import type { Axis, Volume } from './core.ts';
 export type Segment = { id: number; name: string; color: string; visible: boolean };
-export type Tool = 'paint' | 'erase' | 'navigate' | 'threshold';
+export type Tool = 'paint' | 'erase' | 'navigate' | 'threshold' | 'region';
 export const colors = ['#4ed1ad', '#fb9f67', '#859dff', '#ed78b6', '#e5d46f', '#74c5f4'];
 export const initialSegments = (): Segment[] => [{ id: 1, name: '标注 1', color: colors[0], visible: true }];
 export function download(data: BlobPart, name: string, type = 'application/octet-stream') {
