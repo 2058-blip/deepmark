@@ -12,6 +12,21 @@ const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const artifacts = new URL('../artifacts/',import.meta.url);await mkdir(artifacts,{recursive:true});
 try {
   await page.goto('http://127.0.0.1:5173/');
+  await page.getByRole('button',{name:'服务器数据集',exact:true}).click();
+  const library=page.getByRole('dialog',{name:'服务器数据集',exact:true});
+  const row=library.locator('.dataset-card').filter({hasText:'合成练习影像.nii.gz'});
+  await row.waitFor();
+  await page.getByLabel('搜索服务器数据集').fill('不存在的影像');await page.getByText('没有匹配的数据集',{exact:true}).waitFor();
+  await page.getByLabel('搜索服务器数据集').fill('合成练习');
+  const originalDownload=page.waitForEvent('download');await row.getByRole('link',{name:'仅下载原文件 ↓'}).click();
+  const downloaded=await readFile(await (await originalDownload).path());assert.ok(downloaded[0]===31&&downloaded[1]===139);
+  await row.getByRole('button',{name:'下载并标注',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'已加载 合成练习影像.nii.gz'}).waitFor();
+  assert.equal(await page.getByRole('dialog').count(),0);assert.equal(await page.locator('canvas').count(),3);
+  await page.getByRole('button',{name:'服务器数据集',exact:true}).click();await page.getByRole('dialog').waitFor();
+  await page.screenshot({path:fileURLToPath(new URL('server-datasets.png',artifacts)),fullPage:true});
+  await page.getByRole('button',{name:'关闭数据集窗口',exact:true}).click();
+  await page.reload();
   await page.getByRole('button',{name:'先用合成影像体验 →'}).click();
   await page.locator('canvas').first().waitFor();
   await page.waitForTimeout(500);
@@ -54,5 +69,5 @@ try {
   await page.getByRole('status').filter({hasText:'已加载 sample.nii.gz'}).waitFor();
   await page.setViewportSize({width:600,height:900});await page.screenshot({path:fileURLToPath(new URL('annotation-mobile.png',artifacts)),fullPage:true});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
-  assert.deepEqual(errors,[]);console.log(`Browser checks passed: ${count} painted voxels; threshold preview, validation, volume apply, undo/redo, export, gzip import and responsive layout.`);
+  assert.deepEqual(errors,[]);console.log(`Browser checks passed: server catalog/search/download/open; ${count} painted voxels; threshold preview, validation, volume apply, undo/redo, export, gzip import and responsive layout.`);
 } finally {await browser.close();}

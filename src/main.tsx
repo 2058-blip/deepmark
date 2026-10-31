@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { applyThreshold, exportNifti, indexOf, makeDemo, paint, parseNifti, planeAxes, planePoint, thresholdLabel } from './core.ts';
 import type { Axis, Change, ThresholdRange, Volume } from './core.ts';
+import { DatasetBrowser } from './DatasetBrowser.tsx';
 import './style.css';
 import './threshold.css';
 
@@ -116,6 +117,7 @@ function App() {
   const [center,setCenter]=useState(40), [width,setWidth]=useState(400);
   const [thresholdMin,setThresholdMin]=useState('0'), [thresholdMax,setThresholdMax]=useState('100');
   const [previewEnabled,setPreviewEnabled]=useState(true);
+  const [showDatasets,setShowDatasets]=useState(false);
   const [status,setStatus]=useState('打开 NIfTI 影像，开始分割标注'), [busy,setBusy]=useState(false), [dirty,setDirty]=useState(false);
   const history=useRef<Change[]>([]), future=useRef<Change[]>([]), pending=useRef(new Map<number,number>());
   const fileInput=useRef<HTMLInputElement>(null), segInput=useRef<HTMLInputElement>(null);
@@ -131,11 +133,11 @@ function App() {
     setStatus(`已加载 ${v.name} · ${v.dims.join(' × ')} 体素`);
   }
   function canReplace() { return !dirty || window.confirm('当前标注尚未导出。继续将替换当前影像和标注，是否继续？'); }
-  async function load(file?:File) {
-    if(!file || !canReplace())return;
+  async function load(file?:File, replaceConfirmed=false):Promise<boolean> {
+    if(!file || (!replaceConfirmed&&!canReplace()))return false;
     setBusy(true);setStatus('正在读取影像…');
-    try { await new Promise(r=>setTimeout(r,20));install(await readFile(file)); }
-    catch(error) { setStatus(`打开失败：${(error as Error).message}`); }
+    try { await new Promise(r=>setTimeout(r,20));install(await readFile(file));return true; }
+    catch(error) { setStatus(`打开失败：${(error as Error).message}`);return false; }
     finally{setBusy(false);}
   }
   function rememberChange(change:Change) {
@@ -173,7 +175,7 @@ function App() {
   },[dirty]);
   useEffect(()=>{
     function key(e:KeyboardEvent){
-      if((e.target as HTMLElement).matches('input,textarea,select') || busy)return;
+      if((e.target as HTMLElement).matches('input,textarea,select') || busy || showDatasets)return;
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);}
       else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);}
       else if(e.key.toLowerCase()==='b')setTool('paint');else if(e.key.toLowerCase()==='e')setTool('erase');else if(e.key.toLowerCase()==='v')setTool('navigate');
@@ -197,7 +199,7 @@ function App() {
   function exportMask(){if(!volume)return;endStroke();download(exportNifti(volume,mask.current),volume.name.replace(/\.nii(\.gz)?$/i,'')+'-seg.nii');setDirty(false);setStatus('已请求下载分割 NIfTI；标签名称和颜色可单独导出。');}
   return <div className="app">
     <header className="topbar"><div className="brand"><div className="brand-icon">✚</div><div>医学分割标注<small>SLICER WEB · 本地浏览器版</small></div></div>
-      <div className="top-actions"><span className="local-badge">● 影像本地处理</span><button disabled={busy} onClick={()=>fileInput.current?.click()}>打开影像</button><button className="primary" disabled={!volume||busy} onClick={exportMask}>导出标注 ↗</button></div>
+      <div className="top-actions"><span className="local-badge">● 影像本地处理</span><button className="server-library-button" disabled={busy} onClick={()=>setShowDatasets(true)}>服务器数据集</button><button disabled={busy} onClick={()=>fileInput.current?.click()}>打开影像</button><button className="primary" disabled={!volume||busy} onClick={exportMask}>导出标注 ↗</button></div>
     </header>
     <input hidden ref={fileInput} type="file" accept=".nii,.nii.gz" onChange={e=>{void load(e.target.files?.[0]);e.target.value='';}}/>
     <input hidden ref={segInput} type="file" accept=".nii,.nii.gz" onChange={e=>{void loadSegmentation(e.target.files?.[0]);e.target.value='';}}/>
@@ -245,9 +247,10 @@ function App() {
           paint(mask.current,volume,axis,slice,u,v,diameter,tool==='erase'?0:selected,pending.current,tool==='erase'?selected:undefined);setRevision(n=>n+1);
         }}/>)}</div>
         <div className="info-bar"><span>当前标签 <i style={{background:active.color}}/>{active.name} · 值 {selected}</span><span>体素 I {point[0]+1} / J {point[1]+1} / K {point[2]+1}</span><span>灰度 {volume.data[indexOf(point,volume.dims)].toFixed(1)}</span></div>
-      </>:<div className="empty"><div className="empty-visual"><div/><div/><span>＋</span></div><h2>让影像成为可编辑的标注</h2><p>导入三维 NIfTI 影像，在三个切面上绘制分割。<br/>文件在本机处理，无需上传。</p><button disabled={busy} className="primary" onClick={()=>fileInput.current?.click()}>选择 NIfTI 文件</button><button disabled={busy} className="text-button" onClick={()=>{if(canReplace())install(makeDemo());}}>先用合成影像体验 →</button><small>支持三维灰度 NIfTI-1 · 不支持时间序列</small></div>}
+      </>:<div className="empty"><div className="empty-visual"><div/><div/><span>＋</span></div><h2>让影像成为可编辑的标注</h2><p>导入三维 NIfTI 影像，在三个切面上绘制分割。<br/>文件在本机处理，无需上传。</p><button disabled={busy} className="primary" onClick={()=>fileInput.current?.click()}>选择 NIfTI 文件</button><button disabled={busy} className="server-open-button" onClick={()=>setShowDatasets(true)}>从服务器选择数据集</button><button disabled={busy} className="text-button" onClick={()=>{if(canReplace())install(makeDemo());}}>先用合成影像体验 →</button><small>支持三维灰度 NIfTI-1 · 不支持时间序列</small></div>}
     </main></div><footer className="statusbar"><span role="status">{busy?'◌ ':''}{status}</span><span>标注原型 · 请核对导出结果</span></footer>
     {busy&&<div className="busy-overlay" aria-live="polite">正在处理文件，请稍候…</div>}
+    {showDatasets&&<DatasetBrowser onClose={()=>setShowDatasets(false)} onBeforeOpen={canReplace} onOpen={file=>load(file,true)}/>}
   </div>;
 }
 createRoot(document.getElementById('root')!).render(<App/>);

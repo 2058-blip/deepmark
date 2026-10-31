@@ -8,3 +8,5 @@ artifacts/
 *.nii.gz
 *.dcm
 *.log
+server-data/datasets/*
+!server-data/datasets/.gitkeep

@@ -18,7 +18,42 @@ npm test
 npm run build
 ```
 
-部署时将 `dist` 目录托管为静态网站即可，用户不用安装 Node.js 或 Slicer。gzip 解压需要支持 DecompressionStream 的浏览器。
+`npm run dev` 同时启动网页（通常为 5173 端口）和数据集 API（默认 8787 端口），网页会自动转发 API 请求。用户不用安装 Node.js 或 Slicer。gzip 解压需要支持 DecompressionStream 的浏览器。
+
+## 服务器数据集
+
+网页顶部“服务器数据集”或首页“从服务器选择数据集”可以打开数据集列表，按文件名/分类搜索，查看大小和更新时间。
+
+- **下载并标注**：把选中的影像下载到浏览器，显示下载进度，解析后进入三切面标注；不要求用户先保存文件再重新导入。
+- **仅下载原文件**：直接保存原始 `.nii` / `.nii.gz`，不替换正在编辑的影像。
+- **刷新列表**：发现管理员刚添加或删除的文件，无需重启服务。
+
+管理员把影像放入 `server-data/datasets/`，可用子文件夹分类。实际数据文件均被 Git 忽略，不会提交到 GitHub。此目录和应用源码不会被作为静态网页文件公开。列表和下载接口只提供目录内的 NIfTI 文件，忽略隐藏文件与符号链接；支持 HTTP Range 与 HEAD。
+
+尚无真实数据时，可生成一份合成练习影像：
+
+```powershell
+npm run sample-data
+```
+
+生产部署时在服务器运行：
+
+```powershell
+npm ci
+npm run build
+npm start
+```
+
+打开 `http://127.0.0.1:8787`，同一 Node.js 服务会提供 `dist` 网页和数据集 API。远程访问时可在前方配置 HTTPS 反向代理；需要直接监听网络接口时设置 `HOST=0.0.0.0`，端口通过 `PORT` 配置。
+
+数据可以存放在另一块硬盘或挂载目录，通过环境变量指定，例如 PowerShell：
+
+```powershell
+$env:DATASET_DIR = 'D:\medical-datasets'
+npm start
+```
+
+开发时 API 端口可通过 `API_PORT` 修改。若只静态托管 `dist`，仍需单独部署 Node.js 数据服务并反向代理 `/api`；GitHub 仓库本身不会运行此服务。当前列表面向能访问本站的用户共享，尚未加入账号登录、按人分配或标注结果上传。
 
 ## 当前功能
 
@@ -30,10 +65,11 @@ npm run build
 - 导出 uint16 分割 NIfTI，保持原影像尺寸、qform/sform 和坐标网格；可重新导入同空间的分割文件。
 - 单独导出标签名称与颜色 JSON 说明。NIfTI 本身不携带这份界面配色；重新导入分割时按标签值生成默认名称和颜色。
 - 合成练习影像，非患者影像。
+- 服务器数据集列表、搜索、原文件下载、下载进度、直接打开标注；服务器端通过目录管理待标注数据。
 
 ## 操作
 
-1. 选择影像，或点击“先用合成影像体验”。
+1. 从“服务器数据集”下载并打开影像，选择本地影像，或点击“先用合成影像体验”。
 2. 选择或新增标签；B 切画笔，E 切橡皮擦，V 切定位。
 3. 在任意切面拖动画笔；滚轮或滑条切片。画笔会覆盖其他标签，橡皮擦仅擦除当前标签。
 4. Ctrl+Z 撤销，Ctrl+Shift+Z 或 Ctrl+Y 重做。
@@ -43,7 +79,7 @@ npm run build
 
 ## 范围和实现
 
-React + TypeScript + Vite；此首版采用自有 Canvas 切片与体素画笔，尚未接入 Cornerstone3D，也未直接移植 Slicer 的 Qt/VTK 运行代码。参考项目为相邻 `Slicer-main/Slicer-main` 的分割编辑器结构。Slicer 原始文件没有修改。
+React + TypeScript + Vite + Node.js HTTP 数据服务；此首版采用自有 Canvas 切片与体素画笔，尚未接入 Cornerstone3D，也未直接移植 Slicer 的 Qt/VTK 运行代码。参考项目为相邻 `Slicer-main/Slicer-main` 的分割编辑器结构。Slicer 原始文件没有修改。
 
 影像不上传；文件解析、显示和标注均在本机浏览器内执行。当前不包含 DICOM、NIfTI-2、4D、多通道、AI 分割、种子生长、3D 渲染、项目自动保存或协作。
 
