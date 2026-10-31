@@ -76,3 +76,9 @@ test('invalid threshold inputs do not mutate the labelmap',()=>{
   }
   assert.throws(()=>applyThreshold(new Float32Array(2),mask,{minimum:0,maximum:3,label:1}));assert.deepEqual(mask,original);
 });
+
+test('collaborative brush records same-color touches so other versions can converge',()=>{
+  const volume={dims:[3,3,3] as [number,number,number],spacing:[1,1,1] as [number,number,number]},mask=new Uint16Array(27).fill(1);
+  const ordinary=new Map<number,number>();paint(mask,volume,2,1,1,1,2,1,ordinary);assert.equal(ordinary.size,0);
+  const shared=new Map<number,number>();paint(mask,volume,2,1,1,1,2,1,shared,undefined,true);assert.ok(shared.size>0);assert.equal([...shared.values()].every(n=>n===1),true);
+});

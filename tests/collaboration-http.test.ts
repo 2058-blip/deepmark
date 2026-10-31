@@ -1,0 +1,33 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,rm,writeFile} from 'node:fs/promises';
+import {join,resolve,sep} from 'node:path';
+import {tmpdir} from 'node:os';
+import WebSocket from 'ws';
+import {createDatasetServer} from '../server/server.mjs';
+import {makeDemo} from '../src/core.ts';
+
+test('collaboration HTTP sessions, write validation and WebSocket notifications',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'deepmark-socket-test-')),root=join(dir,'datasets');await mkdir(root);
+  const demo=makeDemo(),bytes=Buffer.alloc(352+demo.data.length*2);bytes.set(demo.header);demo.data.forEach((n,i)=>bytes.writeInt16LE(n,352+2*i));await writeFile(join(root,'sample.nii'),bytes);
+  const server=createDatasetServer({datasetDir:root,distDir:join(dir,'dist')});await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const port=(server.address() as {port:number}).port,origin=`http://127.0.0.1:${port}`,prefix=origin+'/api/collaboration';
+  let socket:WebSocket|undefined;
+  t.after(async()=>{socket?.terminate();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));assert.ok(resolve(dir).startsWith(resolve(tmpdir())+sep));await rm(dir,{recursive:true,force:true});});
+  const list=await (await fetch(origin+'/api/datasets')).json(),datasetId=list.datasets[0].id;
+  assert.equal((await fetch(prefix+'/projects',{method:'POST',headers:{'X-Deepmark-Request':'1'},body:JSON.stringify({datasetId})})).status,401);
+  assert.equal((await fetch(prefix+'/session',{method:'POST',body:JSON.stringify({name:'A'})})).status,403);
+  const session=await fetch(prefix+'/session',{method:'POST',headers:{'X-Deepmark-Request':'1'},body:JSON.stringify({name:'A'})});assert.equal(session.status,200);
+  const cookie=session.headers.get('set-cookie')!.split(';')[0],headers={Cookie:cookie,'X-Deepmark-Request':'1'};
+  assert.equal((await (await fetch(prefix+'/session',{headers})).json()).person.name,'A');
+  const project=await (await fetch(prefix+'/projects',{method:'POST',headers,body:JSON.stringify({datasetId})})).json();assert.ok(project.id);
+  socket=new WebSocket(`ws://127.0.0.1:${port}/api/collaboration/socket?project=${project.id}`,{headers:{Cookie:cookie}});
+  await new Promise<void>((resolve,reject)=>{socket!.once('message',()=>resolve());socket!.once('error',reject);});
+  const notification=new Promise<any>((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('Missing live update')),3000);socket!.once('message',data=>{clearTimeout(timeout);resolve(JSON.parse(data.toString()));});});
+  const patch=Buffer.alloc(8);patch.writeUInt16LE(1,6);
+  const response=await fetch(prefix+`/projects/${project.id}/operations`,{method:'POST',headers,body:JSON.stringify({op:'http-operation',branch:'main',baseRevision:0,patch:patch.toString('base64')})});assert.equal(response.status,200);
+  assert.equal((await notification).revision,1);
+  const wrongOrigin=await fetch(prefix+`/projects/${project.id}/labels`,{method:'POST',headers:{...headers,Origin:'https://example.invalid'},body:'{}'});assert.equal(wrongOrigin.status,403);
+  const history=await (await fetch(prefix+`/projects/${project.id}/history`,{headers})).json();assert.equal(history.events[0].name,'A');
+  const closed=new Promise<void>(resolve=>socket!.once('close',()=>resolve()));socket.send('x'.repeat(2048));await closed;
+  assert.equal((await fetch(prefix+'/session',{headers})).status,200);
+});

@@ -1,6 +1,9 @@
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { open, readdir, realpath, stat } from 'node:fs/promises';
+import { open, readdir, realpath, stat, readFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
+import { parseNifti } from '../src/core.ts';
+import { attachCollaboration,openCollaborationStore } from './collaboration.mjs';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { pipeline } from 'node:stream/promises';
@@ -65,11 +68,13 @@ async function sendFile(req, res, file, type, filename) {
   } finally { await handle.close(); }
 }
 export function createDatasetServer({ datasetDir = process.env.DATASET_DIR || defaultDatasetDir,
-  distDir = resolve(projectRoot,'dist') } = {}) {
-  return createServer(async (req,res) => {
+  distDir = resolve(projectRoot,'dist'), stateDir = process.env.STATE_DIR || resolve(datasetDir,'../collaboration') } = {}) {
+  let collaboration;
+  const server=createServer(async (req,res) => {
     try {
       const url = new URL(req.url || '/', 'http://localhost');
       res.setHeader('X-Content-Type-Options','nosniff');
+      if(await collaboration(req,res,url))return;
       if (!['GET','HEAD'].includes(req.method)) {
         res.setHeader('Allow','GET, HEAD'); json(res,405,{error:'此服务仅提供数据集列表和下载。'}); return;
       }
@@ -106,6 +111,13 @@ export function createDatasetServer({ datasetDir = process.env.DATASET_DIR || de
       json(res,500,{error:'服务器暂时无法提供数据，请稍后重试。'});
     }
   });
+  collaboration=attachCollaboration(server,{store:openCollaborationStore(resolve(stateDir,'deepmark.sqlite')),json,
+    resolveDataset:async id=>{
+      const {entries}=await catalog(datasetDir),entry=entries.find(e=>e.id===id);if(!entry)return null;
+      const bytes=await readFile(entry.file),raw=bytes[0]===31&&bytes[1]===139?gunzipSync(bytes,{maxOutputLength:1024*1024*1024}):bytes;
+      return {bytes,volume:parseNifti(raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength),entry.name)};
+    }});
+  return server;
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT||8787);

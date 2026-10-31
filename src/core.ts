@@ -122,14 +122,14 @@ export function planePoint(axis: Axis, slice: number, u: number, v: number): [nu
   p[axis] = slice; p[a] = u; p[b] = v; return p;
 }
 export function paint(labels: Uint16Array, volume: Pick<Volume, 'dims' | 'spacing'>, axis: Axis, slice: number,
-  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number) {
+  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number, recordTouches = false) {
   const [a, b] = planeAxes(axis), radius = diameter / 2;
   const du = radius / volume.spacing[a], dv = radius / volume.spacing[b];
   for (let y = Math.max(0, Math.ceil(v - dv)); y <= Math.min(volume.dims[b] - 1, Math.floor(v + dv)); y++) {
     for (let x = Math.max(0, Math.ceil(u - du)); x <= Math.min(volume.dims[a] - 1, Math.floor(u + du)); x++) {
       if (((x-u)*volume.spacing[a])**2 + ((y-v)*volume.spacing[b])**2 > radius**2) continue;
       const i = indexOf(planePoint(axis, slice, x, y), volume.dims);
-      if (labels[i] === value || (eraseOnly !== undefined && labels[i] !== eraseOnly)) continue;
+      if ((!recordTouches && labels[i] === value) || (eraseOnly !== undefined && labels[i] !== eraseOnly)) continue;
       if (!before.has(i)) before.set(i, labels[i]);
       labels[i] = value;
     }

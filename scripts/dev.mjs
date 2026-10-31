@@ -7,7 +7,7 @@ const api=createDatasetServer();
 await new Promise((resolve,reject)=>{api.once('error',reject);api.listen(apiPort,'127.0.0.1',resolve);});
 let vite;
 try {
-  vite=await createServer({root:fileURLToPath(new URL('../',import.meta.url)),server:{host,proxy:{'/api':`http://127.0.0.1:${apiPort}`}}});
+  vite=await createServer({root:fileURLToPath(new URL('../',import.meta.url)),server:{host,fs:{deny:['.env*','**/.git/**','**/server-data/**']},proxy:{'/api':{target:`http://127.0.0.1:${apiPort}`,ws:true}}}});
   await vite.listen();vite.printUrls();console.log(`Dataset API: http://${host}:${apiPort}/api/datasets`);
 }catch(error){api.close();throw error;}
 async function stop(){await vite.close();api.closeAllConnections();api.close(()=>process.exit(0));}

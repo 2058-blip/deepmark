@@ -10,3 +10,4 @@ artifacts/
 *.log
 server-data/datasets/*
 !server-data/datasets/.gitkeep
+server-data/collaboration/
