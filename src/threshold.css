@@ -1,0 +1,12 @@
+.tools { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tools button { padding: 10px 2px; }
+.threshold-panel { display: flex; flex-direction: column; gap: 9px; border: 1px solid #354638; background: #4ed1ad06; padding: 12px; border-radius: 7px; }
+.threshold-panel .section-heading { margin: 0 0 2px; }
+.threshold-panel > label:not(.preview-toggle) { font-size: 11px; color: #9aabbd; }
+.threshold-panel > input[type=number] { width: 100%; min-width: 0; padding: 7px; background: #101822; border: 1px solid #344153; border-radius: 5px; color: #d7dfe9; }
+.threshold-panel .preview-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; line-height: 1.5; cursor: pointer; }
+.preview-toggle input { accent-color: #4ed1ad; margin: 0; }
+.threshold-panel .primary { font-size: 12px; margin-top: 3px; }
+.field-error { color: #ffb5a4; font-size: 11px; line-height: 1.7; margin: 0; }
+.preview-badge { color: #85e5c9; border: 1px solid #4ed1ad55; border-radius: 3px; font-size: 9px; padding: 1px 4px; }
+.threshold-notice { color: #9cd9c6; background: #4ed1ad0a; border: 1px solid #4ed1ad33; border-radius: 6px; padding: 9px 12px; font-size: 11px; line-height: 1.7; margin-bottom: 14px; }
