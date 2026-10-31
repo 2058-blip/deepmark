@@ -32,3 +32,25 @@ test('collaboration preserves conflicts, fans later edits out to every version, 
     const persisted=store.state(id);store.close();store=openCollaborationStore(filename);assert.deepEqual(store.state(id),persisted);assert.equal(store.person(a.token).name,'工程师 A');
   }finally{store.close();assert.ok(resolve(dir).startsWith(resolve(tmpdir())+sep));await rm(dir,{recursive:true,force:true});}
 });
+
+test('personal spaces isolate author contributions and retain exit checkpoints through logout and resume',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'deepmark-personal-')),filename=join(dir,'personal.sqlite');let store=openCollaborationStore(filename);
+  try{
+    const a=store.session('作者 A'),b=store.session('作者 B'),v=volume(),id=store.join('personal-test',v.bytes,v.volume).id;
+    store.apply(id,a.person,{op:'a-personal',branch:'main',baseRevision:0,patch:patch([[0,0,1]])});
+    store.apply(id,b.person,{op:'b-personal',branch:'main',baseRevision:0,patch:patch([[1,0,1]])});
+    const readMask=(data:string)=>{const bytes=gunzipSync(Buffer.from(data,'base64'));return [...new Uint16Array(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength))];};
+    const ownA=store.workspace(id,a.person),ownB=store.workspace(id,b.person);assert.deepEqual(readMask(ownA.mask),[1,0,0,0,0,0,0,0]);assert.deepEqual(readMask(ownB.mask),[0,1,0,0,0,0,0,0]);assert.equal(ownA.touchedCount,1);
+    assert.throws(()=>store.apply(id,b.person,{key:`${a.person.id}:${id}:wrong-author`,op:'wrong-author',branch:'main',baseRevision:0,patch:patch([[2,0,1]])}),/另一作者/);
+    const shared=store.state(id),checkpoint={id:'checkpoint-a',generation:ownA.generation,revision:shared.revision,branch:'main',snapshot:shared.branches[0].mask,labels:shared.labels,view:{point:[1,0,1],selected:1,center:40,width:400,diameter:8,opacity:.45,tool:'paint'}};
+    const saved=store.checkpoint(id,a.person,checkpoint);assert.equal(saved.generation,ownA.generation+1);assert.equal(store.checkpoint(id,a.person,checkpoint).duplicate,true);
+    assert.equal(store.workspace(id,b.person).checkpoint,null);assert.deepEqual(store.workspace(id,a.person).checkpoint.view,checkpoint.view);assert.deepEqual(store.state(id),shared);
+    assert.throws(()=>store.checkpoint(id,a.person,{...checkpoint,id:'stale-checkpoint'}),/已有更新/);assert.throws(()=>store.checkpoint(id,a.person,{...checkpoint,id:'bad-size',generation:saved.generation,snapshot:ownA.touched}),/尺寸|格式/);
+    const revision=store.workspace(id,a.person).generation;store.apply(id,a.person,{op:'a-personal',branch:'main',baseRevision:0,patch:patch([[0,0,1]])});assert.equal(store.workspace(id,a.person).generation,revision);
+    store.apply(id,a.person,{op:'a-erase',branch:'main',baseRevision:2,patch:patch([[0,1,0]])});assert.equal(readMask(store.workspace(id,a.person).mask)[0],0);assert.equal(gunzipSync(Buffer.from(store.workspace(id,a.person).touched,'base64'))[0],1);
+    store.logout(a.token);assert.equal(store.person(a.token),undefined);const resumed=store.session('作者 A',{authorId:a.person.id,resumeKey:a.resumeKey});assert.equal(resumed.person.id,a.person.id);assert.throws(()=>store.session('作者 A',{authorId:a.person.id,resumeKey:'wrong'}),/身份恢复失败/);
+    const before=store.workspace(id,a.person);store.close();store=openCollaborationStore(filename);assert.deepEqual(store.workspace(id,resumed.person),before);assert.equal(store.person(resumed.token).id,a.person.id);
+    const out=store.exportPersonal(id,b.person);assert.deepEqual([...parseNifti(out.bytes.buffer.slice(out.bytes.byteOffset,out.bytes.byteOffset+out.bytes.byteLength)).data],[0,1,0,0,0,0,0,0]);
+    const labelOp={op:'personal-label',id:1,name:'新的标签名',color:'#123456'};store.label(id,resumed.person,labelOp);const generation=store.workspace(id,resumed.person).generation;assert.equal(store.label(id,resumed.person,labelOp).duplicate,true);assert.equal(store.workspace(id,resumed.person).generation,generation);
+  }finally{store.close();assert.ok(resolve(dir).startsWith(resolve(tmpdir())+sep));await rm(dir,{recursive:true,force:true});}
+});

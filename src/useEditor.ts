@@ -40,6 +40,10 @@ export function useEditor() {
     triggerRef(history);future.value=[];dirty.value=true;revision.value++;onChange?.(change);
   }
   function startStroke(){pending.clear();strokeActive.value=true;}
+  function pendingChange():Change|null{
+    const pairs=[...pending].filter(([i,before])=>onChange||mask.value[i]!==before);if(!pairs.length)return null;
+    return {indices:Uint32Array.from(pairs.map(p=>p[0])),before:Uint16Array.from(pairs.map(p=>p[1])),after:Uint16Array.from(pairs.map(p=>mask.value[p[0]]))};
+  }
   function endStroke(){
     strokeActive.value=false;
     if(!pending.size)return;
@@ -94,5 +98,5 @@ export function useEditor() {
   }
   onMounted(()=>{window.addEventListener('beforeunload',before);window.addEventListener('keydown',key);});
   onBeforeUnmount(()=>{window.removeEventListener('beforeunload',before);window.removeEventListener('keydown',key);});
-  return {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,install,canReplace,load,startStroke,endStroke,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler};
+  return {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,install,canReplace,load,startStroke,endStroke,pendingChange,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler};
 }

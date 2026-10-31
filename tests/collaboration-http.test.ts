@@ -28,6 +28,10 @@ test('collaboration HTTP sessions, write validation and WebSocket notifications'
   assert.equal((await notification).revision,1);
   const wrongOrigin=await fetch(prefix+`/projects/${project.id}/labels`,{method:'POST',headers:{...headers,Origin:'https://example.invalid'},body:'{}'});assert.equal(wrongOrigin.status,403);
   const history=await (await fetch(prefix+`/projects/${project.id}/history`,{headers})).json();assert.equal(history.events[0].name,'A');
+  const own=await (await fetch(prefix+`/projects/${project.id}/workspace`,{headers})).json();assert.equal(own.touchedCount,1);
+  const other=await fetch(prefix+'/session',{method:'POST',headers:{'X-Deepmark-Request':'1'},body:JSON.stringify({name:'B'})}),otherCookie=other.headers.get('set-cookie')!.split(';')[0],otherPerson=(await other.json()).person;
+  const personalB=await (await fetch(prefix+`/projects/${project.id}/workspace`,{headers:{Cookie:otherCookie,'X-Deepmark-Author':otherPerson.id}})).json();assert.equal(personalB.touchedCount,0);
+  assert.equal((await fetch(prefix+`/projects/${project.id}/workspace`,{headers:{Cookie:otherCookie,'X-Deepmark-Author':own.authorId}})).status,401);
   const closed=new Promise<void>(resolve=>socket!.once('close',()=>resolve()));socket.send('x'.repeat(2048));await closed;
   assert.equal((await fetch(prefix+'/session',{headers})).status,200);
 });

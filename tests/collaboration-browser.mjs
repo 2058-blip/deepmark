@@ -9,9 +9,11 @@ const name=`协同测试-${randomUUID()}.nii.gz`,file=new URL('../server-data/da
 const artifacts=new URL('../artifacts/',import.meta.url);await mkdir(artifacts,{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true}),aContext=await browser.newContext({viewport:{width:1440,height:1050}}),bContext=await browser.newContext({viewport:{width:1440,height:1050}}),a=await aContext.newPage(),b=await bContext.newPage(),errors=[];
 a.on('pageerror',e=>errors.push(e.message));b.on('pageerror',e=>errors.push(e.message));
+a.on('dialog',dialog=>dialog.accept());b.on('dialog',dialog=>dialog.accept());
 const origin='http://127.0.0.1:5173',headers={'X-Deepmark-Request':'1'};
 async function until(fn){const end=Date.now()+15000;while(Date.now()<end){if(await fn())return;await new Promise(r=>setTimeout(r,80));}throw new Error('Condition did not become true');}
-async function open(page,nickname){await page.goto(origin);await page.getByRole('button',{name:'服务器数据集',exact:true}).click();const row=page.locator('.dataset-card').filter({hasText:name});await row.waitFor();await row.getByRole('button',{name:'下载并标注',exact:true}).click();await page.locator('canvas').first().waitFor();await page.getByLabel('协同昵称').fill(nickname);await page.getByRole('button',{name:'加入实时协同',exact:true}).click();await until(()=>page.locator('.sync-indicator.online').count());}
+const healthy=page=>page.locator('.collaboration-panel[data-online="true"][data-pending="0"][data-error="false"]');
+async function open(page,nickname){await page.goto(origin);await page.getByRole('button',{name:'服务器数据集',exact:true}).click();const row=page.locator('.dataset-card').filter({hasText:name});await row.waitFor();await row.getByRole('button',{name:'下载并标注',exact:true}).click();await page.locator('canvas').first().waitFor();await page.getByLabel('协同昵称').fill(nickname);await page.getByRole('button',{name:'加入实时协同',exact:true}).click();await until(()=>healthy(page).count());}
 async function stroke(page,dx=0,dy=0){const rect=await page.locator('canvas').first().boundingBox(),x=rect.x+rect.width*.5+dx,y=rect.y+rect.height*.5+dy;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+14,y+9,{steps:5});await page.mouse.up();}
 async function post(page,path,data){const response=await page.request.post(origin+'/api/collaboration'+path,{headers,data});assert.ok(response.ok(),await response.text());return response.json();}
 function masks(state){return state.branches.map(branch=>{const bytes=gunzipSync(Buffer.from(branch.mask,'base64'));return new Uint16Array(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));});}
@@ -25,9 +27,9 @@ try{
   await stroke(a);await until(async()=>masks(await state())[0].some(Boolean));
   await until(async()=>(await b.locator('canvas').first().evaluate(c=>c.toDataURL()))!==oldHash);
   const first=masks(await state())[0];
-  await bContext.setOffline(true);await stroke(b,-45,28);await until(async()=>(await b.locator('.sync-indicator').innerText()).includes('未确认'));
-  await until(()=>b.evaluate(async(projectId)=>{const request=indexedDB.open('deepmark-collaboration',1);const db=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});return new Promise(resolve=>{const read=db.transaction('queue').objectStore('queue').getAll();read.onsuccess=()=>resolve(read.result.some(op=>op.project===projectId));});},id));
-  await bContext.setOffline(false);await b.reload();await open(b,'协同工程师 B');await until(()=>b.locator('.sync-indicator.online').count());
+  await bContext.setOffline(true);await stroke(b,-45,28);await until(async()=>(await b.locator('.sync-indicator').innerText()).includes('待上传'));
+  await until(()=>b.evaluate(async(projectId)=>{const request=indexedDB.open('deepmark-workspaces',1);const db=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});return new Promise(resolve=>{const read=db.transaction('queue').objectStore('queue').getAll();read.onsuccess=()=>resolve(read.result.some(op=>op.project===projectId));});},id));
+  await bContext.setOffline(false);await b.reload();await open(b,'协同工程师 B');await until(()=>healthy(b).count());
   await until(async()=>masks(await state())[0].reduce((n,v)=>n+(v?1:0),0)>first.reduce((n,v)=>n+(v?1:0),0));
   let current=await state();assert.ok(first.every((n,i)=>!n||masks(current)[0][i]===n));
   const label=await post(a,`/projects/${id}/labels`,{});assert.equal(label.label.id,2);
@@ -38,7 +40,7 @@ try{
   await until(async()=>(await a.getByLabel('协同版本').locator('option').count())===2);
   current=await state();assert.equal(masks(current)[0][0],1);assert.equal(masks(current)[1][0],2);
   assert.equal(masks(current)[1][centerIndex],2);await stroke(a);await until(async()=>masks(await state()).every(mask=>mask[centerIndex]===1));
-  await stroke(a,45,-25);await until(()=>a.locator('.sync-indicator.online').count());
+  await stroke(a,45,-25);await until(()=>healthy(a).count());
   current=await state();const finalMasks=masks(current);assert.equal(finalMasks[0][0],1);assert.equal(finalMasks[1][0],2);assert.deepEqual(finalMasks[0].slice(1),finalMasks[1].slice(1));
   await a.getByLabel('协同版本').selectOption(conflict.forkId);await until(async()=>(await a.getByLabel('协同版本').inputValue())===conflict.forkId);
   const waitDownload=a.waitForEvent('download');await a.getByRole('button',{name:'导出标注 ↗',exact:true}).click();const downloaded=await readFile(await (await waitDownload).path());const out=parseNifti(downloaded.buffer.slice(downloaded.byteOffset,downloaded.byteOffset+downloaded.byteLength));assert.equal(out.data[0],2);

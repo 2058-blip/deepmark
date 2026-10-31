@@ -3,33 +3,37 @@ import { ref } from 'vue';
 import SliceView from './SliceView.vue';
 import DatasetBrowser from './DatasetBrowser.vue';
 import CollaborationPanel from './CollaborationPanel.vue';
+import LocalDrafts from './LocalDrafts.vue';
 import { useEditor } from './useEditor.ts';
 import { useCollaboration } from './useCollaboration.ts';
 import { indexOf,makeDemo } from './core.ts';
 import type { Axis } from './core.ts';
 import type { Tool } from './view.ts';
 import { download,inputValue } from './view.ts';
+import {cacheDataset} from './localCache.ts';
 const editor=useEditor();
 const {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,viewBusy:busy,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,canReplace,load,startStroke,endStroke,stroke,runThreshold,undo,loadSegmentation}=editor;
 const collaboration=useCollaboration(editor);
-const {active:collaborating,queueCount,unsaved}=collaboration;
+const {active:collaborating,queueCount,unsaved,showDrafts,drafts}=collaboration;
 const datasetId=ref<string|null>(null);
 const fileInput=ref<HTMLInputElement|null>(null),segInput=ref<HTMLInputElement|null>(null);
 const tools:{id:Tool;icon:string;label:string}[]=[{id:'paint',icon:'✎',label:'画笔'},{id:'erase',icon:'▱',label:'橡皮擦'},{id:'navigate',icon:'⌖',label:'定位'},{id:'threshold',icon:'◒',label:'阈值'}];
 const axes:Axis[]=[2,1,0];
-async function chooseFile(event:Event,seg=false){const element=event.target as HTMLInputElement,file=element.files?.[0];element.value='';if(seg)await loadSegmentation(file);else if(await load(file)){collaboration.leave();datasetId.value=null;}}
-async function openDataset(file:File,id?:string){if(!await load(file,true))return false;collaboration.leave();datasetId.value=id||null;return true;}
+async function chooseFile(event:Event,seg=false){const element=event.target as HTMLInputElement,file=element.files?.[0];element.value='';if(seg)await loadSegmentation(file);else{if(collaborating.value&&!await collaboration.saveAndExit())return;if(await load(file))datasetId.value=null;}}
+async function openDataset(file:File,id?:string){if(collaborating.value&&!await collaboration.saveAndExit())return false;if(id)await cacheDataset(id,file);if(!await load(file,true))return false;datasetId.value=id||null;return true;}
+async function showLocal(){await collaboration.reloadDrafts();showDrafts.value=true;}
+async function restoreLocal(key:string){if(collaborating.value&&!await collaboration.saveAndExit())throw new Error('请先处理当前工作副本。');const id=await collaboration.restoreDraft(key);if(!id)throw new Error(collaboration.error.value||'恢复失败。');datasetId.value=id;}
 function addSegment(){if(collaborating.value)void collaboration.addLabel();else editor.addSegment();}
 function updateLabel(label:typeof segments.value[number]){if(collaborating.value)void collaboration.updateLabel(label);}
 function exportMask(){if(collaborating.value)collaboration.exportServer();else editor.exportMask();}
-function demo(){if(canReplace()){collaboration.leave();datasetId.value=null;editor.install(makeDemo());}}
+async function demo(){if(collaborating.value&&!await collaboration.saveAndExit())return;if(canReplace()){datasetId.value=null;editor.install(makeDemo());}}
 function setWindow(event:Event,which:'center'|'width'){const value=Number(inputValue(event));if(!Number.isFinite(value)||(which==='width'&&value<1))return;if(which==='width')width.value=value;else center.value=value;}
 function fullWindow(){if(volume.value){center.value=(volume.value.min+volume.value.max)/2;width.value=Math.max(1,volume.value.max-volume.value.min);}}
 </script>
 <template>
   <div class="app">
     <header class="topbar"><div class="brand"><div class="brand-icon">✚</div><div>医学分割标注<small>SLICER WEB · 本地浏览器版</small></div></div>
-      <div class="top-actions"><span class="local-badge">● {{collaborating?'多人实时协同':'影像本地处理'}}</span><button class="server-library-button" :disabled="busy" @click="showDatasets=true">服务器数据集</button><button :disabled="busy" @click="fileInput?.click()">打开影像</button><button class="primary" :disabled="!volume||(busy&&!editor.readOnly.value)||(collaborating&&(!!queueCount||unsaved))" @click="exportMask">导出标注 ↗</button></div>
+      <div class="top-actions"><span class="local-badge">● {{collaborating?'多人实时协同':'影像本地处理'}}</span><button class="local-cache-button" @click="showLocal">本地工作缓存</button><button class="server-library-button" :disabled="busy" @click="showDatasets=true">服务器数据集</button><button :disabled="busy" @click="fileInput?.click()">打开影像</button><button class="primary" :disabled="!volume||(busy&&!editor.readOnly.value)||(collaborating&&(!!queueCount||unsaved))" @click="exportMask">导出标注 ↗</button></div>
     </header>
     <input ref="fileInput" hidden type="file" accept=".nii,.nii.gz" @change="chooseFile($event)"/><input ref="segInput" hidden type="file" accept=".nii,.nii.gz" @change="chooseFile($event,true)"/>
     <div class="workspace"><aside class="sidebar">
@@ -65,5 +69,6 @@ function fullWindow(){if(volume.value){center.value=(volume.value.min+volume.val
     </main></div>
     <footer class="statusbar"><span role="status">{{editor.busy.value?'◌ ':''}}{{status}}</span><span>标注原型 · 请核对导出结果</span></footer><div v-if="editor.busy.value" class="busy-overlay" aria-live="polite">正在处理文件，请稍候…</div>
     <DatasetBrowser v-if="showDatasets" :on-before-open="canReplace" :on-open="openDataset" @close="showDatasets=false"/>
+    <LocalDrafts v-if="showDrafts" :drafts="drafts" :restore="restoreLocal" @close="showDrafts=false"/>
   </div>
 </template>

@@ -23,7 +23,7 @@ async function open(dataset:Dataset){
     const total=Number(response.headers.get('Content-Length'))||dataset.size,chunks:ArrayBuffer[]=[],reader=response.body?.getReader();if(!reader)throw new Error('浏览器无法读取下载内容。');
     let received=0;while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value.slice().buffer);received+=value.byteLength;progress.value={received,total};}
     if(total&&received!==total)throw new Error('数据集下载不完整，请重试。');parsing.value=true;
-    if(await props.onOpen(new File(chunks,dataset.name,{type:'application/octet-stream'}),dataset.id))emit('close');else error.value='影像未能打开，请检查文件格式。关闭此窗口可查看详细错误。';
+    if(await props.onOpen(new File(chunks,dataset.name,{type:'application/octet-stream'}),dataset.id))emit('close');else error.value='本次打开未完成，请处理当前工作提示或检查文件格式后重试。';
   }catch(reason){if((reason as Error).name!=='AbortError')error.value=(reason as Error).message;}finally{request=null;downloading.value=null;parsing.value=false;}
 }
 const filtered=computed(()=>datasets.value.filter(item=>(item.name+' '+item.folder).toLowerCase().includes(search.value.toLowerCase())));
