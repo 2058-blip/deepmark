@@ -17,7 +17,7 @@
 
 同一作者继续修改对应意见时更新其条目；其他人可在区域增加意见。更改未冲突区域只更新主标注。服务器保留操作意图，避免先一致、后来意见分歧时丢失另一位作者的记录。
 
-有并列意见时导出包含主 NIfTI 与所有意见的 JSON 审阅包，不能用单标签 NIfTI 假装保留了多条标注。没有并列意见时可导出普通 NIfTI。
+统一导出 ZIP，包含主标注 segmentation.nii、标签 labels.json、修订清单 manifest.json 及说明；存在并列意见时另含 parallel-annotations.json。主 NIfTI 不编码多条意见，应与区域意见 JSON 一并保留。
 
 ## 存储与恢复
 

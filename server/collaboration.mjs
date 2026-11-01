@@ -5,6 +5,8 @@ import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {WebSocketServer} from 'ws';
 import {applyShared,mergeLegacy,resolveRegion} from './sharedModel.mjs';
+import {zipSync} from 'fflate';
+import {annotationFiles,archiveOptions} from '../src/exportArchive.ts';
 
 const pack=value=>gzipSync(Buffer.from(JSON.stringify(value))),unpack=value=>JSON.parse(gunzipSync(value).toString());
 const digest=value=>createHash('sha256').update(value).digest('hex');
@@ -134,7 +136,7 @@ export function openCollaborationStore(filename,{adminKey:configuredKey=process.
     resolve(id,person,body){requireAdmin(person);return transaction(()=>{const p=getProject(id);editable(p);exact(p,body);if(body.label!==undefined&&![0,...JSON.parse(p.labels).map(l=>l.id)].includes(body.label))fail('标签无效。');const result=resolveRegion(readModel(p),person,body);saveModel(id,result.model);return {revision:saveEvent(p,person,randomUUID(),'管理员审定并列标注',{applied:result.applied,ownerUpdates:result.ownerUpdates,regions:result.model.regions,authors:result.model.authors})};});},
     finalize(id,person,body){requireAdmin(person);return transaction(()=>{const p=getProject(id);editable(p);exact(p,body);const m=readModel(p);if(m.regions.length)fail('仍有并列标注未审定，暂不能定稿。',409);const time=new Date().toISOString(),revision=saveEvent(p,person,randomUUID(),'管理员定稿',{applied:[],ownerUpdates:[],regions:[],authors:m.authors,finalizedBy:person.name,finalizedAt:time,finalRevision:p.revision+1},JSON.parse(p.labels),'finalized');db.prepare('UPDATE projects SET finalized_by=?,finalized_at=?,final_revision=? WHERE id=?').run(person.name,time,revision,id);db.prepare('INSERT INTO final_results VALUES(?,?,?,?,?,?)').run(id,revision,person.id,person.name,time,niftiBytes(p.header,m.mask));return {revision};});},
     reopen(id,person,body){requireAdmin(person);return transaction(()=>{const p=getProject(id);exact(p,body);if(p.status!=='finalized')fail('工程尚未定稿。');const m=readModel(p);return {revision:saveEvent(p,person,randomUUID(),'管理员重新开放',{applied:[],ownerUpdates:[],regions:m.regions,authors:m.authors},JSON.parse(p.labels),'editing')};});},
-    export(id,revision){const p=getProject(id),s=state(id,revision),mask=unzip(Buffer.from(s.mask,'base64'),Uint16Array),bytes=niftiBytes(p.header,mask);if(s.regions.length)return {bytes:Buffer.from(JSON.stringify({format:'deepmark-review-1',projectId:id,revision:s.revision,labels:s.labels,primaryNifti:bytes.toString('base64'),parallelRegions:s.regions},null,2)),revision:s.revision,type:'application/json',extension:'review.json'};return {bytes,revision:s.revision,type:'application/octet-stream',extension:'nii'};}
+    export(id,revision){const p=getProject(id),s=state(id,revision),mask=unzip(Buffer.from(s.mask,'base64'),Uint16Array),nifti=niftiBytes(p.header,mask),files=annotationFiles(nifti,s.labels,{projectId:id,datasetId:p.dataset,revision:s.revision,status:s.status,parallelRegions:s.regions});return {bytes:Buffer.from(zipSync(files,archiveOptions)),revision:s.revision,type:'application/zip',extension:'zip'};}
   };return store;
 }
 function sessionToken(req){return /(?:^|;\s*)deepmark_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1];}

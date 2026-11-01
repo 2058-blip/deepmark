@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import {unzipSync} from 'fflate';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {mkdtemp,rm,stat} from 'node:fs/promises';
@@ -24,7 +25,7 @@ test('one shared result preserves region-level parallel opinions, including sequ
     apply(b,'b4',[[0,1,2]]);apply(a,'elsewhere',[[2,0,1]]);shared=store.state(id);assert.equal(values(shared)[2],1);assert.equal(shared.regions[0].annotations.find((r:any)=>r.author===b.id).values[0][1],2);
     const rev=shared.revision;assert.equal(apply(a,'elsewhere',[[2,0,1]]).duplicate,true);assert.equal(store.state(id).revision,rev);
     assert.throws(()=>apply(a,'invalid',[[9,0,1]]));assert.throws(()=>apply(a,'wrong-owner',[[3,0,1]],{key:`${b.id}:${id}:wrong-owner`}));assert.deepEqual(store.state(id),shared);
-    const review=store.export(id);assert.equal(review.extension,'review.json');assert.equal(JSON.parse(review.bytes.toString()).parallelRegions[0].annotations.length,2);
+    const review=store.export(id);assert.equal(review.extension,'zip');assert.equal(review.type,'application/zip');const files=unzipSync(review.bytes);assert.ok(files['segmentation.nii']);assert.ok(files['labels.json']);assert.equal(JSON.parse(new TextDecoder().decode(files['parallel-annotations.json'])).parallelRegions[0].annotations.length,2);
     for(let r=0;r<=rev;r++)assert.equal(store.state(id,r).revision,r);
     const persisted=store.state(id);store.close();store=openCollaborationStore(filename,{adminKey});assert.deepEqual(store.state(id),persisted);assert.equal('workspace' in store,false);
   }finally{store.close();assert.ok(resolve(dir).startsWith(resolve(tmpdir())+sep));await rm(dir,{recursive:true,force:true});}

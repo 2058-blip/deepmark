@@ -1,3 +1,4 @@
+import {unzipSync} from 'fflate';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
@@ -35,8 +36,8 @@ try {
   await page.mouse.down();await page.mouse.move(rect.x+rect.width/2+28,rect.y+rect.height/2+15,{steps:10});await page.mouse.up();
   assert.equal(await page.getByRole('button',{name:'↶ 撤销',exact:true}).isEnabled(),true);
   async function exported(){
-    const wait=page.waitForEvent('download');await page.getByRole('button',{name:'导出标注 ↗'}).click();
-    const d=await wait;const bytes=await readFile(await d.path());
+    const wait=page.waitForEvent('download');await page.getByRole('button',{name:'导出标注 ZIP ↗'}).click();
+    const d=await wait;assert.match(d.suggestedFilename(),/\.zip$/);const files=unzipSync(await readFile(await d.path()));assert.ok(files['labels.json']);const bytes=files['segmentation.nii'];
     return parseNifti(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
   }
   const painted=await exported();const count=painted.data.reduce((n,v)=>n+(v>0?1:0),0);assert.ok(count>10);

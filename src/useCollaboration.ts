@@ -1,6 +1,8 @@
 import {computed,onBeforeUnmount,ref,shallowRef,watch} from 'vue';
 import type {Change} from './core.ts';
 import {exportNifti} from './core.ts';
+import {annotationArchive} from './exportArchive.ts';
+import {operationId} from './operationId.ts';
 import type {Segment,Tool} from './view.ts';
 import {download,readFile} from './view.ts';
 import type {useEditor} from './useEditor.ts';
@@ -48,12 +50,12 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   }
   void (async()=>{try{await rememberIdentity(await api('/session'));}catch{}const identities=await allIdentities();if(!person.value&&identities.length)nickname.value=identities.sort((a,b)=>b.updated-a.updated)[0].name;await reloadDrafts();})().catch(reason=>{cacheError.value=(reason as Error).message;});
   function view():ViewState{return {point:[...editor.point.value],selected:editor.selected.value,center:editor.center.value,width:editor.width.value,diameter:editor.diameter.value,opacity:editor.opacity.value,tool:editor.tool.value,regionWidth:editor.regionWidth.value,regionMode:editor.regionMode.value,hoverPreview:editor.hoverPreview.value};}
-  function operation(change:Change,kind='edit',id:string=crypto.randomUUID()):Operation{
+  function operation(change:Change,kind='edit',id:string=operationId()):Operation{
     return {key:`${draftKey()}:${id}`,project:project.value!.id,op:id,baseRevision:project.value!.revision,patch:encode(change),kind,created:Date.now(),review:false};
   }
   function capture():Draft|null{
     if(!project.value||!person.value||!editor.volume.value||historical.value!==null)return null;
-    const partial=editor.pendingChange();if(!partial)partialId=null;else partialId??=crypto.randomUUID();
+    const partial=editor.pendingChange();if(!partial)partialId=null;else partialId??=operationId();
     const draft:Draft={key:draftKey(),author:{...person.value},project:structuredClone(project.value),name:editor.volume.value.name,mask:editor.mask.value.slice().buffer,segments:editor.segments.value.map(s=>({...s})),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
   }
   function persistWrite(draft:Draft|null,op?:Operation,removeOp?:string){
@@ -161,7 +163,11 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   async function addLabel(){if(!project.value)return;try{const result=await request<{label:Omit<Segment,'visible'>}>(`/projects/${project.value.id}/labels`,{});editor.segments.value.push({...result.label,visible:true});editor.selected.value=result.label.id;cacheGeneration++;await refresh();}catch(reason){error.value=(reason as Error).message;}}
   async function updateLabel(label:Segment){if(!project.value||!person.value)return;if(!label.name.trim()||label.name.length>60){label.name=project.value.labels.find(s=>s.id===label.id)?.name||`标注 ${label.id}`;error.value='标签名称不能为空，已恢复原名称。';return;}cacheGeneration++;const op:Operation={...operation({indices:new Uint32Array(),before:new Uint16Array(),after:new Uint16Array()},'label'),label:{id:label.id,name:label.name,color:label.color}};queue.push(op);editor.dirty.value=true;mark();try{await persistWrite(capture(),op);void pump();}catch(reason){cacheError.value=(reason as Error).message;}}
   function exportServer(){if(!project.value||queue.length||unsaved.value)return;const params=new URLSearchParams();if(historical.value!==null)params.set('revision',String(historical.value));const a=document.createElement('a');a.href=`${base}/projects/${project.value.id}/export?${params}`;a.download='';a.click();}
-  function exportLocal(){if(editor.volume.value)download(exportNifti(editor.volume.value,editor.mask.value),`本地工作副本-${person.value?.name||'标注'}.nii`);}
+  async function exportLocal(){
+    if(!editor.volume.value||editor.busy.value)return;editor.endStroke();editor.busy.value=true;editor.status.value='正在压缩本地副本 ZIP…';
+    try{const v=editor.volume.value,archive=await annotationArchive(exportNifti(v,editor.mask.value),editor.segments.value,{source:v.name,local:true,projectId:project.value?.id,revision:historical.value??project.value?.revision,parallelRegions:project.value?.regions});download(archive,`本地工作副本-${person.value?.name||'标注'}.zip`,'application/zip');editor.status.value='已请求下载本地副本 ZIP。';}
+    catch(reason){editor.status.value=`导出失败：${(reason as Error).message}`;}finally{editor.busy.value=false;}
+  }
   watch(()=>editor.strokeActive.value,value=>{if(!value&&!queue.length)void refresh();});
   let viewTimer:ReturnType<typeof setTimeout>|null=null;
   watch(()=>JSON.stringify(view()),()=>{if(active.value&&historical.value===null){cacheGeneration++;if(viewTimer)clearTimeout(viewTimer);viewTimer=setTimeout(()=>void cacheView().catch(()=>{}),400);}});

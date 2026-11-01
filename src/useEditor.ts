@@ -5,6 +5,7 @@ import { colors, download, initialSegments, readFile } from './view.ts';
 import type { Segment, Tool } from './view.ts';
 import {fillSliceRegion} from './sliceData.ts';
 import type {GrayMode} from './grayRegions.ts';
+import {annotationArchive} from './exportArchive.ts';
 
 export function useEditor() {
   const volume=shallowRef<Volume|null>(null),mask=shallowRef<Uint16Array>(new Uint16Array());
@@ -94,7 +95,11 @@ export function useEditor() {
       if(onChange){const indices:number[]=[];next.forEach((value,i)=>{if(value!==previous[i])indices.push(i);});if(indices.length)onChange({indices:Uint32Array.from(indices),before:Uint16Array.from(indices,i=>previous[i]),after:Uint16Array.from(indices,i=>next[i])});}
     }catch(error){status.value=`导入失败：${(error as Error).message}`;}finally{busy.value=false;}
   }
-  function exportMask(){if(!volume.value)return;endStroke();download(exportNifti(volume.value,mask.value),volume.value.name.replace(/\.nii(\.gz)?$/i,'')+'-seg.nii');dirty.value=false;status.value='已请求下载分割 NIfTI；标签名称和颜色可单独导出。';}
+  async function exportMask(){
+    if(!volume.value||busy.value)return;endStroke();busy.value=true;status.value='正在压缩标注 ZIP…';
+    try{const v=volume.value,archive=await annotationArchive(exportNifti(v,mask.value),segments.value,{source:v.name});download(archive,v.name.replace(/\.nii(\.gz)?$/i,'')+'-seg.zip','application/zip');dirty.value=false;status.value='已请求下载标注 ZIP，内含分割 NIfTI 和标签说明。';}
+    catch(reason){status.value=`导出失败：${(reason as Error).message}`;}finally{busy.value=false;}
+  }
   function addSegment(){const id=Math.max(...segments.value.map(s=>s.id))+1;if(id>65535)return;segments.value.push({id,name:`标注 ${id}`,color:colors[(id-1)%colors.length],visible:true});selected.value=id;}
   function demo(){if(canReplace())install(makeDemo());}
   function before(e:BeforeUnloadEvent){if(dirty.value){e.preventDefault();e.returnValue='';}}

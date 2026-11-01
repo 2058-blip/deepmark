@@ -1,3 +1,4 @@
+import {unzipSync} from 'fflate';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {writeFile,unlink,readFile,mkdir} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
@@ -11,7 +12,7 @@ const name=`工程师性能-${randomUUID()}.nii.gz`,file=new URL('../server-data
 const browser=await chromium.launch({channel:'msedge',headless:true}),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
 async function until(fn){const end=Date.now()+20000;while(Date.now()<end){if(await fn())return;await new Promise(r=>setTimeout(r,40));}throw new Error('Condition timed out');}
 const healthy=()=>page.locator('.collaboration-panel[data-online="true"][data-pending="0"][data-error="false"]');
-async function exported(){const wait=page.waitForEvent('download');await page.getByRole('button',{name:'导出标注 ↗',exact:true}).click();const data=await readFile(await (await wait).path());return parseNifti(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));}
+async function exported(){const wait=page.waitForEvent('download');await page.getByRole('button',{name:'导出标注 ZIP ↗',exact:true}).click();const data=unzipSync(await readFile(await (await wait).path()))['segmentation.nii'];return parseNifti(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));}
 async function center(){const canvas=page.locator('canvas').first();await canvas.scrollIntoViewIfNeeded();await until(()=>canvas.evaluate(c=>Math.abs(c.height-window.devicePixelRatio*c.getBoundingClientRect().height)<2));const rect=await canvas.boundingBox();return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};}
 try{
   await page.goto('http://127.0.0.1:5173/');assert.equal(await page.getByRole('button',{name:'管理员工作台',exact:true}).count(),0);

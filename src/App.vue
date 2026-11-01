@@ -34,7 +34,7 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
 <template>
   <div class="app">
     <header class="topbar"><div class="brand"><div class="brand-icon">✚</div><div>医学分割标注<small>SLICER WEB · 本地浏览器版</small></div></div>
-      <div class="top-actions"><span class="local-badge">● {{collaborating?'统一共享标注':'影像本地处理'}}</span><button class="local-cache-button" @click="showLocal">本地工作缓存</button><button class="server-library-button" :disabled="busy" @click="showDatasets=true">服务器数据集</button><button :disabled="busy" @click="fileInput?.click()">打开影像</button><button class="primary" :disabled="!volume||(busy&&!editor.readOnly.value)||(collaborating&&(!!queueCount||unsaved))" @click="exportMask">{{collaborating&&project?.regions.length?'导出完整审阅包':'导出标注 ↗'}}</button></div>
+      <div class="top-actions"><span class="local-badge">● {{collaborating?'统一共享标注':'影像本地处理'}}</span><button class="local-cache-button" @click="showLocal">本地工作缓存</button><button class="server-library-button" :disabled="busy" @click="showDatasets=true">服务器数据集</button><button :disabled="busy" @click="fileInput?.click()">打开影像</button><button class="primary" :disabled="!volume||(busy&&!editor.readOnly.value)||(collaborating&&(!!queueCount||unsaved))" @click="exportMask">{{collaborating&&project?.regions.length?'导出审阅 ZIP':'导出标注 ZIP ↗'}}</button></div>
     </header>
     <input ref="fileInput" hidden type="file" accept=".nii,.nii.gz" @change="chooseFile($event)"/><input ref="segInput" hidden type="file" accept=".nii,.nii.gz" @change="chooseFile($event,true)"/>
     <div class="workspace"><aside class="sidebar">
@@ -69,7 +69,7 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
       </template>
       <div v-else class="empty"><div class="empty-visual"><div/><div/><span>＋</span></div><h2>让影像成为可编辑的标注</h2><p>导入三维 NIfTI 影像，在三个切面上绘制分割。<br/>文件在本机处理，无需上传。</p><button :disabled="busy" class="primary" @click="fileInput?.click()">选择 NIfTI 文件</button><button :disabled="busy" class="server-open-button" @click="showDatasets=true">从服务器选择数据集</button><button :disabled="busy" class="text-button" @click="demo">先用合成影像体验 →</button><small>支持三维灰度 NIfTI-1 · 不支持时间序列</small></div>
     </main></div>
-    <footer class="statusbar"><span role="status">{{editor.busy.value?'◌ ':''}}{{status}}</span><span>标注原型 · 请核对导出结果</span></footer><div v-if="editor.busy.value" class="busy-overlay" aria-live="polite">正在处理文件，请稍候…</div>
+    <footer class="statusbar"><span role="status">{{editor.busy.value?'◌ ':''}}{{status}}</span><span>标注原型 · 请核对导出结果</span></footer><div v-if="editor.busy.value" class="busy-overlay" aria-live="polite">{{status}}</div>
     <DatasetBrowser v-if="showDatasets" :on-before-open="canReplace" :on-open="openDataset" @close="showDatasets=false"/>
     <LocalDrafts v-if="showDrafts" :drafts="drafts" :restore="restoreLocal" @close="showDrafts=false"/>
   </div>
