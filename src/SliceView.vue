@@ -12,10 +12,16 @@ const p=withDefaults(defineProps<{volume:Volume;mask:Uint16Array;axis:Axis;point
 const emit=defineEmits<{point:[value:number[]];start:[];stroke:[axis:Axis,slice:number,u:number,v:number];end:[];region:[axis:Axis,slice:number,pixels:Uint32Array]}>();
 const host=ref<HTMLDivElement|null>(null),canvas=ref<HTMLCanvasElement|null>(null),size=ref([300,300]),outline=shallowRef<RegionOutline|null>(null),grayMessage=ref('');
 const renderedSlice=ref(-1),renderCount=ref(0),grayBuilds=ref(0),renderMs=ref(0);
+const brushPoint=shallowRef<[number,number]|null>(null);
 let drawing=false,last:[number,number]|null=null,observer:ResizeObserver,renderer:SliceRenderer|null=null,frame:GrayFrame|null=null,grayClient:GrayRegionClient|null=null;
 let renderRAF=0,wheelRAF=0,wheelTarget:number|null=null,grayDirty=true,labelDirty=true,inside=false,lastClient:[number,number]|null=null,quietTimer:ReturnType<typeof setTimeout>|null=null;
 let preparedVolume:Volume|null=null,renderedVolume:Volume|null=null,preparedSlice=-1,preparedKey='';
 const geometry=computed(()=>{const [a,b]=planeAxes(p.axis),nx=p.volume.dims[a],ny=p.volume.dims[b],scale=Math.min((size.value[0]-36)/(nx*p.volume.spacing[a]),(size.value[1]-36)/(ny*p.volume.spacing[b])),w=nx*p.volume.spacing[a]*scale,h=ny*p.volume.spacing[b]*scale;return {a,b,nx,ny,w,h,ox:(size.value[0]-w)/2,oy:(size.value[1]-h)/2};});
+const brushCursor=computed(()=>{
+  if(!brushPoint.value||!p.allowEdit||(p.tool!=='paint'&&p.tool!=='erase'))return null;
+  const g=geometry.value,[u,v]=brushPoint.value;
+  return {x:g.ox+(u+.5)/g.nx*g.w,y:g.oy+(g.ny-v-.5)/g.ny*g.h,rx:p.diameter/2/p.volume.spacing[g.a]*g.w/g.nx,ry:p.diameter/2/p.volume.spacing[g.b]*g.h/g.ny};
+});
 function schedule(){if(!renderRAF)renderRAF=requestAnimationFrame(render);}
 function render(){
   renderRAF=0;if(!renderer)return;const started=performance.now();
@@ -48,6 +54,7 @@ function seed(point:[number,number]){const {nx,ny}=geometry.value;return Math.ro
 function preview(){if(!inside||!lastClient||!p.hoverPreview||drawing||quietTimer)return;const point=coords(...lastClient);if(!point){outline.value=null;grayClient?.clear();return;}prepare()?.hover(seed(point));}
 function move(e:PointerEvent){
   lastClient=[e.clientX,e.clientY];const current=coords(e.clientX,e.clientY);
+  brushPoint.value=current;
   if(!drawing){inside=!!current;if(current)preview();else{outline.value=null;grayClient?.clear();}return;}
   if(!current){last=null;return;}
   if(p.tool==='navigate'||p.tool==='threshold'){const q=[...p.point];q[geometry.value.a]=Math.round(current[0]);q[geometry.value.b]=Math.round(current[1]);emit('point',q);return;}
@@ -61,7 +68,7 @@ function start(e:PointerEvent){
   drawing=true;grayClient?.clear();outline.value=null;canvas.value!.setPointerCapture(e.pointerId);emit('start');move(e);
 }
 function end(){if(drawing){drawing=false;last=null;emit('end');preview();}}
-function leave(){inside=false;outline.value=null;grayMessage.value='';grayClient?.clear();}
+function leave(){brushPoint.value=null;inside=false;outline.value=null;grayMessage.value='';grayClient?.clear();}
 function slice(value:number){const q=[...p.point];q[p.axis]=Math.max(0,Math.min(p.volume.dims[p.axis]-1,value));emit('point',q);}
 function wheel(event:WheelEvent){
   if(drawing||!event.deltaY)return;wheelTarget=Math.max(0,Math.min(p.volume.dims[p.axis]-1,(wheelTarget??p.point[p.axis])+(event.deltaY>0?1:-1)));outline.value=null;grayClient?.clear();
@@ -74,6 +81,7 @@ function wheel(event:WheelEvent){
     <header><span class="view-dot"/>{{direction(volume,axis)}}<span v-if="thresholdPreview" class="preview-badge">预览</span><span v-else-if="parallelMap?.size" class="preview-badge">并列标注</span><small>{{['I','J','K'][axis]}} = {{point[axis]+1}} / {{volume.dims[axis]}}</small></header>
     <div ref="host" class="canvas-host" @wheel.prevent="wheel">
       <canvas ref="canvas" @pointerenter="move" @pointerleave="leave" @pointerdown="start" @pointermove="move" @pointerup="end" @pointercancel="end" @lostpointercapture="end"/>
+      <svg v-if="brushCursor" :class="['brush-cursor',{'eraser-cursor':tool==='erase'}]" :viewBox="`0 0 ${size[0]} ${size[1]}`" :aria-label="`${tool==='erase'?'橡皮擦':'画笔'}直径 ${diameter} ${volume.unit}`"><ellipse :cx="brushCursor.x" :cy="brushCursor.y" :rx="brushCursor.rx" :ry="brushCursor.ry"/><text :x="brushCursor.x+brushCursor.rx+7" :y="brushCursor.y-7">⌀ {{diameter}} {{volume.unit}}</text></svg>
       <svg v-if="outline?.path&&hoverPreview&&!drawing" class="gray-region-outline" :viewBox="`0 0 ${geometry.nx} ${geometry.ny}`" preserveAspectRatio="none" :style="{left:`${geometry.ox}px`,top:`${geometry.oy}px`,width:`${geometry.w}px`,height:`${geometry.h}px`}" aria-label="鼠标所在灰度区域轮廓"><path :d="outline.path" fill="none" stroke="#ffe26f" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>
       <span v-if="inside&&hoverPreview&&!drawing" class="gray-region-info">{{outline&&!outline.truncated?`${outline.count.toLocaleString()} 像素 · 灰度 ${+outline.minimum.toFixed(2)}～${+outline.maximum.toFixed(2)}`:grayMessage}}</span>
       <span class="edge top">{{edgeDirection(volume,geometry.b,true)}}</span><span class="edge bottom">{{edgeDirection(volume,geometry.b,false)}}</span><span class="edge left">{{edgeDirection(volume,geometry.a,false)}}</span><span class="edge right">{{edgeDirection(volume,geometry.a,true)}}</span>
