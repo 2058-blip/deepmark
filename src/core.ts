@@ -12,24 +12,28 @@ export type ThresholdRange = { minimum: number; maximum: number; label: number }
 export function thresholdLabel(gray: number, current: number, range: ThresholdRange): number {
   return gray >= range.minimum && gray <= range.maximum ? range.label : current === range.label ? 0 : current;
 }
-export function applyThreshold(data: Float32Array, labels: Uint16Array, range: ThresholdRange): { change: Change | null; matched: number } {
+export function applyThreshold(data: Float32Array, labels: Uint16Array, range: ThresholdRange, excluded?: (index:number)=>boolean,personalValue?:(index:number)=>number|null,deferErase=false): { change: Change | null; matched: number } {
   if (data.length !== labels.length) throw new Error('分割尺寸与影像不一致。');
   if (!Number.isFinite(range.minimum) || !Number.isFinite(range.maximum) || range.minimum > range.maximum)
     throw new Error('请输入有效灰度范围，最小值不能大于最大值。');
   if (!Number.isInteger(range.label) || range.label < 1 || range.label > 65535) throw new Error('标签值无效。');
   let count = 0, matched = 0;
   for (let i = 0; i < data.length; i++) {
-    if (data[i] >= range.minimum && data[i] <= range.maximum) matched++;
-    if (thresholdLabel(data[i], labels[i], range) !== labels[i]) count++;
+    const inRange=data[i]>=range.minimum&&data[i]<=range.maximum;
+    const current=personalValue?(personalValue(i)??0):labels[i];if(!inRange&&current!==range.label)continue;
+    if (excluded?.(i)) continue;
+    if (inRange) matched++;
+    if (thresholdLabel(data[i], current, range) !== current) count++;
   }
   if (!count) return { change: null, matched };
   // Allocate the full undo transaction before modifying any voxel.
   const change: Change = { indices: new Uint32Array(count), before: new Uint16Array(count), after: new Uint16Array(count) };
   for (let i = 0, j = 0; i < data.length; i++) {
-    const value = thresholdLabel(data[i], labels[i], range);
-    if (value === labels[i]) continue;
-    change.indices[j] = i; change.before[j] = labels[i]; change.after[j] = value;
-    labels[i] = value; j++;
+    const current=personalValue?(personalValue(i)??0):labels[i],value = thresholdLabel(data[i], current, range);
+    if (value === current) continue;
+    if (excluded?.(i)) continue;
+    change.indices[j] = i; change.before[j] = current; change.after[j] = value;
+    if(!deferErase||value!==0)labels[i] = value;j++;
   }
   return { change, matched };
 }
@@ -122,16 +126,18 @@ export function planePoint(axis: Axis, slice: number, u: number, v: number): [nu
   p[axis] = slice; p[a] = u; p[b] = v; return p;
 }
 export function paint(labels: Uint16Array, volume: Pick<Volume, 'dims' | 'spacing'>, axis: Axis, slice: number,
-  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number, recordTouches = false) {
+  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number, recordTouches = false, excluded?: (x:number,y:number)=>boolean,ownership?:{personalValue:(index:number,fallback:number)=>number|null;deferErase?:boolean}) {
   const [a, b] = planeAxes(axis), radius = diameter / 2;
   const du = radius / volume.spacing[a], dv = radius / volume.spacing[b];
   for (let y = Math.max(0, Math.ceil(v - dv)); y <= Math.min(volume.dims[b] - 1, Math.floor(v + dv)); y++) {
     for (let x = Math.max(0, Math.ceil(u - du)); x <= Math.min(volume.dims[a] - 1, Math.floor(u + du)); x++) {
       if (((x-u)*volume.spacing[a])**2 + ((y-v)*volume.spacing[b])**2 > radius**2) continue;
+      if(value && excluded?.(x,y)) continue;
       const i = indexOf(planePoint(axis, slice, x, y), volume.dims);
-      if ((!recordTouches && labels[i] === value) || (eraseOnly !== undefined && labels[i] !== eraseOnly)) continue;
-      if (!before.has(i)) before.set(i, labels[i]);
-      labels[i] = value;
+      const own=ownership?ownership.personalValue(i,labels[i]):labels[i],current=value===0&&ownership?own:labels[i];
+      if(current===null||(!recordTouches&&current===value)||(eraseOnly!==undefined&&current!==eraseOnly))continue;
+      if (!before.has(i)) before.set(i,own??0);
+      if(!ownership?.deferErase||value!==0)labels[i] = value;
     }
   }
 }

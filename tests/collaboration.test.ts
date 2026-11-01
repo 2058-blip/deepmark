@@ -12,6 +12,41 @@ const adminKey='test-only-administrator-key';
 function volume(){const bytes=new ArrayBuffer(368),v=new DataView(bytes);v.setInt32(0,348,true);v.setInt16(40,3,true);for(let a=0;a<3;a++){v.setInt16(42+a*2,2,true);v.setFloat32(80+a*4,1,true);}v.setInt16(70,4,true);v.setInt16(72,16,true);v.setFloat32(108,352,true);new Uint8Array(bytes,344,4).set([110,43,49,0]);return {bytes:Buffer.from(bytes),volume:parseNifti(bytes)};}
 function patch(entries:number[][]){const bytes=Buffer.alloc(entries.length*8);entries.sort((a,b)=>a[0]-b[0]).forEach(([i,b,a],n)=>{bytes.writeUInt32LE(i,n*8);bytes.writeUInt16LE(b,n*8+4);bytes.writeUInt16LE(a,n*8+6);});return bytes.toString('base64');}
 function values(state:any){const b=gunzipSync(Buffer.from(state.mask,'base64'));return [...new Uint16Array(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength))];}
+
+test('engineers can replace their own opinions but cannot erase another author through any operation channel',()=>{
+  const store=openCollaborationStore(':memory:',{adminKey});try{
+    const a=store.session('A').person,b=store.session('B').person,c=store.session('C').person,v=volume(),id=store.join('protected',v.bytes,v.volume).id;
+    const edit=(person:any,op:string,entries:number[][],extra={})=>store.apply(id,person,{op,baseRevision:store.state(id).revision,patch:patch(entries),...extra});
+    edit(a,'a-paint',[[0,0,1]]);store.label(id,b,{});store.label(id,c,{});
+    const denied=edit(b,'b-erase-foreign',[[0,1,0]]);assert.equal(denied.protectedCount,1);assert.equal(values(store.state(id))[0],1);assert.equal(store.state(id).regions.length,0);
+    edit(b,'b-opinion',[[0,1,2]]);edit(c,'c-opinion',[[0,1,3]]);edit(b,'b-withdraw-own',[[0,2,0]]);let state=store.state(id);assert.deepEqual(state.regions[0].annotations.map((row:any)=>row.author).sort(),[a.id,c.id].sort());assert.equal(values(state)[0],1);
+    edit(a,'a-withdraw-own',[[0,1,0]]);state=store.state(id);assert.equal(values(state)[0],3);assert.equal(state.regions.length,0);assert.equal(store.provenance(id,0,state.revision).author.id,c.id);
+    edit(b,'b-erase-again',[[0,3,0]],{kind:'undo'});assert.equal(values(store.state(id))[0],3);
+    edit(b,'b-own-second',[[1,0,2]]);const mixed=edit(b,'b-mixed-threshold',[[0,3,0],[1,2,0]]);assert.equal(mixed.protectedCount,1);assert.deepEqual(values(store.state(id)).slice(0,2),[3,0]);
+    assert.throws(()=>edit(b,'forged-review',[[0,3,0]],{review:true}),(error:any)=>error.status===403);assert.throws(()=>edit(b,'a-paint',[[0,3,0]]),(error:any)=>error.status===409);
+    const ownership=store.state(id,undefined,c.id);assert.equal(ownership.ownershipAuthor,c.id);assert.equal(gunzipSync(Buffer.from(ownership.ownedVoxels,'base64'))[0]&1,1);assert.equal(gunzipSync(Buffer.from(store.state(id,undefined,b.id).ownedVoxels,'base64'))[0]&1,0);
+    edit(c,'c-erase-own',[[0,3,0]]);assert.equal(values(store.state(id))[0],0);assert.equal(store.provenance(id,0,store.state(id).revision).author,null);
+  }finally{store.close();}
+});
+
+test('deleting a shared same-color claim preserves the other author without reviving withdrawn claims',()=>{
+  const store=openCollaborationStore(':memory:',{adminKey});try{
+    const a=store.session('A').person,b=store.session('B').person,v=volume(),id=store.join('same-color',v.bytes,v.volume).id;
+    const edit=(person:any,op:string,index:number,before:number,after:number)=>store.apply(id,person,{op,baseRevision:store.state(id).revision,patch:patch([[index,before,after]])});
+    edit(a,'a1',0,0,1);edit(b,'b1',0,1,1);edit(a,'a-remove',0,1,0);assert.equal(values(store.state(id))[0],1);assert.equal(store.provenance(id,0,store.state(id).revision).author.id,b.id);edit(b,'b-remove',0,1,0);assert.equal(values(store.state(id))[0],0);
+    edit(a,'a2',1,0,1);edit(b,'b2',1,1,1);edit(b,'b-withdraw',1,1,0);edit(a,'a-last',1,1,0);assert.equal(values(store.state(id))[1],0);
+  }finally{store.close();}
+});
+
+test('voxel provenance identifies ordinary and parallel authors at the requested revision',()=>{
+  const store=openCollaborationStore(':memory:',{adminKey});try{
+    const a=store.session('作者 A').person,b=store.session('作者 B').person,v=volume(),id=store.join('author-source',v.bytes,v.volume).id;
+    store.apply(id,a,{op:'source-a',baseRevision:0,patch:patch([[0,0,1]])});assert.equal(store.provenance(id,0,1).author.id,a.id);
+    store.label(id,b,{});assert.throws(()=>store.provenance(id,0,1),(error:any)=>error.status===409);assert.equal(store.provenance(id,0,1,true).author.id,a.id);assert.equal(store.provenance(id,0,0,true).author,null);
+    store.apply(id,b,{op:'source-b',baseRevision:2,patch:patch([[0,1,2]])});const current=store.provenance(id,0,3);assert.equal(current.label,1);assert.deepEqual(current.annotations.map((row:any)=>[row.name,row.label]).sort(),[['作者 A',1],['作者 B',2]]);
+    assert.equal(store.provenance(id,7,3).author,null);assert.throws(()=>store.provenance(id,8,3),(error:any)=>error.status===400);
+  }finally{store.close();}
+});
 test('one shared result preserves region-level parallel opinions, including sequential edits by different authors',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'deepmark-shared-')),filename=join(dir,'shared.sqlite');let store=openCollaborationStore(filename,{adminKey});
   try{

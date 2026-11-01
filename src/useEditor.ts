@@ -5,11 +5,14 @@ import { colors, download, initialSegments, readFile } from './view.ts';
 import type { Segment, Tool } from './view.ts';
 import {fillSliceRegion} from './sliceData.ts';
 import type {GrayMode} from './grayRegions.ts';
+import {ExteriorAirCache} from './exteriorAir.ts';
 import {annotationArchive} from './exportArchive.ts';
 
 export function useEditor() {
   const volume=shallowRef<Volume|null>(null),mask=shallowRef<Uint16Array>(new Uint16Array());
   const segments=ref<Segment[]>(initialSegments()),selected=ref(1),tool=ref<Tool>('paint');
+  const excludeAir=ref(true),airThreshold=ref(-900),zooms=ref([1,1,1]);
+  const airCache=computed(()=>volume.value&&excludeAir.value?new ExteriorAirCache(volume.value,airThreshold.value):null);
   const diameter=ref(8),opacity=ref(.45),point=ref([0,0,0]),revision=ref(0);
   const center=ref(40),width=ref(400),thresholdMin=ref('0'),thresholdMax=ref('100'),previewEnabled=ref(true);
   const showDatasets=ref(false),status=ref('打开 NIfTI 影像，开始分割标注'),busy=ref(false),dirty=ref(false);
@@ -23,10 +26,12 @@ export function useEditor() {
   const thresholdPreview=computed<ThresholdRange|null>(()=>tool.value==='threshold'&&thresholdValid.value&&previewEnabled.value&&active.value.visible?{minimum:minimum.value,maximum:maximum.value,label:selected.value}:null);
   // Publish edit transactions without making large voxel arrays deeply reactive.
   let onChange: ((change:Change,kind?:string)=>void)|null=null;
+  let personalValue:((index:number,fallback:number)=>number|null)|null=null,pendingErasure=false;
   function setChangeHandler(handler:typeof onChange){onChange=handler;}
+  function setPersonalValueHandler(handler:typeof personalValue){personalValue=handler;}
   function install(v:Volume){
     mask.value=new Uint16Array(v.data.length);history.value=[];future.value=[];pending.clear();
-    volume.value=v;point.value=v.dims.map(n=>Math.floor(n/2));segments.value=initialSegments();selected.value=1;
+    zooms.value=[1,1,1];volume.value=v;point.value=v.dims.map(n=>Math.floor(n/2));segments.value=initialSegments();selected.value=1;
     center.value=(v.min+v.max)/2;width.value=Math.max(1,v.max-v.min);dirty.value=false;revision.value++;
     thresholdMin.value=String(v.min+(v.max-v.min)*.75);thresholdMax.value=String(v.max);previewEnabled.value=true;tool.value='paint';
     status.value=`已加载 ${v.name} · ${v.dims.join(' × ')} 体素`;
@@ -44,34 +49,38 @@ export function useEditor() {
     while(history.value.length>1&&(bytes>64*1024*1024||history.value.length>80)){const c=history.value.shift()!;bytes-=c.indices.byteLength+c.before.byteLength+c.after.byteLength;}
     triggerRef(history);future.value=[];dirty.value=true;revision.value++;onChange?.(change);
   }
-  function startStroke(){pending.clear();strokeActive.value=true;}
+  function startStroke(){pending.clear();pendingErasure=!!onChange&&tool.value==='erase';strokeActive.value=true;}
   function pendingChange():Change|null{
     const pairs=[...pending].filter(([i,before])=>onChange||mask.value[i]!==before);if(!pairs.length)return null;
-    return {indices:Uint32Array.from(pairs.map(p=>p[0])),before:Uint16Array.from(pairs.map(p=>p[1])),after:Uint16Array.from(pairs.map(p=>mask.value[p[0]]))};
+    return {indices:Uint32Array.from(pairs.map(p=>p[0])),before:Uint16Array.from(pairs.map(p=>p[1])),after:Uint16Array.from(pairs.map(p=>pendingErasure?0:mask.value[p[0]]))};
   }
+  function pendingDisplayChange(){return pendingErasure?null:pendingChange();}
   function endStroke(){
     strokeActive.value=false;
     if(!pending.size)return;
     const pairs=[...pending].filter(([i,before])=>onChange||mask.value[i]!==before);pending.clear();if(!pairs.length)return;
-    rememberChange({indices:Uint32Array.from(pairs.map(p=>p[0])),before:Uint16Array.from(pairs.map(p=>p[1])),after:Uint16Array.from(pairs.map(p=>mask.value[p[0]]))});
+    rememberChange({indices:Uint32Array.from(pairs.map(p=>p[0])),before:Uint16Array.from(pairs.map(p=>p[1])),after:Uint16Array.from(pairs.map(p=>pendingErasure?0:mask.value[p[0]]))});
   }
   function stroke(axis:Axis,slice:number,u:number,v:number){
     if(!volume.value||busy.value||readOnly.value||editLocked.value)return;
     if(!active.value.visible){status.value='请先显示当前标签。';return;}
-    paint(mask.value,volume.value,axis,slice,u,v,diameter.value,tool.value==='erase'?0:selected.value,pending,tool.value==='erase'?selected.value:undefined,!!onChange);revision.value++;
+    if(tool.value!=='paint'&&tool.value!=='erase')return;
+    const excluded=airCache.value?.slice(axis,slice);const [a,b]=axis===2?[0,1]:axis===1?[0,2]:[1,2];
+    paint(mask.value,volume.value,axis,slice,u,v,diameter.value,tool.value==='erase'?0:selected.value,pending,tool.value==='erase'?selected.value:undefined,!!onChange,excluded?(x,y)=>!!excluded[x+volume.value!.dims[a]*(volume.value!.dims[b]-1-y)]:undefined,personalValue?{personalValue,deferErase:pendingErasure}:undefined);revision.value++;
   }
   async function runThreshold(){
     if(!volume.value||!thresholdValid.value||!active.value.visible||busy.value||readOnly.value||editLocked.value)return;
     endStroke();busy.value=true;status.value='正在对整套影像执行阈值分割…';
     try{
       await new Promise(resolve=>setTimeout(resolve,30));
-      const {change,matched}=applyThreshold(volume.value.data,mask.value,{minimum:minimum.value,maximum:maximum.value,label:selected.value});
+      const air=airCache.value;const {change,matched}=applyThreshold(volume.value.data,mask.value,{minimum:minimum.value,maximum:maximum.value,label:selected.value},air?(i)=>air.voxel(i):undefined,personalValue?(i)=>personalValue!(i,mask.value[i]):undefined,!!onChange);
       if(change)rememberChange(change);tool.value='paint';
       status.value=`阈值分割完成：${minimum.value}～${maximum.value}，选中 ${matched.toLocaleString()} 个体素，${change?'已更新当前标签，可撤销':'标注无需修改'}。`;
     }catch(error){status.value=`阈值分割失败：${(error as Error).message}`;}finally{busy.value=false;}
   }
   function selectRegion(axis:Axis,slice:number,pixels:Uint32Array){
     if(!volume.value||busy.value||readOnly.value||editLocked.value)return;if(!active.value.visible){status.value='请先显示当前标签。';return;}
+    const excluded=airCache.value?.slice(axis,slice);if(excluded)pixels=pixels.filter(i=>!excluded[i]);if(!pixels.length){status.value='外围空气已排除，没有需要写入的像素。';return;}
     try{const change=fillSliceRegion(mask.value,volume.value.dims,axis,slice,pixels,selected.value,!!onChange);if(change)rememberChange(change);status.value=`本切片灰度区域已加入“${active.value.name}”：${pixels.length.toLocaleString()} 个像素，可撤销。`;}
     catch(reason){status.value=(reason as Error).message;}
   }
@@ -79,7 +88,7 @@ export function useEditor() {
     if(readOnly.value||editLocked.value)return;
     endStroke();const from=redo?future:history,to=redo?history:future,change=from.value.pop();if(!change)return;
     const values=redo?change.after:change.before;const before=redo?change.before:change.after;
-    change.indices.forEach((i,k)=>{mask.value[i]=values[k];});to.value.push(change);triggerRef(from);triggerRef(to);
+    change.indices.forEach((i,k)=>{if(!onChange||values[k]!==0)mask.value[i]=values[k];});to.value.push(change);triggerRef(from);triggerRef(to);
     dirty.value=true;revision.value++;onChange?.({indices:change.indices,before,after:values},redo?'redo':'undo');
   }
   async function loadSegmentation(file?:File){
@@ -108,9 +117,9 @@ export function useEditor() {
     if((e.target as HTMLElement).matches('input,textarea,select')||busy.value||readOnly.value||editLocked.value||showDatasets.value)return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);}
     else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);}
-    else if(e.key.toLowerCase()==='b')tool.value='paint';else if(e.key.toLowerCase()==='e')tool.value='erase';else if(e.key.toLowerCase()==='v')tool.value='navigate';else if(e.key.toLowerCase()==='g')tool.value='region';
+    else if(e.key.toLowerCase()==='b')tool.value='paint';else if(e.key.toLowerCase()==='e')tool.value='erase';else if(e.key.toLowerCase()==='g')tool.value='region';
   }
   onMounted(()=>{window.addEventListener('beforeunload',before);window.addEventListener('keydown',key);});
   onBeforeUnmount(()=>{window.removeEventListener('beforeunload',before);window.removeEventListener('keydown',key);});
-  return {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,editLocked,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,install,canReplace,load,startStroke,endStroke,pendingChange,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler};
+  return {excludeAir,airThreshold,airCache,zooms,volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,editLocked,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,install,canReplace,load,startStroke,endStroke,pendingChange,pendingDisplayChange,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler,setPersonalValueHandler};
 }

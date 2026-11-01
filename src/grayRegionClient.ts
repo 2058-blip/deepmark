@@ -14,7 +14,7 @@ export class GrayRegionClient{
     };
     this.worker.onerror=()=>this.error('灰度预览计算未能启动，请重新打开页面。');
   }
-  prepare(data:Float32Array,width:number,height:number,mode:GrayMode,bandWidth:number){this.generation++;this.ready=false;this.busy=false;this.labels=null;this.lastRegion='';this.lastSeed=-1;this.selected=-1;const copy=data.slice().buffer;this.worker.postMessage({type:'prepare',generation:this.generation,data:copy,width,height,mode,bandWidth},[copy]);}
+  prepare(data:Float32Array,width:number,height:number,mode:GrayMode,bandWidth:number,excluded?:Uint8Array){this.generation++;this.ready=false;this.busy=false;this.labels=null;this.lastRegion='';this.lastSeed=-1;this.selected=-1;const copy=data.slice().buffer;this.worker.postMessage({type:'prepare',generation:this.generation,data:copy,width,height,mode,bandWidth,excluded},[copy]);}
   hover(seed:number){this.wanted=seed;this.send();}
   select(seed:number){this.wanted=seed;this.selected=++this.requestId;this.send();}
   clear(){this.wanted=-1;this.lastSeed=-1;this.lastRegion='';this.selected=-1;}

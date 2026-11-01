@@ -1,5 +1,6 @@
 import type {Axis,ThresholdRange,Volume} from './core.ts';
 import {sliceLayout,extractSlice} from './sliceData.ts';
+import type {ExteriorAirCache} from './exteriorAir.ts';
 import type {Segment} from './view.ts';
 export function grayPixels(values:Float32Array,center:number,width:number,target:Uint8ClampedArray){
   const low=center-width/2,scale=255/Math.max(width,1);for(let i=0,j=0;i<values.length;i++,j+=4){const gray=(values[i]-low)*scale;target[j]=gray;target[j+1]=gray;target[j+2]=gray;target[j+3]=255;}return target;
@@ -24,13 +25,13 @@ export class SliceRenderer{
     grayPixels(frame.values,center,width,this.scratch.data);frame.canvas.getContext('2d')!.putImageData(this.scratch,0,0);this.cache.set(slice,frame);this.builds++;
     while(this.pool.length>limit){const old=this.pool.pop()!;old.canvas.width=0;old.canvas.height=0;}return frame;
   }
-  labels(volume:Volume,axis:Axis,slice:number,mask:Uint16Array,segments:Segment[],threshold:ThresholdRange|null,parallel?:Map<number,number[]>){
+  labels(volume:Volume,axis:Axis,slice:number,mask:Uint16Array,segments:Segment[],threshold:ThresholdRange|null,parallel?:Map<number,number[]>,air?:ExteriorAirCache|null){
     const l=sliceLayout(volume,axis,slice),key=segments.map(s=>`${s.id}:${s.color}:${s.visible}`).join('|');
     if(key!==this.paletteKey){this.paletteKey=key;this.palette.fill(0);for(const s of segments)if(s.visible){const r=parseInt(s.color.slice(1,3),16),g=parseInt(s.color.slice(3,5),16),b=parseInt(s.color.slice(5,7),16);this.palette[s.id]=(r|(g<<8)|(b<<16)|0xff000000)>>>0;}}
     if(!this.overlayImage||this.overlayImage.width!==l.width||this.overlayImage.height!==l.height){this.overlay.width=l.width;this.overlay.height=l.height;this.overlayImage=this.overlayContext.createImageData(l.width,l.height);}
     const pixels=new Uint32Array(this.overlayImage.data.buffer);pixels.fill(0);const palette=this.palette,hasParallel=!!parallel?.size,data=volume.data;
     for(let y=0,j=0;y<l.height;y++){let index=l.base+(l.height-1-y)*l.stepY;for(let x=0;x<l.width;x++,j++,index+=l.stepX){
-      let label=mask[index];if(threshold)label=data[index]>=threshold.minimum&&data[index]<=threshold.maximum?threshold.label:label===threshold.label?0:label;
+      let label=mask[index];if(threshold){const target=data[index]>=threshold.minimum&&data[index]<=threshold.maximum?threshold.label:label===threshold.label?0:label;if(target!==label&&!air?.voxel(index))label=target;}
       const choices=!threshold&&hasParallel?parallel!.get(index):undefined;
       if(choices?.length){let r=0,g=0,b=0,n=0;for(const value of choices){const color=palette[value];if(color){r+=color&255;g+=(color>>>8)&255;b+=(color>>>16)&255;n++;}}if(n)pixels[j]=((Math.round(r/n))|(Math.round(g/n)<<8)|(Math.round(b/n)<<16)|(Math.round(255*n/choices.length)<<24))>>>0;}
       else pixels[j]=palette[label];

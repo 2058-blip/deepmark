@@ -40,7 +40,7 @@ export function openCollaborationStore(filename,{adminKey:configuredKey=process.
   for(const [name,type]of [['dataset_name',"TEXT NOT NULL DEFAULT ''"],['status',"TEXT NOT NULL DEFAULT 'editing'"],['finalized_by','TEXT'],['finalized_at','TEXT'],['final_revision','INTEGER']])if(!columns.has(name))db.exec(`ALTER TABLE projects ADD COLUMN ${name} ${type}`);
   const hasTable=name=>!!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(name);
   if(!db.prepare('PRAGMA table_info(shared_data)').all().some(c=>c.name==='revision')){db.exec('ALTER TABLE shared_data ADD COLUMN revision INTEGER NOT NULL DEFAULT 0; UPDATE shared_data SET revision=(SELECT revision FROM projects WHERE projects.id=shared_data.project);');}
-  const models=new Map();
+  const models=new Map(),historyModels=new Map();
   const initialLabels=[{id:1,name:'标注 1',color:'#4ed1ad'}];
   function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');models.clear();throw error;}}
   function getProject(id){const p=db.prepare('SELECT * FROM projects WHERE id=?').get(id);if(!p)fail('共享工程不存在。',404);return p;}
@@ -80,8 +80,9 @@ export function openCollaborationStore(filename,{adminKey:configuredKey=process.
       db.exec('DROP TABLE IF EXISTS branches; DROP TABLE IF EXISTS personal;');
     });
   }
-  function state(id,revision){
+  function readRevision(id,revision){
     const p=getProject(id);if(revision!==undefined&&(!Number.isInteger(revision)||revision<0||revision>p.revision))fail('修订记录不存在。',404);
+    const historyKey=`${id}:${revision}`;if(revision!==undefined&&revision<p.revision&&historyModels.has(historyKey))return {...historyModels.get(historyKey),latestRevision:p.revision};
     let model,labels=JSON.parse(p.labels),status=p.status,finalizedBy=p.finalized_by,finalizedAt=p.finalized_at,finalRevision=p.final_revision;
     if(revision===undefined||revision===p.revision)model=readModel(p);
     else{
@@ -95,7 +96,16 @@ export function openCollaborationStore(filename,{adminKey:configuredKey=process.
         }
       }
     }
-    return {id:p.id,datasetId:p.dataset,name:p.dataset_name,revision:revision??p.revision,latestRevision:p.revision,mask:zip(model.mask).toString('base64'),regions:model.regions,labels,status,finalizedBy,finalizedAt,finalRevision};
+    const result={id:p.id,datasetId:p.dataset,name:p.dataset_name,revision:revision??p.revision,latestRevision:p.revision,model,regions:model.regions,labels,status,finalizedBy,finalizedAt,finalRevision};
+    if(revision!==undefined&&revision<p.revision){historyModels.clear();historyModels.set(historyKey,result);}return result;
+  }
+  function state(id,revision,authorId){const {model,...result}=readRevision(id,revision);if(authorId){const bits=new Uint8Array(Math.ceil(model.mask.length/8)),code=model.authors.findIndex(author=>author.id===authorId)+1;if(code)for(let i=0;i<model.mask.length;i++)if(model.mask[i]&&model.owners[i]===code)bits[i>>>3]|=1<<(i&7);return {...result,mask:zip(model.mask).toString('base64'),ownershipAuthor:authorId,ownedVoxels:zip(bits).toString('base64')};}return {...result,mask:zip(model.mask).toString('base64')};}
+  function provenance(id,index,revision,historical=false){
+    const p=getProject(id);if(!Number.isInteger(index)||index<0||index>=p.count)fail('体素索引无效。',400);
+    if(!historical&&revision!==p.revision)fail('标注修订已更新，请重新查询作者。',409);
+    const result=readRevision(id,revision),model=result.model,author=model.authors[model.owners[index]-1]||null,annotations=[];
+    for(const region of model.regions)if(region.indices.includes(index))for(const row of region.annotations){const entry=row.values.find(([i])=>i===index);if(entry)annotations.push({author:row.author,name:row.name,label:entry[1]});}
+    return {projectId:id,index,revision:result.revision,label:model.mask[index],author,annotations};
   }
   function requireAdmin(person){if(person?.role!=='admin')fail('只有管理员可以审定、最终修改和定稿。',403);}
   function editable(p){if(p.status==='finalized')fail('该工程已定稿，请管理员重新开放后再编辑。',423);}
@@ -104,15 +114,15 @@ export function openCollaborationStore(filename,{adminKey:configuredKey=process.
     const revision=p.revision+1;db.prepare('INSERT INTO events VALUES(?,?,?,?,?,?,?,?)').run(p.id,revision,op,person.id,person.name,kind,new Date().toISOString(),pack({shared:true,...m,labels,status}));
     db.prepare('UPDATE projects SET revision=?,labels=?,status=? WHERE id=?').run(revision,JSON.stringify(labels),status,p.id);if(models.has(p.id))models.get(p.id).revision=revision;return revision;
   }
-  function eventDelta(id,row){const data=unpack(row.details);if(!data.shared)return null;return {type:'delta',projectId:id,revision:row.revision,op:row.op,author:row.author,name:row.name,kind:row.kind,time:row.time,patch:data.canonical||encodePatch(data.applied||[]),regions:data.regions,labels:data.labels,status:data.status,finalizedBy:data.finalizedBy,finalizedAt:data.finalizedAt,finalRevision:data.finalRevision};}
+  function eventDelta(id,row){const data=unpack(row.details);if(!data.shared)return null;return {type:'delta',projectId:id,revision:row.revision,op:row.op,author:row.author,name:row.name,kind:row.kind,time:row.time,patch:data.canonical||encodePatch(data.applied||[]),owners:(data.ownerUpdates||[]).map(([i,code])=>[i,data.authors[code-1]?.id||null]),regions:data.regions,labels:data.labels,status:data.status,finalizedBy:data.finalizedBy,finalizedAt:data.finalizedAt,finalRevision:data.finalRevision};}
   function delta(id,revision){const row=db.prepare('SELECT * FROM events WHERE project=? AND revision=?').get(id,revision);return row?eventDelta(id,row):null;}
   function resume(person){if(db.prepare('SELECT author FROM resume_keys WHERE author=?').get(person.id))return undefined;const key=randomBytes(32).toString('hex');db.prepare('INSERT INTO resume_keys VALUES(?,?,?)').run(person.id,person.name,digest(key));return key;}
   function recentAgreements(p,person,model,entries){
     const regionPoints=new Set(model.regions.flatMap(r=>r.indices)),wanted=new Set(entries.filter(([i,,after])=>model.mask[i]!==after&&model.authors[model.owners[i]-1]?.id===person.id&&!regionPoints.has(i)).map(([i])=>i)),found=new Map();
     if(!wanted.size)return found;
-    for(const row of db.prepare('SELECT author,name,details FROM events WHERE project=? ORDER BY revision DESC').all(p.id)){
+    const seen=new Set();for(const row of db.prepare('SELECT author,name,details FROM events WHERE project=? ORDER BY revision DESC').iterate(p.id)){
       const event=unpack(row.details);
-      if(row.author!==person.id&&event.intent){const b=Buffer.from(event.intent,'base64');for(let n=0;n<b.length;n+=8){const i=b.readUInt32LE(n);if(wanted.has(i)&&b.readUInt16LE(n+6)===model.mask[i]){found.set(i,{id:row.author,name:row.name});wanted.delete(i);}}}
+      if(event.intent){const b=Buffer.from(event.intent,'base64');for(let n=0;n<b.length;n+=8){const i=b.readUInt32LE(n),key=`${row.author}:${i}`;if(!wanted.has(i)||seen.has(key))continue;seen.add(key);if(row.author!==person.id&&b.readUInt16LE(n+6)===model.mask[i]){found.set(i,{id:row.author,name:row.name});wanted.delete(i);}}}
       if(row.author===person.id)for(const [i,,value]of event.applied||[])if(value===model.mask[i])wanted.delete(i);
       if(!wanted.size)break;
     }return found;
@@ -123,31 +133,31 @@ export function openCollaborationStore(filename,{adminKey:configuredKey=process.
     const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO people VALUES(?,?,?)').run(digest(token),person.id,person.name);person.role=db.prepare('SELECT role FROM roles WHERE author=?').get(person.id)?.role||'engineer';resumeKey??=resume(person);return {token,person,resumeKey};
   }
   const store={
-    close:()=>{models.clear();db.close();},resume,session,delta,
+    close:()=>{models.clear();historyModels.clear();db.close();},resume,session,delta,provenance,
     updates(id,after){const p=getProject(id);if(!Number.isSafeInteger(after)||after<0||after>p.revision)return {reset:true,revision:p.revision};const baseline=db.prepare('SELECT revision FROM shared_baselines WHERE project=?').get(id);if(after<baseline.revision)return {reset:true,revision:p.revision};const rows=db.prepare('SELECT * FROM events WHERE project=? AND revision>? AND revision<=? ORDER BY revision LIMIT 128').all(id,after,p.revision),events=rows.map(row=>eventDelta(id,row));return events.some(e=>!e)?{reset:true,revision:p.revision}:{revision:p.revision,events,more:rows.length===128&&rows.at(-1).revision<p.revision};},
     person(token){if(!token)return null;const p=db.prepare('SELECT id,name FROM people WHERE token=?').get(digest(token));return p?{...p,role:db.prepare('SELECT role FROM roles WHERE author=?').get(p.id)?.role||'engineer'}:null;},
     adminSession(key){if(typeof key!=='string'||!timingSafeEqual(Buffer.from(digest(key),'hex'),Buffer.from(digest(adminKey),'hex')))fail('管理员密钥不正确。',403);const result=session('管理员');db.prepare('INSERT OR REPLACE INTO roles VALUES(?,?)').run(result.person.id,'admin');result.person.role='admin';return result;},
     logout(token){if(token)db.prepare('DELETE FROM people WHERE token=?').run(digest(token));},
-    join(dataset,bytes,volume){const fingerprint=digest(bytes),id=digest(dataset+fingerprint).slice(0,32);
+    join(dataset,bytes,volume,authorId){const fingerprint=digest(bytes),id=digest(dataset+fingerprint).slice(0,32);
       if(!db.prepare('SELECT id FROM projects WHERE id=?').get(id))transaction(()=>{db.prepare('INSERT INTO projects(id,dataset,fingerprint,count,header,labels,dataset_name) VALUES(?,?,?,?,?,?,?)').run(id,dataset,fingerprint,volume.data.length,volume.header,JSON.stringify(initialLabels),volume.name);const m={mask:new Uint16Array(volume.data.length),owners:new Uint32Array(volume.data.length),authors:[],regions:[],dims:volume.dims};saveModel(id,m);db.prepare('INSERT INTO shared_baselines VALUES(?,?,?)').run(id,0,pack({...modelJSON(m),labels:initialLabels,status:'editing'}));});
       else if(!getProject(id).dataset_name)db.prepare('UPDATE projects SET dataset_name=? WHERE id=?').run(volume.name,id);
-      return state(id);
+      return state(id,undefined,authorId);
     },state,revision(id){return getProject(id).revision;},
     source(id,person){requireAdmin(person);const p=getProject(id);return {dataset:p.dataset,fingerprint:p.fingerprint,name:p.dataset_name};},
     projects(person){requireAdmin(person);return db.prepare('SELECT id,dataset AS datasetId,dataset_name AS name,revision,status,finalized_by AS finalizedBy,finalized_at AS finalizedAt FROM projects ORDER BY rowid DESC').all().map(p=>({...p,regions:readModel(getProject(p.id)).regions.length,contributors:db.prepare('SELECT author,name,COUNT(*) AS operations FROM events WHERE project=? GROUP BY author ORDER BY operations DESC').all(p.id)}));},
     history(id){getProject(id);return db.prepare('SELECT revision,op,author,name,kind,time FROM events WHERE project=? ORDER BY revision DESC LIMIT 100').all(id);},
-    label(id,person,body){return transaction(()=>{const p=getProject(id);editable(p);if(body.op){if(!validId(body.op))fail('操作编号无效。');const old=db.prepare('SELECT revision,details FROM events WHERE project=? AND op=?').get(id,body.op);if(old)return {revision:old.revision,label:unpack(old.details).labels.find(l=>l.id===body.id),duplicate:true};}
+    label(id,person,body){return transaction(()=>{const p=getProject(id);editable(p);if(body.op){if(!validId(body.op))fail('操作编号无效。');const old=db.prepare('SELECT revision,details,author FROM events WHERE project=? AND op=?').get(id,body.op);if(old){if(old.author!==person.id)fail('此操作编号属于另一作者。',409);return {revision:old.revision,label:unpack(old.details).labels.find(l=>l.id===body.id),duplicate:true};}}
       const labels=JSON.parse(p.labels);let label;if(body.id!==undefined){label=labels.find(l=>l.id===body.id);if(!label)fail('标签不存在。');}else{const next=Math.max(...labels.map(l=>l.id))+1;if(next>65535||labels.length>=64)fail('标签数量已达上限。');label={id:next,name:`标注 ${next}`,color:['#fb9f67','#859dff','#ed78b6','#e5d46f','#74c5f4'][(next-2)%5]};labels.push(label);}
       if(body.name!==undefined){if(typeof body.name!=='string'||!body.name.trim()||body.name.length>60)fail('标签名称无效。');label.name=body.name.trim();}if(body.color!==undefined){if(!/^#[a-f0-9]{6}$/i.test(body.color))fail('颜色无效。');label.color=body.color;}
       const m=readModel(p),revision=saveEvent(p,person,body.op||randomUUID(),'标签设置',{applied:[],ownerUpdates:[],regions:m.regions,authors:m.authors},labels);return {revision,label};
     });},
     apply(id,person,body){return transaction(()=>{
       if(body.key!==undefined&&(typeof body.key!=='string'||!body.key.startsWith(person.id+':'+id+':')))fail('操作属于另一作者，请恢复原身份后续传。',401);if(!validId(body.op))fail('操作编号无效。');
-      const old=db.prepare('SELECT revision FROM events WHERE project=? AND op=?').get(id,body.op);if(old)return {revision:old.revision,duplicate:true};
+      const old=db.prepare('SELECT revision,author FROM events WHERE project=? AND op=?').get(id,body.op);if(old){if(old.author!==person.id)fail('此操作编号属于另一作者。',409);return {revision:old.revision,duplicate:true};}
       const p=getProject(id);editable(p);if(body.baseRevision>p.revision)fail('客户端修订号无效。');if(body.review)requireAdmin(person);
       const entries=decodePatch(body,p.count),allowed=new Set([0,...JSON.parse(p.labels).map(l=>l.id)]);if(entries.some(([,before,after])=>!allowed.has(before)||!allowed.has(after)))fail('编辑包含未知标签。');
       const model=readModel(p),result=applyShared(model,person,entries,{review:!!body.review,agreements:body.review?new Map():recentAgreements(p,person,model,entries)});
-      const revision=saveEvent(p,person,body.op,body.review?'管理员最终修改':body.kind==='undo'?'撤销':body.kind==='redo'?'重做':'标注',{intent:body.patch,canonical:encodePatch(entries.map(([i,before])=>[i,before,model.mask[i]])),applied:result.applied,ownerUpdates:result.ownerUpdates,regions:result.model.regions,authors:result.model.authors});return {revision,parallelCount:result.conflictCount};
+      const revision=saveEvent(p,person,body.op,body.review?'管理员最终修改':body.kind==='undo'?'撤销':body.kind==='redo'?'重做':'标注',{intent:body.patch,canonical:encodePatch(entries.map(([i,before])=>[i,before,model.mask[i]])),applied:result.applied,ownerUpdates:result.ownerUpdates,regions:result.model.regions,authors:result.model.authors});return {revision,parallelCount:result.conflictCount,protectedCount:result.protectedCount};
     });},
     resolve(id,person,body){requireAdmin(person);return transaction(()=>{const p=getProject(id);editable(p);exact(p,body);if(body.label!==undefined&&![0,...JSON.parse(p.labels).map(l=>l.id)].includes(body.label))fail('标签无效。');const result=resolveRegion(readModel(p),person,body);return {revision:saveEvent(p,person,randomUUID(),'管理员审定并列标注',{applied:result.applied,ownerUpdates:result.ownerUpdates,regions:result.model.regions,authors:result.model.authors})};});},
     finalize(id,person,body){requireAdmin(person);return transaction(()=>{const p=getProject(id);editable(p);exact(p,body);const m=readModel(p);if(m.regions.length)fail('仍有并列标注未审定，暂不能定稿。',409);const time=new Date().toISOString(),revision=saveEvent(p,person,randomUUID(),'管理员定稿',{applied:[],ownerUpdates:[],regions:[],authors:m.authors,finalizedBy:person.name,finalizedAt:time,finalRevision:p.revision+1},JSON.parse(p.labels),'finalized');db.prepare('UPDATE projects SET finalized_by=?,finalized_at=?,final_revision=? WHERE id=?').run(person.name,time,revision,id);db.prepare('INSERT INTO final_results VALUES(?,?,?,?,?,?)').run(id,revision,person.id,person.name,time,niftiBytes(p.header,m.mask));return {revision};});},
@@ -184,17 +194,18 @@ export function attachCollaboration(server,{store,resolveDataset,json}){
       }
       if(!person)fail('请先登录团队。',401);if(req.headers['x-deepmark-author']&&req.headers['x-deepmark-author']!==person.id)fail('当前登录身份已变化，请恢复原作者身份。',401);
       if(path==='/logout'&&req.method==='POST'){const token=sessionToken(req);store.logout(token);for(const ws of wss.clients)if(ws.session===digest(token))ws.close();res.setHeader('Set-Cookie','deepmark_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');json(res,200,{ok:true});return true;}
-      if(path==='/projects'&&req.method==='POST'){const data=await body(req),dataset=await resolveDataset(data.datasetId);if(!dataset)fail('数据集不存在。',404);json(res,200,store.join(data.datasetId,dataset.bytes,dataset.volume));return true;}
+      if(path==='/projects'&&req.method==='POST'){const data=await body(req),dataset=await resolveDataset(data.datasetId);if(!dataset)fail('数据集不存在。',404);json(res,200,store.join(data.datasetId,dataset.bytes,dataset.volume,person.id));return true;}
       if(path==='/admin/projects'&&req.method==='GET'){json(res,200,{projects:store.projects(person)});return true;}
       const source=/^\/admin\/projects\/([a-f0-9]{32})\/source$/.exec(path);
       if(source&&req.method==='GET'){const info=store.source(source[1],person),dataset=await resolveDataset(info.dataset);if(!dataset||digest(dataset.bytes)!==info.fingerprint)fail('原始影像已移除或替换，不能用另一份影像进行审核。',410);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':dataset.bytes.length,'Content-Disposition':`attachment; filename="source.nii"; filename*=UTF-8''${encodeURIComponent(info.name||'source.nii')}`,'Cache-Control':'no-store'});res.end(dataset.bytes);return true;}
-      const match=/^\/projects\/([a-f0-9]{32})(?:\/(history|events|operations|labels|export|resolve|finalize|reopen|workspace|workspace\/export))?$/.exec(path);if(!match)fail('接口不存在。',404);const [,id,action]=match;
+      const match=/^\/projects\/([a-f0-9]{32})(?:\/(history|events|operations|labels|provenance|export|resolve|finalize|reopen|workspace|workspace\/export))?$/.exec(path);if(!match)fail('接口不存在。',404);const [,id,action]=match;
       if(action?.startsWith('workspace'))fail('作者个人空间已取消，请使用统一共享成果。',410);
       if(req.method==='GET'){
-        if(action==='history')json(res,200,{events:store.history(id)});
+        if(action==='provenance'){if(!url.searchParams.has('index')||!url.searchParams.has('revision'))fail('需要体素索引与修订号。',400);json(res,200,store.provenance(id,Number(url.searchParams.get('index')),Number(url.searchParams.get('revision')),url.searchParams.get('historical')==='1'));}
+        else if(action==='history')json(res,200,{events:store.history(id)});
         else if(action==='events')json(res,200,store.updates(id,Number(url.searchParams.get('after'))));
         else if(action==='export'){const result=store.export(id,url.searchParams.has('revision')?Number(url.searchParams.get('revision')):undefined);res.writeHead(200,{'Content-Type':result.type,'Content-Length':result.bytes.length,'Content-Disposition':`attachment; filename="deepmark-${id}-r${result.revision}.${result.extension}"`,'Cache-Control':'no-store'});res.end(result.bytes);}
-        else if(!action){const current=store.revision(id);if(!url.searchParams.has('revision')&&url.searchParams.has('ifRevision')&&Number(url.searchParams.get('ifRevision'))===current)json(res,200,{unchanged:true,revision:current});else json(res,200,store.state(id,url.searchParams.has('revision')?Number(url.searchParams.get('revision')):undefined));}else fail('接口不存在。',404);
+        else if(!action){const current=store.revision(id);if(!url.searchParams.has('revision')&&url.searchParams.has('ifRevision')&&Number(url.searchParams.get('ifRevision'))===current)json(res,200,{unchanged:true,revision:current});else json(res,200,store.state(id,url.searchParams.has('revision')?Number(url.searchParams.get('revision')):undefined,person.id));}else fail('接口不存在。',404);
       }else if(['operations','labels','resolve','finalize','reopen'].includes(action)){const data=await body(req),method={operations:'apply',labels:'label',resolve:'resolve',finalize:'finalize',reopen:'reopen'}[action],result=store[method](id,person,data),event=result.duplicate?store.delta(id,result.revision):broadcast(id,result.revision);json(res,200,{...result,delta:event});}else fail('接口不存在。',404);
     }catch(error){if(!res.headersSent)json(res,error.status||500,{error:error.status?error.message:'协同服务处理失败，请重试。'});else res.destroy();}return true;
   };

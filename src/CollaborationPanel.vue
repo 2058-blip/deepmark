@@ -20,7 +20,7 @@ function labelSummary(row:ParallelAnnotation){const ids=[...new Set(row.values.m
       </div>
       <p v-if="offlineSource" class="collaboration-error">当前显示本地缓存，联网后会获取共享完整成果并提交待上传操作。</p>
       <p v-if="project!.status==='finalized'" class="final-status">已由 {{project!.finalizedBy}} 定稿。当前仅可查看和导出。</p>
-      <p v-else>共同编辑一份成果，不同意见在对应区域并列保留。点击条目可定位查看。</p>
+      <p v-else>同一区域可提交自己的标注，其他作者的意见会保留。只能删除自己的标注。</p>
       <div v-if="project!.regions.length" class="parallel-regions"><header><strong>并列标注 · {{project!.regions.length}} 处区域</strong><button v-if="highlightAnnotation" @click="highlightAnnotation=null">显示全部意见</button></header>
         <article v-for="(region,index) in project!.regions" :key="region.id" class="parallel-region"><div class="region-heading"><button @click="focusRegion(region)">定位区域 {{index+1}}</button><span>{{region.indices.length.toLocaleString()}} 个体素</span></div>
           <div v-for="annotation in region.annotations" :key="annotation.id" :class="['parallel-annotation',{highlighted:highlightAnnotation===annotation.id}]"><button class="parallel-choice" @click="focusRegion(region,annotation.id)"><strong>{{annotation.name}}</strong><span>{{labelSummary(annotation)}} · {{annotation.values.length}} 个体素</span></button></div>

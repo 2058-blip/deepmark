@@ -1,0 +1,3 @@
+export function sliceBox(size:number[],nx:number,ny:number,sx:number,sy:number,zoom=1){const scale=Math.min((size[0]-36)/(nx*sx),(size[1]-36)/(ny*sy))*zoom,w=nx*sx*scale,h=ny*sy*scale;return {nx,ny,w,h,ox:(size[0]-w)/2,oy:(size[1]-h)/2};}
+export function sliceCoords(box:ReturnType<typeof sliceBox>,x:number,y:number):[number,number]|null{const g=box;if(x<g.ox||x>=g.ox+g.w||y<g.oy||y>=g.oy+g.h)return null;return [Math.min(g.nx-1,Math.max(0,(x-g.ox)/g.w*g.nx-.5)),Math.min(g.ny-1,Math.max(0,g.ny-.5-(y-g.oy)/g.h*g.ny))];}
+export function dragZoom(initial:number,startY:number,currentY:number){return Math.max(.25,Math.min(8,initial*Math.exp((startY-currentY)/180)));}

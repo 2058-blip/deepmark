@@ -12,14 +12,14 @@ import type { Tool } from './view.ts';
 import { download,inputValue } from './view.ts';
 import {cacheDataset} from './localCache.ts';
 const editor=useEditor();
-const {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,viewBusy:busy,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,canReplace,load,startStroke,endStroke,stroke,runThreshold,undo,loadSegmentation}=editor;
+const {excludeAir,airThreshold,airCache,zooms,volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,viewBusy:busy,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,canReplace,load,startStroke,endStroke,stroke,runThreshold,undo,loadSegmentation}=editor;
 const collaboration=useCollaboration(editor);
 const {active:collaborating,queueCount,unsaved,showDrafts,drafts,parallelMap,project}=collaboration;
 const datasetId=ref<string|null>(null);
 const datasetOpening=ref(false),editingBlocked=computed(()=>busy.value||datasetOpening.value||!!datasetId.value&&!collaborating.value);
 watch(editingBlocked,value=>{editor.editLocked.value=value;},{immediate:true});
 const fileInput=ref<HTMLInputElement|null>(null),segInput=ref<HTMLInputElement|null>(null);
-const tools:{id:Tool;icon:string;label:string}[]=[{id:'paint',icon:'✎',label:'画笔'},{id:'erase',icon:'▱',label:'橡皮擦'},{id:'navigate',icon:'⌖',label:'定位'},{id:'threshold',icon:'◒',label:'阈值'},{id:'region',icon:'◌',label:'灰度分区'}];
+const tools:{id:Tool;icon:string;label:string}[]=[{id:'paint',icon:'✎',label:'画笔'},{id:'erase',icon:'▱',label:'橡皮擦'},{id:'threshold',icon:'◒',label:'阈值'},{id:'region',icon:'◌',label:'灰度分区'}];
 const axes:Axis[]=[2,1,0];
 async function chooseFile(event:Event,seg=false){const element=event.target as HTMLInputElement,file=element.files?.[0];element.value='';if(seg)await loadSegmentation(file);else{if(collaborating.value&&!await collaboration.switchDataset())return;if(await load(file))datasetId.value=null;}}
 async function loadServerResult(){if(!datasetId.value)return false;datasetOpening.value=true;try{const ok=await collaboration.openProject(datasetId.value);if(!ok)status.value=`团队标注加载失败：${collaboration.error.value}`;return ok;}finally{datasetOpening.value=false;}}
@@ -37,6 +37,7 @@ function exportMask(){if(collaborating.value)collaboration.exportServer();else e
 async function demo(){if(collaborating.value&&!await collaboration.switchDataset())return;if(canReplace()){datasetId.value=null;editor.install(makeDemo());}}
 function setWindow(event:Event,which:'center'|'width'){const value=Number(inputValue(event));if(!Number.isFinite(value)||(which==='width'&&value<1))return;if(which==='width')width.value=value;else center.value=value;}
 function fullWindow(){if(volume.value){center.value=(volume.value.min+volume.value.max)/2;width.value=Math.max(1,volume.value.max-volume.value.min);}}
+function setAirThreshold(event:Event){const raw=inputValue(event);const n=Number(raw);if(raw.trim()!==''&&Number.isFinite(n))airThreshold.value=n;}
 function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number.isFinite(n)&&n>=.1)regionWidth.value=n;}
 </script>
 <template>
@@ -51,7 +52,7 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
       <div class="section-heading">分割标签<button aria-label="新增标签" :disabled="!volume||editingBlocked||segments.length>=64" @click="addSegment">＋</button></div>
       <div class="segment-list"><div v-for="s in segments" :key="s.id" :class="['segment',{selected:selected===s.id}]" @click="selected=s.id"><input v-model="s.color" :disabled="editingBlocked" :aria-label="`${s.name}颜色`" type="color" @change="updateLabel(s)"/><input v-model="s.name" :disabled="editingBlocked" :aria-label="`标签 ${s.id}名称`" maxlength="60" @change="updateLabel(s)"/><button :title="s.visible?'隐藏标注':'显示标注'" :aria-label="s.visible?'隐藏标注':'显示标注'" @click.stop="s.visible=!s.visible">{{s.visible?'◉':'○'}}</button></div></div>
       <label class="range-label">标注透明度<span>{{Math.round(opacity*100)}}%</span><input v-model.number="opacity" type="range" min="0" max="1" step=".05"/></label>
-      <div class="section-heading">标注工具<small>B / E / V / G</small></div>
+      <div class="section-heading">标注工具<small>B / E / G</small></div>
       <div class="tools"><button v-for="t in tools" :key="t.id" :aria-label="t.label" :disabled="!volume||editingBlocked" :class="{active:tool===t.id}" @click="tool=t.id"><b aria-hidden="true">{{t.icon}}</b>{{t.label}}</button></div>
       <div v-if="tool==='threshold'&&volume" class="threshold-panel">
         <div class="section-heading">灰度阈值<small>整套三维影像</small></div><p class="hint">影像灰度范围：{{volume.min.toLocaleString()}} ～ {{volume.max.toLocaleString()}}。使用原始灰度，与窗宽窗位无关。</p>
@@ -60,7 +61,8 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
         <p v-if="!thresholdValid" class="field-error" role="alert">请输入有效范围，最小值不能大于最大值。</p><p v-if="!active.visible" class="field-error">请先显示当前标签，再预览或应用。</p>
         <label class="preview-toggle"><input v-model="previewEnabled" type="checkbox"/>预览选区（尚未写入标注）</label><p class="hint">应用后，以此范围替换当前标签；范围内覆盖其他标签，范围外保留其他标签。包含上下限，可一次撤销。</p><button class="primary" :disabled="!thresholdValid||!active.visible||editingBlocked" @click="runThreshold">应用阈值分割</button>
       </div>
-      <template v-else><label class="range-label">画笔直径<span>{{diameter}} {{volume?.unit||'mm'}}</span><input v-model.number="diameter" type="range" min="1" max="50"/></label><p class="hint">画笔覆盖其他标签；橡皮擦只擦除当前标签。先显示当前标签，再进行编辑。</p></template>
+      <template v-else><label class="range-label">画笔直径<span>{{diameter}} {{volume?.unit||'mm'}}</span><input v-model.number="diameter" type="range" min="1" max="50"/></label><p class="hint">{{collaborating?'同一区域修改会保留他人意见；橡皮只删除自己在当前标签中的标注。':'画笔覆盖其他标签；橡皮只擦除当前标签。'}}先显示当前标签，再进行编辑。</p></template>
+      <div class="gray-settings"><label class="preview-toggle"><input v-model="excludeAir" type="checkbox"/>排除外围空气</label><label v-if="excludeAir">空气上限<input aria-label="空气上限" type="number" :value="airThreshold" @input="setAirThreshold($event)"/></label><p class="hint">排除与当前切片边界连通的低灰度空气，保留内部气腔。阈值分割按原始 K 平面逐层识别；已有标注保留，仍可擦除。</p></div>
       <div class="gray-settings"><label class="preview-toggle"><input v-model="hoverPreview" type="checkbox" :disabled="!volume"/>悬停显示灰度区域轮廓</label><label>分区方式<select v-model="regionMode" aria-label="灰度分区方式" :disabled="!volume"><option value="bands">灰度区间分区</option><option value="level">悬停灰度等值区域</option></select></label><label v-if="regionMode==='bands'">灰度区间宽度<input aria-label="灰度区间宽度" type="number" min=".1" step="1" :value="regionWidth" :disabled="!volume" @input="setRegionWidth"/></label><p class="hint">黄色轮廓仅为预览。选择“灰度分区”，点击轮廓内区域可加入当前标签，仅作用于当前切片。</p></div>
       <div class="history"><button :disabled="!history.length||editingBlocked" @click="undo()">↶ 撤销</button><button :disabled="!future.length||editingBlocked" @click="undo(true)">↷ 重做</button></div>
       <div class="section-heading">影像显示</div><div class="window-inputs"><label>窗位<input type="number" :disabled="!volume" :value="center" @input="setWindow($event,'center')"/></label><label>窗宽<input type="number" min="1" :disabled="!volume" :value="width" @input="setWindow($event,'width')"/></label></div>
@@ -70,9 +72,9 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
       <div class="main-heading"><div><span class="eyebrow">SEGMENT EDITOR</span><h1>{{volume?'三切面标注':'从一份影像开始'}}</h1></div><span class="state">{{dirty?'● 有未导出的修改':volume?'● 就绪':'等待导入'}}</span></div>
       <CollaborationPanel :dataset-id="datasetId" :collaboration="collaboration" @login="loginTeam" @reload="loadServerResult"/>
       <template v-if="volume">
-        <div class="notice">{{volume.oblique?'此影像为斜切或方向信息未定义：按原始 I/J/K 体素平面显示，未重采样为标准解剖切面。':'按影像空间方向标注切面与方位，保持原始体素网格。'}} 滚轮切片 · 定位工具联动十字线</div>
+        <div class="notice">{{volume.oblique?'此影像为斜切或方向信息未定义：按原始 I/J/K 体素平面显示，未重采样为标准解剖切面。':'按影像空间方向标注切面与方位，保持原始体素网格。'}} 滚轮切片 · Ctrl + 按住右键上下拖动缩放</div>
         <div v-if="thresholdPreview" class="threshold-notice">正在预览阈值 {{minimum.toLocaleString()}} ～ {{maximum.toLocaleString()}} · 点击“应用阈值分割”才会写入标注。导出不包含未应用的预览。</div>
-        <div class="views"><SliceView v-for="axis in axes" :key="axis" :volume="volume" :mask="mask" :axis="axis" :point="point" :revision="revision" :segments="segments" :opacity="opacity" :center="center" :width="width" :tool="tool" :diameter="diameter" :threshold-preview="thresholdPreview" :parallel-map="collaborating?parallelMap:undefined" :hover-preview="hoverPreview" :region-width="regionWidth" :region-mode="regionMode" :allow-edit="!editingBlocked" @point="point=$event" @start="startStroke" @end="endStroke" @stroke="stroke" @region="selectRegion"/></div>
+        <div class="views"><SliceView v-for="axis in axes" :key="axis" :volume="volume" :mask="mask" :axis="axis" :point="point" :revision="revision" :segments="segments" :opacity="opacity" :center="center" :width="width" :tool="tool" :diameter="diameter" :threshold-preview="thresholdPreview" :parallel-map="collaborating?parallelMap:undefined" :hover-preview="hoverPreview" :region-width="regionWidth" :region-mode="regionMode" :allow-edit="!editingBlocked" :air-cache="airCache" :zoom="zooms[axis]" :provenance="collaborating?collaboration.provenance:undefined" :provenance-key="`${project?.id}:${project?.revision}:${revision}`" @zoom="zooms[axis]=$event" @point="point=$event" @start="startStroke" @end="endStroke" @stroke="stroke" @region="selectRegion"/></div>
         <div class="info-bar"><span>当前标签<i :style="{background:active.color}"/>{{active.name}} · 值 {{selected}}</span><span>体素 I {{point[0]+1}} / J {{point[1]+1}} / K {{point[2]+1}}</span><span>灰度 {{volume.data[indexOf(point,volume.dims)].toFixed(1)}}</span></div>
       </template>
       <div v-else class="empty"><div class="empty-visual"><div/><div/><span>＋</span></div><h2>让影像成为可编辑的标注</h2><p>导入三维 NIfTI 影像，在三个切面上绘制分割。<br/>文件在本机处理，无需上传。</p><button :disabled="busy" class="primary" @click="fileInput?.click()">选择 NIfTI 文件</button><button :disabled="busy" class="server-open-button" @click="showDatasets=true">从服务器选择数据集</button><button :disabled="busy" class="text-button" @click="demo">先用合成影像体验 →</button><small>支持三维灰度 NIfTI-1 · 不支持时间序列</small></div>

@@ -20,8 +20,9 @@ function encode(change:Change){
   const order=Array.from(change.indices.keys()).sort((a,b)=>change.indices[a]-change.indices[b]),bytes=new Uint8Array(order.length*8),view=new DataView(bytes.buffer);
   order.forEach((k,n)=>{view.setUint32(n*8,change.indices[k],true);view.setUint16(n*8+4,change.before[k],true);view.setUint16(n*8+6,change.after[k],true);});return base64(bytes);
 }
-function applyLocal(mask:Uint16Array,patch:string){const bytes=Uint8Array.from(atob(patch),c=>c.charCodeAt(0)),view=new DataView(bytes.buffer);for(let n=0;n<bytes.length;n+=8)mask[view.getUint32(n,true)]=view.getUint16(n+6,true);}
-async function inflate(value:string){const raw=Uint8Array.from(atob(value),c=>c.charCodeAt(0)),bytes=await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();return new Uint16Array(bytes);}
+function applyLocal(mask:Uint16Array,patch:string,preserveErase=false){const bytes=Uint8Array.from(atob(patch),c=>c.charCodeAt(0)),view=new DataView(bytes.buffer);for(let n=0;n<bytes.length;n+=8){const value=view.getUint16(n+6,true);if(!preserveErase||value!==0)mask[view.getUint32(n,true)]=value;}}
+async function inflateBytes(value:string){const raw=Uint8Array.from(atob(value),c=>c.charCodeAt(0));return new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
+async function inflate(value:string){const bytes=await inflateBytes(value);return new Uint16Array(bytes.buffer);}
 async function deflate(value:ArrayBuffer){const bytes=await new Response(new Blob([value]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();return base64(new Uint8Array(bytes));}
 export function useCollaboration(editor:ReturnType<typeof useEditor>){
   const nickname=ref(''),person=shallowRef<Person|null>(null),project=shallowRef<Project|null>(null),history=ref<History[]>([]),historical=ref<number|null>(null);
@@ -32,11 +33,21 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   const active=computed(()=>!!project.value),unsaved=computed(()=>queueCount.value>0||!!error.value||!!cacheError.value);
   const parallelMap=computed(()=>{const map=new Map<number,number[]>();for(const region of project.value?.regions||[])for(const row of region.annotations)for(const [i,label]of row.values){if(highlightAnnotation.value&&row.id===highlightAnnotation.value)map.set(i,[label]);else if(!highlightAnnotation.value){const values=map.get(i)||[];if(!values.includes(label))values.push(label);map.set(i,values);}}return map;});
   let queue:Operation[]=[],socket:WebSocket|null=null,reconnect:ReturnType<typeof setTimeout>|null=null,retry:ReturnType<typeof setTimeout>|null=null,fetching=false,sending=false,epoch=0,stopped=true,persist=Promise.resolve(),partialId:string|null=null,cacheGeneration=0,lastFetchedRevision=-1;
-  type Reply={revision:number;parallelCount?:number;duplicate?:boolean;delta?:LiveDelta;serverMs?:number};
+  type Reply={revision:number;parallelCount?:number;protectedCount?:number;duplicate?:boolean;delta?:LiveDelta;serverMs?:number};
+  let ownershipBits=new Uint8Array(),ownershipKnown=false,regionSource:Project['regions']|null=null,ownOpinions=new Map<number,number>();
+  const patchViews=new WeakMap<Operation,DataView>();
   const acknowledged=new Set<string>(),incoming=new Map<number,LiveDelta>();
   const waiting=new Map<string,{resolve:(reply:Reply)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
   let catchingUp=false,cacheTimer:ReturnType<typeof setTimeout>|null=null,cacheWriting=false;
   const request=<T>(path:string,data?:unknown)=>api<T>(path,data,person.value?.id);
+  async function readOwnership(state:Project){if(state.ownershipAuthor!==person.value?.id||!state.ownedVoxels)return null;const bits=await inflateBytes(state.ownedVoxels);if(bits.length!==Math.ceil(editor.mask.value.length/8))throw new Error('标注权限尺寸不一致。');return bits;}
+  function pendingValue(index:number):number|undefined{for(let n=queue.length-1;n>=0;n--){const op=queue[n];if(op.label||acknowledged.has(op.op))continue;let patch=patchViews.get(op);if(!patch){const bytes=Uint8Array.from(atob(op.patch),c=>c.charCodeAt(0));patch=new DataView(bytes.buffer);patchViews.set(op,patch);}let lo=0,hi=patch.byteLength/8;while(lo<hi){const mid=(lo+hi)>>>1;if(patch.getUint32(mid*8,true)<index)lo=mid+1;else hi=mid;}if(lo*8<patch.byteLength&&patch.getUint32(lo*8,true)===index)return patch.getUint16(lo*8+6,true);}return undefined;}
+  function personalValue(index:number,fallback:number):number|null{
+    const pending=pendingValue(index);if(pending!==undefined)return pending||null;
+    const regions=project.value?.regions;if(regions!==regionSource){regionSource=regions||null;ownOpinions=new Map();for(const region of regions||[])for(const row of region.annotations)if(row.author===person.value?.id)for(const [i,value]of row.values)ownOpinions.set(i,value);}
+    if(ownOpinions.has(index))return ownOpinions.get(index)||null;
+    return ownershipKnown&&(ownershipBits[index>>>3]&(1<<(index&7)))?fallback:null;
+  }
   const draftKey=()=>person.value&&project.value?`${person.value.id}:${project.value.id}`:'';
   const captureSignatures=new WeakMap<Draft,string>();let lastFullSignature='';
   const fullSignature=()=>`${draftKey()}:${editor.revision.value}:${project.value?.revision}:${queue.length}:${JSON.stringify(editor.segments.value)}`;
@@ -60,14 +71,14 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     try{const identity=(await allIdentities()).find(item=>item.name===nickname.value.trim());if(identity)await ensureSession(identity);else await rememberIdentity(await api('/session',{name:nickname.value}));return true;}
     catch(reason){error.value=(reason as Error).message;return false;}finally{joining.value=false;}
   }
-  function view():ViewState{return {point:[...editor.point.value],selected:editor.selected.value,center:editor.center.value,width:editor.width.value,diameter:editor.diameter.value,opacity:editor.opacity.value,tool:editor.tool.value,regionWidth:editor.regionWidth.value,regionMode:editor.regionMode.value,hoverPreview:editor.hoverPreview.value};}
+  function view():ViewState{return {point:[...editor.point.value],selected:editor.selected.value,center:editor.center.value,width:editor.width.value,diameter:editor.diameter.value,opacity:editor.opacity.value,tool:editor.tool.value,regionWidth:editor.regionWidth.value,regionMode:editor.regionMode.value,hoverPreview:editor.hoverPreview.value,zooms:[...editor.zooms.value],excludeAir:editor.excludeAir.value,airThreshold:editor.airThreshold.value};}
   function operation(change:Change,kind='edit',id:string=operationId()):Operation{
     return {key:`${draftKey()}:${id}`,project:project.value!.id,op:id,baseRevision:project.value!.revision,patch:encode(change),kind,created:Date.now(),review:false};
   }
   function capture():Draft|null{
     if(!project.value||!person.value||!editor.volume.value||historical.value!==null)return null;
     const partial=editor.pendingChange();if(!partial)partialId=null;else partialId??=operationId();
-    const draft:Draft={key:draftKey(),author:{...person.value},project:{...structuredClone(project.value),mask:''},name:editor.volume.value.name,mask:editor.mask.value.slice().buffer,segments:editor.segments.value.map(s=>({...s})),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
+    const draft:Draft={key:draftKey(),author:{...person.value},project:{...structuredClone(project.value),mask:''},name:editor.volume.value.name,mask:editor.mask.value.slice().buffer,ownedMask:ownershipKnown?ownershipBits.slice().buffer:undefined,segments:editor.segments.value.map(s=>({...s})),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
   }
   function persistWrite(draft:Draft|null,op?:Operation,removeOp?:string){
     const operations=queue.map(item=>({...item}));
@@ -80,8 +91,8 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   function scheduleCache(){if(cacheTimer||cacheWriting||!active.value)return;const token=epoch;cacheTimer=setTimeout(()=>{cacheTimer=null;if(token!==epoch)return;cacheWriting=true;void cacheNow().catch(()=>{}).finally(()=>{cacheWriting=false;});},150);}
   async function reloadDrafts(){drafts.value=(await listDrafts()).sort((a,b)=>b.updated-a.updated);}
   function rejectWaiting(){for(const item of waiting.values()){clearTimeout(item.timer);item.reject(new Error('实时连接已断开，正在重试。'));}waiting.clear();}
-  function detach(){epoch++;lastFetchedRevision=-1;stopped=true;socket?.close();socket=null;rejectWaiting();incoming.clear();acknowledged.clear();if(cacheTimer)clearTimeout(cacheTimer);cacheTimer=null;if(reconnect)clearTimeout(reconnect);if(retry)clearTimeout(retry);editor.setChangeHandler(null);editor.readOnly.value=false;project.value=null;queue=[];queueCount.value=0;connected.value=false;historical.value=null;highlightAnnotation.value=null;error.value='';syncText.value='';partialId=null;}
-  function overlayLocal(){for(const op of queue)if(!acknowledged.has(op.op))applyLocal(editor.mask.value,op.patch);}
+  function detach(){epoch++;lastFetchedRevision=-1;stopped=true;socket?.close();socket=null;rejectWaiting();incoming.clear();acknowledged.clear();if(cacheTimer)clearTimeout(cacheTimer);cacheTimer=null;if(reconnect)clearTimeout(reconnect);if(retry)clearTimeout(retry);editor.setChangeHandler(null);editor.setPersonalValueHandler(null);ownershipBits=new Uint8Array();ownershipKnown=false;regionSource=null;ownOpinions.clear();editor.readOnly.value=false;project.value=null;queue=[];queueCount.value=0;connected.value=false;historical.value=null;highlightAnnotation.value=null;error.value='';syncText.value='';partialId=null;}
+  function overlayLocal(){for(const op of queue)if(!acknowledged.has(op.op))applyLocal(editor.mask.value,op.patch,true);}
   function updateLabels(labels:Project['labels']){
     editor.segments.value=labels.map(label=>({...label,visible:editor.segments.value.find(s=>s.id===label.id)?.visible??true}));
     for(const op of queue)if(op.label&&!acknowledged.has(op.op)){const label=editor.segments.value.find(s=>s.id===op.label!.id);if(label){label.name=op.label.name;label.color=op.label.color;}}
@@ -93,8 +104,9 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     if(historical.value!==null){project.value={...project.value,latestRevision:Math.max(project.value.latestRevision,event.revision)};return;}
     if(event.revision<=lastFetchedRevision)return;incoming.set(event.revision,event);
     while(incoming.has(lastFetchedRevision+1)){
-      const next=incoming.get(lastFetchedRevision+1)!,stroke=editor.pendingChange();incoming.delete(next.revision);
+      const next=incoming.get(lastFetchedRevision+1)!,stroke=editor.pendingDisplayChange();incoming.delete(next.revision);
       applyLocal(editor.mask.value,next.patch);overlayLocal();if(stroke)stroke.indices.forEach((i,k)=>{editor.mask.value[i]=stroke.after[k];});
+      for(const [i,author]of next.owners||[])if(ownershipKnown){if(author===person.value?.id)ownershipBits[i>>>3]|=1<<(i&7);else ownershipBits[i>>>3]&=~(1<<(i&7));}
       project.value={...project.value,mask:'',revision:next.revision,latestRevision:next.revision,regions:next.regions,labels:next.labels,status:next.status,finalizedBy:next.finalizedBy??project.value.finalizedBy,finalizedAt:next.finalizedAt??project.value.finalizedAt,finalRevision:next.finalRevision??project.value.finalRevision};lastFetchedRevision=next.revision;
       updateLabels(next.labels);editor.revision.value++;editor.readOnly.value=next.status==='finalized';editor.dirty.value=queue.some(op=>!acknowledged.has(op.op));offlineSource.value=false;
       history.value=[{revision:next.revision,op:next.op,author:next.author,name:next.name,kind:next.kind,time:next.time},...history.value.filter(item=>item.revision!==next.revision)].slice(0,100);
@@ -108,11 +120,12 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     try{
       const response=await request<Project|{unchanged:true;revision:number}>(`/projects/${id}${expectedHistory===null?force?'':`?ifRevision=${lastFetchedRevision}`:`?revision=${expectedHistory}`}`);
       if('unchanged' in response){if(token===epoch){offlineSource.value=false;error.value='';mark();}return;}
-      const state=response,mask=await inflate(state.mask);
+      const state=response,mask=await inflate(state.mask),owned=await readOwnership(state);
       if(token!==epoch||historical.value!==expectedHistory)return;
       if(expectedHistory===null&&state.revision<(project.value?.revision??0))return;
       if(mask.length!==editor.mask.value.length)throw new Error('服务器工程与当前影像尺寸不一致。');
-      const stroke=editor.pendingChange();for(const op of queue)if(!acknowledged.has(op.op))applyLocal(mask,op.patch);if(stroke)stroke.indices.forEach((i,k)=>{mask[i]=stroke.after[k];});
+      const stroke=editor.pendingDisplayChange();for(const op of queue)if(!acknowledged.has(op.op))applyLocal(mask,op.patch,true);if(stroke)stroke.indices.forEach((i,k)=>{mask[i]=stroke.after[k];});
+      ownershipBits=owned||new Uint8Array(Math.ceil(mask.length/8));ownershipKnown=!!owned;
       editor.mask.value=mask;editor.revision.value++;project.value=state;offlineSource.value=false;if(expectedHistory===null)lastFetchedRevision=state.revision;
       updateLabels(state.labels);for(const revision of incoming.keys())if(revision<=state.revision)incoming.delete(revision);
       editor.readOnly.value=expectedHistory!==null||state.status==='finalized';editor.dirty.value=queue.length>0;
@@ -135,6 +148,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
         const op=queue[0],result=socket?.readyState===WebSocket.OPEN&&connected.value?await sendLive(op):await request<Reply>(`/projects/${op.project}/${op.label?'labels':'operations'}`,op.label?{...op.label,op:op.op}:op);if(token!==epoch)return;
         if(result.delta)receiveDelta(result.delta);
         if(result.parallelCount)editor.status.value='存在不同标注意见，已在对应区域保留并列标注。';
+        if(result.protectedCount)editor.status.value=`已保留 ${result.protectedCount} 个他人标注体素；只能删除自己的标注。`;
         queue=queue.filter(item=>item.key!==op.key);acknowledged.delete(op.op);void persistWrite(null,undefined,op.key).catch(()=>{});scheduleCache();error.value='';mark();
         if(result.duplicate&&result.revision<=lastFetchedRevision)await refresh(true);
       }
@@ -142,7 +156,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   }
   function enqueue(change:Change,kind='edit'){
     if(!project.value||!person.value)return;cacheGeneration++;
-    try{const op=operation(change,kind,partialId||operationId());partialId=null;queue.push(op);mark();void pump();void persistWrite(null,op).catch(()=>{});scheduleCache();}
+    try{change.before=Uint16Array.from(change.indices,(i,k)=>personalValue(i,change.before[k])??0);const op=operation(change,kind,partialId||operationId());partialId=null;queue.push(op);mark();void pump();void persistWrite(null,op).catch(()=>{});scheduleCache();}
     catch(reason){blockedLocal.value=error.value=(reason as Error).message;editor.dirty.value=true;mark();void cacheNow().catch(()=>{});}
   }
   function connect(){
@@ -150,22 +164,23 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     const current=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}${base}/socket?project=${project.value.id}`);socket=current;
     current.onmessage=event=>{
       if(socket!==current)return;const message=JSON.parse(event.data);
-      if(message.type==='ready'){connected.value=true;mark();void pump();if(message.revision!==lastFetchedRevision)void catchUp();}
+      if(message.type==='ready'){connected.value=true;mark();void pump();if(!ownershipKnown)void refresh(true);else if(message.revision!==lastFetchedRevision)void catchUp();}
       else if(message.type==='delta')receiveDelta(message);
       else if(message.type==='ack'||message.type==='error'){const item=waiting.get(message.requestId);if(!item)return;waiting.delete(message.requestId);clearTimeout(item.timer);if(message.type==='ack')item.resolve(message);else item.reject(Object.assign(new Error(message.message),{status:message.status}));}
       else void catchUp();
     };
     current.onclose=()=>{if(socket!==current)return;connected.value=false;rejectWaiting();mark();if(!stopped)reconnect=setTimeout(()=>{void ensureSession().then(connect).catch(()=>{reconnect=setTimeout(connect,1500);});},500);};current.onerror=()=>current.close();
   }
-  function restoreView(saved:ViewState){const v=editor.volume.value;if(!v)return;editor.point.value=saved.point.map((n,a)=>Math.max(0,Math.min(v.dims[a]-1,n)));editor.selected.value=editor.segments.value.some(s=>s.id===saved.selected)?saved.selected:editor.segments.value[0].id;editor.center.value=saved.center;editor.width.value=saved.width;editor.diameter.value=saved.diameter;editor.opacity.value=saved.opacity;editor.tool.value=['paint','erase','navigate','threshold','region'].includes(saved.tool)?saved.tool as Tool:'paint';if(saved.regionWidth&&saved.regionWidth>=.1)editor.regionWidth.value=saved.regionWidth;if(saved.regionMode)editor.regionMode.value=saved.regionMode;if(saved.hoverPreview!==undefined)editor.hoverPreview.value=saved.hoverPreview;}
+  function restoreView(saved:ViewState){const v=editor.volume.value;if(!v)return;editor.point.value=saved.point.map((n,a)=>Math.max(0,Math.min(v.dims[a]-1,n)));editor.selected.value=editor.segments.value.some(s=>s.id===saved.selected)?saved.selected:editor.segments.value[0].id;editor.center.value=saved.center;editor.width.value=saved.width;editor.diameter.value=saved.diameter;editor.opacity.value=saved.opacity;editor.tool.value=['paint','erase','threshold','region'].includes(saved.tool)?saved.tool as Tool:'paint';if(saved.zooms?.length===3)editor.zooms.value=saved.zooms.map(n=>Number.isFinite(n)?Math.max(.25,Math.min(8,n)):1);if(saved.excludeAir!==undefined)editor.excludeAir.value=saved.excludeAir;if(Number.isFinite(saved.airThreshold))editor.airThreshold.value=saved.airThreshold!;if(saved.regionWidth&&saved.regionWidth>=.1)editor.regionWidth.value=saved.regionWidth;if(saved.regionMode)editor.regionMode.value=saved.regionMode;if(saved.hoverPreview!==undefined)editor.hoverPreview.value=saved.hoverPreview;}
   async function attach(state:Project,draft?:Draft,offline=false){
     detach();stopped=false;project.value=state;lastFetchedRevision=offline?-1:state.revision;blockedLocal.value=draft?.blocked||'';error.value=blockedLocal.value;offlineSource.value=offline;
     queue=(await allOperations()).filter(op=>op.project===state.id&&op.key.startsWith(person.value!.id+':')).sort((a,b)=>a.created-b.created);
     if(draft?.pending&&!queue.some(op=>op.op===draft.pending!.op)){queue.push(draft.pending);await writeLocal({operation:draft.pending});}
     editor.history.value=[];editor.future.value=[];editor.setChangeHandler(enqueue);historical.value=null;
     editor.mask.value=draft&&(offline||blockedLocal.value)?new Uint16Array(draft.mask.slice(0)):await inflate(state.mask);
+    const owned=offline&&draft?.ownedMask?new Uint8Array(draft.ownedMask.slice(0)):await readOwnership(state);ownershipBits=owned||new Uint8Array(Math.ceil(editor.mask.value.length/8));ownershipKnown=!!owned;editor.setPersonalValueHandler(personalValue);
     editor.segments.value=(offline&&draft?draft.segments:state.labels).map(s=>({...s,visible:('visible' in s)&&typeof s.visible==='boolean'?s.visible:true}));
-    for(const op of queue){applyLocal(editor.mask.value,op.patch);if(op.label){const row=editor.segments.value.find(s=>s.id===op.label!.id);if(row){row.name=op.label.name;row.color=op.label.color;}}}
+    for(const op of queue){applyLocal(editor.mask.value,op.patch,true);if(op.label){const row=editor.segments.value.find(s=>s.id===op.label!.id);if(row){row.name=op.label.name;row.color=op.label.color;}}}
     if(draft)restoreView(draft.view);editor.revision.value++;editor.readOnly.value=state.status==='finalized';
     editor.dirty.value=queue.length>0;mark();connect();scheduleCache();
     if(!offline){const token=epoch;void request<{events:History[]}>(`/projects/${state.id}/history`).then(result=>{if(token===epoch)history.value=result.events;}).catch(()=>{});}
@@ -223,6 +238,24 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   const beforeUnload=(event:BeforeUnloadEvent)=>{if(active.value&&(queue.length||editor.strokeActive.value||cacheError.value)){editor.endStroke();void cacheNow().catch(()=>{});event.preventDefault();event.returnValue='';}};
   document.addEventListener('visibilitychange',visibility);window.addEventListener('beforeunload',beforeUnload);
   onBeforeUnmount(()=>{void cacheNow().catch(()=>{});detach();clearInterval(poll);clearInterval(partialCache);if(viewTimer)clearTimeout(viewTimer);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('beforeunload',beforeUnload);});
+  const provenanceCache=new Map<string,string>();
+  async function provenance(index:number):Promise<string>{
+    const current=project.value;if(!current)return '';const revision=current.revision,id=current.id,token=epoch;
+    for(const op of queue)if(!op.label&&!acknowledged.has(op.op)){
+      let patch=patchViews.get(op);if(!patch){const bytes=Uint8Array.from(atob(op.patch),c=>c.charCodeAt(0));patch=new DataView(bytes.buffer);patchViews.set(op,patch);}
+      let lo=0,hi=patch.byteLength/8;while(lo<hi){const mid=(lo+hi)>>>1;if(patch.getUint32(mid*8,true)<index)lo=mid+1;else hi=mid;}
+      if(lo*8<patch.byteLength&&patch.getUint32(lo*8,true)===index)return patch.getUint16(lo*8+6,true)===0?'正在确认自己的删除操作；他人标注保留':`${person.value?.name||'本机'} · 本机未同步`;
+    }
+    if(offlineSource.value)return '作者未记录（离线缓存）';
+    const key=`${id}:${revision}:${index}`,old=provenanceCache.get(key);if(old)return old;
+    type Source={projectId:string;index:number;revision:number;label:number;author:{id:string;name:string}|null;annotations:{author:string;name:string;label:number}[]};
+    const source=await request<Source>(`/projects/${id}/provenance?index=${index}&revision=${revision}${historical.value!==null?'&historical=1':''}`).catch(async reason=>{if((reason as {status?:number}).status===409&&token===epoch){await catchUp();return null;}throw reason;});
+    if(!source)return '';
+    if(token!==epoch||project.value?.id!==id||project.value.revision!==revision||source.projectId!==id||source.index!==index||source.revision!==revision||source.label!==editor.mask.value[index])return '';
+    const label=(value:number)=>value===0?'擦除（0）':`${editor.segments.value.find(s=>s.id===value)?.name||'标签'}（${value}）`;
+    const text=source.annotations.length?`并列意见：${source.annotations.map(a=>`${a.name} · ${label(a.label)}`).join('；')}`:`来自：${source.author?.name||'作者未记录'} · ${label(source.label)}`;
+    provenanceCache.set(key,text);while(provenanceCache.size>300)provenanceCache.delete(provenanceCache.keys().next().value!);return text;
+  }
   function focusRegion(region:ParallelRegion,annotationId?:string){editor.point.value=region.bounds.min.map((v,a)=>Math.round((v+region.bounds.max[a])/2));highlightAnnotation.value=annotationId||null;}
-  return {nickname,person,project,history,historical,syncText,error,cacheError,connected,joining,initializing,sessionReady,queueCount,showHistory,active,unsaved,drafts,lastCached,showDrafts,exiting,exitBlocked,exitNotice,loginTeam,openProject,switchDataset,cacheNow,reloadDrafts,restoreDraft,saveAndExit,retryFinish,forceLocalExit,viewHistory,addLabel,updateLabel,exportServer,exportLocal,focusRegion,highlightAnnotation,parallelMap,offlineSource};
+  return {nickname,person,project,history,historical,syncText,error,cacheError,connected,joining,initializing,sessionReady,queueCount,showHistory,active,unsaved,drafts,lastCached,showDrafts,exiting,exitBlocked,exitNotice,loginTeam,openProject,switchDataset,cacheNow,reloadDrafts,restoreDraft,saveAndExit,retryFinish,forceLocalExit,viewHistory,addLabel,updateLabel,exportServer,exportLocal,focusRegion,highlightAnnotation,parallelMap,offlineSource,provenance};
 }
