@@ -120,7 +120,6 @@ export function createDatasetServer({ datasetDir = process.env.DATASET_DIR || de
   return server;
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
-  const host=process.env.HOST||'127.0.0.1',port=Number(process.env.PORT||8787);
-  const server=createDatasetServer();server.listen(port,host,()=>console.log(`Deepmark: http://${host}:${port}`));
-  server.on('error',error=>{console.error(error.message);process.exitCode=1;});
+  console.error('This legacy server is a test fixture. Build the Java backend and run npm start.');
+  process.exitCode=1;
 }

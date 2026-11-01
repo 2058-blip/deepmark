@@ -11,3 +11,6 @@ artifacts/
 server-data/datasets/*
 !server-data/datasets/.gitkeep
 server-data/collaboration/
+server-data/platform/
+backend/target/
+deploy/runtime/

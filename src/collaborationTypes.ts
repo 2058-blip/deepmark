@@ -1,9 +1,9 @@
 import type {Segment} from './view.ts';
-export type Person={id:string;name:string;role?:'engineer'|'admin'};
+export type Person={id:string;name:string;username?:string;role?:'dispatcher'|'worker'|'engineer'|'admin'};
 export type Identity=Person & {resumeKey:string;updated:number};
 export type ParallelAnnotation={id:string;author:string;name:string;values:[number,number][];created:string};
 export type ParallelRegion={id:string;indices:number[];annotations:ParallelAnnotation[];bounds:{min:number[];max:number[]};created:string;updated:string};
-export type Project={id:string;datasetId:string;name?:string;revision:number;latestRevision:number;mask:string;regions:ParallelRegion[];labels:Omit<Segment,'visible'>[];status:'editing'|'finalized';finalizedBy?:string|null;finalizedAt?:string|null;finalRevision?:number|null;ownershipAuthor?:string;ownedVoxels?:string};
+export type Project={id:string;datasetId:string;name?:string;fingerprint?:string;canWrite?:boolean;datasetStatus?:string;revision:number;latestRevision:number;mask:string;regions:ParallelRegion[];labels:Omit<Segment,'visible'>[];status:'editing'|'finalized';finalizedBy?:string|null;finalizedAt?:string|null;finalRevision?:number|null;ownershipAuthor?:string;ownedVoxels?:string};
 export type LiveDelta={type:'delta';projectId:string;revision:number;op:string;author:string;name:string;kind:string;time:string;patch:string;owners?:[number,string|null][];regions:ParallelRegion[];labels:Omit<Segment,'visible'>[];status:Project['status'];finalizedBy?:string;finalizedAt?:string;finalRevision?:number};
 export type Operation={key:string;project:string;op:string;branch?:string;baseRevision:number;patch:string;kind:string;created:number;review?:boolean;label?:{id:number;name:string;color:string}};
 export type ViewState={point:number[];selected:number;center:number;width:number;diameter:number;opacity:number;tool:string;regionWidth?:number;regionMode?:'bands'|'level';hoverPreview?:boolean;zooms?:number[];excludeAir?:boolean;airThreshold?:number};

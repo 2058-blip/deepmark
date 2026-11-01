@@ -1,0 +1,44 @@
+user www-data;
+worker_processes 2;
+worker_shutdown_timeout 10s;
+pid "@PROXY_DIR@/nginx.pid";
+error_log "@PROXY_DIR@/logs/error.log" warn;
+
+events { worker_connections 1024; }
+
+http {
+    access_log "@PROXY_DIR@/logs/access.log";
+    client_body_temp_path "@PROXY_DIR@/client_temp";
+    proxy_temp_path "@PROXY_DIR@/proxy_temp";
+    server_tokens off;
+    map $http_upgrade $deepmark_connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+    server {
+        listen @HTTPS_PORT@ ssl;
+        listen [::]:@HTTPS_PORT@ ssl;
+        server_name ddns.984797.xyz localhost;
+        ssl_certificate "@TLS_CERT@";
+        ssl_certificate_key "@TLS_KEY@";
+        ssl_protocols TLSv1.2 TLSv1.3;
+        client_max_body_size 513m;
+        client_body_timeout 3600s;
+        send_timeout 3600s;
+
+        location / {
+            proxy_pass http://127.0.0.1:@BACKEND_PORT@;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $deepmark_connection_upgrade;
+            proxy_request_buffering off;
+            proxy_buffering off;
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
+        }
+    }
+}

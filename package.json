@@ -8,7 +8,9 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "start": "node server/server.mjs",
+    "start": "java -jar backend/target/deepmark-server.jar",
+    "build:server": "mvn -f backend/pom.xml package",
+    "test:platform": "node tests/platform-integration.mjs",
     "sample-data": "node --experimental-strip-types scripts/create-sample.mjs",
     "build": "vue-tsc --noEmit && vite build",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
