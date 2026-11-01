@@ -4,17 +4,19 @@ import type {useCollaboration} from './useCollaboration.ts';
 import type {ParallelAnnotation} from './collaborationTypes.ts';
 import './collaboration.css';
 const props=defineProps<{datasetId:string|null;collaboration:ReturnType<typeof useCollaboration>}>();
-const {nickname,person,project,history,historical,syncText,error,cacheError,connected,joining,queueCount,showHistory,active,join,viewHistory,exiting,exitBlocked,exitNotice,saveAndExit,forceLocalExit,exportLocal,focusRegion,highlightAnnotation,offlineSource}=props.collaboration;
+defineEmits<{login:[];reload:[]}>();
+const {nickname,person,project,history,historical,syncText,error,cacheError,connected,joining,initializing,queueCount,showHistory,active,viewHistory,exiting,exitBlocked,exitNotice,saveAndExit,retryFinish,forceLocalExit,exportLocal,focusRegion,highlightAnnotation,offlineSource}=props.collaboration;
 const exitDialog=ref<HTMLDialogElement|null>(null);
 watchPostEffect(()=>{const dialog=exitDialog.value;if(!dialog)return;if((exiting.value||exitBlocked.value)&&!dialog.open)dialog.showModal();else if(!exiting.value&&!exitBlocked.value&&dialog.open)dialog.close();});
 function labelSummary(row:ParallelAnnotation){const ids=[...new Set(row.values.map(([,v])=>v))];return ids.map(id=>id===0?'背景 / 擦除':project.value?.labels.find(l=>l.id===id)?.name||`标签 ${id}`).join('、');}
 </script>
 <template>
-  <section v-if="datasetId" class="collaboration-panel" :data-online="connected" :data-pending="queueCount" :data-error="!!(error||cacheError)" :aria-busy="joining||exiting">
-    <header><strong>多人协同</strong><span>{{active?`统一成果 · 修订 ${project!.revision}`:'进入时获取服务器完整成果'}}</span></header>
-    <template v-if="!active"><div class="collaboration-join"><input v-model="nickname" aria-label="协同昵称" maxlength="40" placeholder="输入你的协同昵称"/><button class="primary" :disabled="joining||!nickname.trim()" @click="join(datasetId!)">{{joining?'正在获取共享成果…':'加入实时协同'}}</button></div><p>所有工程师共同编辑一份完整成果，分工由团队协调。</p></template>
-    <template v-else>
-      <div class="collaboration-controls"><span v-if="queueCount||error||!connected" class="sync-indicator" role="status">{{syncText}}</span><span>{{person?.name}}</span><button @click="showHistory=!showHistory">{{showHistory?'收起记录':'操作记录'}}</button><button @click="exportLocal">导出本地副本</button><button :disabled="exiting" @click="saveAndExit">同步并退出</button>
+  <section class="collaboration-panel" :data-author="person?.id" :data-online="connected" :data-pending="queueCount" :data-error="!!(error||cacheError)" :aria-busy="initializing||joining||exiting">
+    <header><strong>团队协同</strong><span>{{person?'当前服务器的所有数据集均由团队共享':'登录一次，即可协同所有服务器数据集'}}</span></header>
+    <template v-if="!person"><div class="collaboration-join"><input v-model="nickname" aria-label="团队昵称" maxlength="40" placeholder="输入你的团队昵称" @keydown.enter="!initializing&&!joining&&nickname.trim()&&$emit('login')"/><button class="primary" :disabled="initializing||joining||!nickname.trim()" @click="$emit('login')">{{initializing?'正在恢复登录…':joining?'正在登录…':'登录团队'}}</button></div><p>{{datasetId?'登录后自动获取这份数据集的团队已有标注，加载完成后即可编辑。':'团队成员权限相同。服务器数据集自动同步，本地打开的影像仍可独立标注。'}}</p></template>
+    <template v-else><div class="collaboration-controls"><strong>{{person.name}}</strong><span>{{active?`统一成果 · 修订 ${project!.revision}`:'已登录团队'}}</span><button :disabled="exiting||joining" @click="saveAndExit">退出团队</button></div><p v-if="!datasetId">打开任意服务器数据集，将自动加载团队最新成果并实时同步。</p><p v-else-if="!active">{{joining?'正在加载团队已有标注…':'团队标注尚未加载完成，暂不能编辑。'}} <button v-if="!joining" @click="$emit('reload')">重新加载团队标注</button></p></template>
+    <template v-if="active">
+      <div class="collaboration-controls"><span v-if="queueCount||error||!connected" class="sync-indicator" role="status">{{syncText}}</span><button @click="showHistory=!showHistory">{{showHistory?'收起记录':'操作记录'}}</button><button @click="exportLocal">导出本地副本</button>
       </div>
       <p v-if="offlineSource" class="collaboration-error">当前显示本地缓存，联网后会获取共享完整成果并提交待上传操作。</p>
       <p v-if="project!.status==='finalized'" class="final-status">已由 {{project!.finalizedBy}} 定稿。当前仅可查看和导出。</p>
@@ -28,6 +30,6 @@ function labelSummary(row:ParallelAnnotation){const ids=[...new Set(row.values.m
       <div v-if="showHistory" class="collaboration-history"><button :disabled="!!queueCount" @click="viewHistory(0)">查看初始记录</button><div v-for="event in history" :key="event.revision"><span>#{{event.revision}} · {{event.name}} · {{event.kind}} · {{new Date(event.time).toLocaleString('zh-CN')}}</span><button :disabled="!!queueCount" @click="viewHistory(event.revision)">查看此记录</button></div><p v-if="!history.length">尚无操作记录。</p></div>
     </template>
     <p v-if="error" class="collaboration-error" role="alert">{{error}}</p><p v-if="cacheError" class="collaboration-error" role="alert">{{cacheError}}</p><p v-if="exitNotice" role="status">{{exitNotice}}</p>
-    <dialog ref="exitDialog" class="dataset-dialog exit-dialog" aria-labelledby="exit-title" @cancel.prevent="!exiting&&(exitBlocked=false)"><h2 id="exit-title">{{exiting?'正在同步操作':'操作尚未全部上传'}}</h2><p v-if="exiting">正在缓存本地副本并提交剩余操作，请稍候…</p><template v-else><p>可以等待网络恢复，也可保留本地副本与待上传操作后暂时退出。</p><p class="collaboration-error">{{error}}</p><div class="exit-actions"><button @click="exitBlocked=false">继续工作</button><button @click="saveAndExit">重试同步并退出</button><button class="primary" :disabled="!!cacheError" @click="forceLocalExit">保留本地缓存并退出</button></div></template></dialog>
+    <dialog ref="exitDialog" class="dataset-dialog exit-dialog" aria-labelledby="exit-title" @cancel.prevent="!exiting&&(exitBlocked=false)"><h2 id="exit-title">{{exiting?'正在同步操作':'操作尚未全部上传'}}</h2><p v-if="exiting">正在缓存本地副本并提交剩余操作，请稍候…</p><template v-else><p>可以等待网络恢复，也可保留本地副本与待上传操作后暂时退出。</p><p class="collaboration-error">{{error}}</p><div class="exit-actions"><button @click="exitBlocked=false">继续工作</button><button @click="retryFinish">重试同步并退出</button><button class="primary" :disabled="!!cacheError" @click="forceLocalExit">保留本地缓存并退出</button></div></template></dialog>
   </section>
 </template>

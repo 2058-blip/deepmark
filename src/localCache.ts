@@ -9,14 +9,18 @@ function db(){return connection??=new Promise((resolve,reject)=>{
 });}
 async function transaction<T>(names:string[],mode:IDBTransactionMode,run:(tx:IDBTransaction)=>IDBRequest<T>|void):Promise<T>{
   const database=await db();return new Promise((resolve,reject)=>{
-    const tx=database.transaction(names,mode);let result:T;const request=run(tx);if(request)request.onsuccess=()=>{result=request.result;};
+    const tx=database.transaction(names,mode);let result:T;
     tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error||new Error('本地缓存写入失败。'));tx.onabort=()=>reject(tx.error||new Error('本地缓存写入中断。'));
+    try{const request=run(tx);if(request)request.onsuccess=()=>{result=request.result;};}catch(reason){try{tx.abort();}catch{}reject(reason);}
   });
 }
 export function writeLocal({operation,operations,draft,removeOp}:{operation?:Operation;operations?:Operation[];draft?:Draft;removeOp?:string}){
+  // Store large voxel buffers as Blob payloads, outside IndexedDB's metadata serialization path.
+  const stored=draft?{...draft,mask:new Blob([draft.mask])}:null;
   const write=transaction<void>(['queue','drafts','draftIndex'],'readwrite',tx=>{
-    if(operations)for(const op of operations)tx.objectStore('queue').put(op);if(operation)tx.objectStore('queue').put(operation);if(removeOp)tx.objectStore('queue').delete(removeOp);
-    if(draft){tx.objectStore('drafts').put(draft);const index:DraftIndex={key:draft.key,author:draft.author,name:draft.name,updated:draft.updated,needsCheckpoint:draft.needsCheckpoint,projectId:draft.project.id,datasetId:draft.project.datasetId,view:draft.view,viewUpdated:draft.updated};tx.objectStore('draftIndex').put(index);}
+    const queue=tx.objectStore('queue'),drafts=tx.objectStore('drafts'),indices=tx.objectStore('draftIndex');
+    if(operations)for(const op of operations)queue.put(op);if(operation)queue.put(operation);if(removeOp)queue.delete(removeOp);
+    if(draft&&stored){const index:DraftIndex={key:draft.key,author:draft.author,name:draft.name,updated:draft.updated,needsCheckpoint:draft.needsCheckpoint,projectId:draft.project.id,datasetId:draft.project.datasetId,view:draft.view,viewUpdated:draft.updated};indices.put(index);drafts.put(stored);}
   });
   return write.then(async()=>{if(removeOp&&legacyKeys.has(removeOp)){const old=await legacy();if(old.objectStoreNames.contains('queue'))await new Promise<void>((resolve,reject)=>{const tx=old.transaction('queue','readwrite');tx.objectStore('queue').delete(removeOp);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});old.close();legacyKeys.delete(removeOp);}});
 }
@@ -27,7 +31,7 @@ async function migrateLegacy(){
   if(rows.length)await transaction<void>(['queue'],'readwrite',tx=>{for(const op of rows){legacyKeys.add(op.key);const store=tx.objectStore('queue'),request=store.get(op.key);request.onsuccess=()=>{if(!request.result)store.put(op);};}});
 }
 export const allOperations=async()=>{await (migration??=migrateLegacy());return transaction<Operation[]>(['queue'],'readonly',tx=>tx.objectStore('queue').getAll());};
-export const readDraft=async(key:string)=>{const draft=await transaction<Draft|undefined>(['drafts'],'readonly',tx=>tx.objectStore('drafts').get(key));if(!draft)return undefined;const meta=await transaction<DraftIndex|undefined>(['draftIndex'],'readonly',tx=>tx.objectStore('draftIndex').get(key));return meta?.view&&(meta.viewUpdated||0)>=draft.updated?{...draft,view:meta.view,updated:Math.max(draft.updated,meta.updated)}:draft;};
+export const readDraft=async(key:string)=>{const stored=await transaction<(Omit<Draft,'mask'>&{mask:ArrayBuffer|Blob})|undefined>(['drafts'],'readonly',tx=>tx.objectStore('drafts').get(key));if(!stored)return undefined;const draft:Draft={...stored,mask:stored.mask instanceof Blob?await stored.mask.arrayBuffer():stored.mask};const meta=await transaction<DraftIndex|undefined>(['draftIndex'],'readonly',tx=>tx.objectStore('draftIndex').get(key));return meta?.view&&(meta.viewUpdated||0)>=draft.updated?{...draft,view:meta.view,updated:Math.max(draft.updated,meta.updated)}:draft;};
 export const writeView=(key:string,view:ViewState)=>transaction<void>(['draftIndex'],'readwrite',tx=>{const store=tx.objectStore('draftIndex'),request=store.get(key);request.onsuccess=()=>{if(request.result)store.put({...request.result,view,viewUpdated:Date.now(),updated:Date.now()});};});
 export const listDrafts=()=>transaction<DraftIndex[]>(['draftIndex'],'readonly',tx=>tx.objectStore('draftIndex').getAll());
 export const cacheDataset=(key:string,file:File)=>transaction<void>(['datasets'],'readwrite',tx=>{tx.objectStore('datasets').put({key,name:file.name,file});});

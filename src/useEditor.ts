@@ -14,6 +14,7 @@ export function useEditor() {
   const center=ref(40),width=ref(400),thresholdMin=ref('0'),thresholdMax=ref('100'),previewEnabled=ref(true);
   const showDatasets=ref(false),status=ref('打开 NIfTI 影像，开始分割标注'),busy=ref(false),dirty=ref(false);
   const readOnly=ref(false),strokeActive=ref(false),viewBusy=computed(()=>busy.value||readOnly.value);
+  const editLocked=ref(false);
   const hoverPreview=ref(true),regionWidth=ref(100),regionMode=ref<GrayMode>('bands');
   const history=shallowRef<Change[]>([]),future=shallowRef<Change[]>([]),pending=new Map<number,number>();
   const active=computed(()=>segments.value.find(s=>s.id===selected.value)!);
@@ -55,12 +56,12 @@ export function useEditor() {
     rememberChange({indices:Uint32Array.from(pairs.map(p=>p[0])),before:Uint16Array.from(pairs.map(p=>p[1])),after:Uint16Array.from(pairs.map(p=>mask.value[p[0]]))});
   }
   function stroke(axis:Axis,slice:number,u:number,v:number){
-    if(!volume.value||busy.value||readOnly.value)return;
+    if(!volume.value||busy.value||readOnly.value||editLocked.value)return;
     if(!active.value.visible){status.value='请先显示当前标签。';return;}
     paint(mask.value,volume.value,axis,slice,u,v,diameter.value,tool.value==='erase'?0:selected.value,pending,tool.value==='erase'?selected.value:undefined,!!onChange);revision.value++;
   }
   async function runThreshold(){
-    if(!volume.value||!thresholdValid.value||!active.value.visible||busy.value||readOnly.value)return;
+    if(!volume.value||!thresholdValid.value||!active.value.visible||busy.value||readOnly.value||editLocked.value)return;
     endStroke();busy.value=true;status.value='正在对整套影像执行阈值分割…';
     try{
       await new Promise(resolve=>setTimeout(resolve,30));
@@ -70,19 +71,19 @@ export function useEditor() {
     }catch(error){status.value=`阈值分割失败：${(error as Error).message}`;}finally{busy.value=false;}
   }
   function selectRegion(axis:Axis,slice:number,pixels:Uint32Array){
-    if(!volume.value||busy.value||readOnly.value)return;if(!active.value.visible){status.value='请先显示当前标签。';return;}
+    if(!volume.value||busy.value||readOnly.value||editLocked.value)return;if(!active.value.visible){status.value='请先显示当前标签。';return;}
     try{const change=fillSliceRegion(mask.value,volume.value.dims,axis,slice,pixels,selected.value,!!onChange);if(change)rememberChange(change);status.value=`本切片灰度区域已加入“${active.value.name}”：${pixels.length.toLocaleString()} 个像素，可撤销。`;}
     catch(reason){status.value=(reason as Error).message;}
   }
   function undo(redo=false){
-    if(readOnly.value)return;
+    if(readOnly.value||editLocked.value)return;
     endStroke();const from=redo?future:history,to=redo?history:future,change=from.value.pop();if(!change)return;
     const values=redo?change.after:change.before;const before=redo?change.before:change.after;
     change.indices.forEach((i,k)=>{mask.value[i]=values[k];});to.value.push(change);triggerRef(from);triggerRef(to);
     dirty.value=true;revision.value++;onChange?.({indices:change.indices,before,after:values},redo?'redo':'undo');
   }
   async function loadSegmentation(file?:File){
-    if(!file||!volume.value||readOnly.value||!canReplace())return;busy.value=true;
+    if(!file||!volume.value||readOnly.value||editLocked.value||!canReplace())return;busy.value=true;
     try{
       const seg=await readFile(file),v=volume.value;
       if(seg.dims.some((n,i)=>n!==v.dims[i])||seg.affine.some((row,r)=>row.some((n,c)=>Math.abs(n-v.affine[r][c])>1e-4)))throw new Error('标注的尺寸或空间方向与当前影像不同。');
@@ -104,12 +105,12 @@ export function useEditor() {
   function demo(){if(canReplace())install(makeDemo());}
   function before(e:BeforeUnloadEvent){if(dirty.value){e.preventDefault();e.returnValue='';}}
   function key(e:KeyboardEvent){
-    if((e.target as HTMLElement).matches('input,textarea,select')||busy.value||readOnly.value||showDatasets.value)return;
+    if((e.target as HTMLElement).matches('input,textarea,select')||busy.value||readOnly.value||editLocked.value||showDatasets.value)return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);}
     else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);}
     else if(e.key.toLowerCase()==='b')tool.value='paint';else if(e.key.toLowerCase()==='e')tool.value='erase';else if(e.key.toLowerCase()==='v')tool.value='navigate';else if(e.key.toLowerCase()==='g')tool.value='region';
   }
   onMounted(()=>{window.addEventListener('beforeunload',before);window.addEventListener('keydown',key);});
   onBeforeUnmount(()=>{window.removeEventListener('beforeunload',before);window.removeEventListener('keydown',key);});
-  return {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,install,canReplace,load,startStroke,endStroke,pendingChange,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler};
+  return {volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,busy,viewBusy,readOnly,editLocked,strokeActive,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,install,canReplace,load,startStroke,endStroke,pendingChange,stroke,runThreshold,undo,loadSegmentation,exportMask,addSegment,demo,setChangeHandler};
 }

@@ -4,6 +4,7 @@ export type Identity=Person & {resumeKey:string;updated:number};
 export type ParallelAnnotation={id:string;author:string;name:string;values:[number,number][];created:string};
 export type ParallelRegion={id:string;indices:number[];annotations:ParallelAnnotation[];bounds:{min:number[];max:number[]};created:string;updated:string};
 export type Project={id:string;datasetId:string;name?:string;revision:number;latestRevision:number;mask:string;regions:ParallelRegion[];labels:Omit<Segment,'visible'>[];status:'editing'|'finalized';finalizedBy?:string|null;finalizedAt?:string|null;finalRevision?:number|null};
+export type LiveDelta={type:'delta';projectId:string;revision:number;op:string;author:string;name:string;kind:string;time:string;patch:string;regions:ParallelRegion[];labels:Omit<Segment,'visible'>[];status:Project['status'];finalizedBy?:string;finalizedAt?:string;finalRevision?:number};
 export type Operation={key:string;project:string;op:string;branch?:string;baseRevision:number;patch:string;kind:string;created:number;review?:boolean;label?:{id:number;name:string;color:string}};
 export type ViewState={point:number[];selected:number;center:number;width:number;diameter:number;opacity:number;tool:string;regionWidth?:number;regionMode?:'bands'|'level';hoverPreview?:boolean};
 export type Draft={key:string;author:Person;project:Project;branch?:string;name:string;mask:ArrayBuffer;segments:Segment[];view:ViewState;updated:number;generation:number;pending:Operation|null;needsCheckpoint:boolean;blocked?:string};
