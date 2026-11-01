@@ -193,7 +193,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
       const state=await request<Project>('/projects',{datasetId}),draft=await readDraft(`${person.value!.id}:${state.id}`);
       if(!await readDataset(`project:${state.id}`))await cacheDataset(`project:${state.id}`,new File([original.file],original.name));
       await attach(state,draft);
-      await refresh();editor.status.value=`已加载 ${editor.volume.value?.name||'影像'} 的团队最新成果 · 修订 ${project.value?.revision??state.revision}`;return true;
+      await refresh();editor.status.value=`已加载 ${editor.volume.value?.name||'影像'} 的团队最新成果`;return true;
     }catch(reason){detach();error.value=(reason as Error).message;return false;}finally{joining.value=false;}
   }
   async function restoreDraft(key:string){
@@ -241,19 +241,19 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   const provenanceCache=new Map<string,string>();
   async function provenance(index:number):Promise<string>{
     const current=project.value;if(!current)return '';const revision=current.revision,id=current.id,token=epoch;
+    const label=(value:number)=>value===0?'擦除（0）':`${editor.segments.value.find(s=>s.id===value)?.name||'标签'}（${value}）`;
     for(const op of queue)if(!op.label&&!acknowledged.has(op.op)){
       let patch=patchViews.get(op);if(!patch){const bytes=Uint8Array.from(atob(op.patch),c=>c.charCodeAt(0));patch=new DataView(bytes.buffer);patchViews.set(op,patch);}
       let lo=0,hi=patch.byteLength/8;while(lo<hi){const mid=(lo+hi)>>>1;if(patch.getUint32(mid*8,true)<index)lo=mid+1;else hi=mid;}
-      if(lo*8<patch.byteLength&&patch.getUint32(lo*8,true)===index)return patch.getUint16(lo*8+6,true)===0?'正在确认自己的删除操作；他人标注保留':`${person.value?.name||'本机'} · 本机未同步`;
+      if(lo*8<patch.byteLength&&patch.getUint32(lo*8,true)===index)return `标注内容：${label(editor.mask.value[index])}\n${patch.getUint16(lo*8+6,true)===0?'正在确认自己的删除操作；他人标注保留':`来自：${person.value?.name||'本机'}（待同步）`}`;
     }
-    if(offlineSource.value)return '作者未记录（离线缓存）';
+    if(offlineSource.value)return `标注内容：${label(editor.mask.value[index])}\n来源：离线缓存，作者暂无法查询`;
     const key=`${id}:${revision}:${index}`,old=provenanceCache.get(key);if(old)return old;
     type Source={projectId:string;index:number;revision:number;label:number;author:{id:string;name:string}|null;annotations:{author:string;name:string;label:number}[]};
     const source=await request<Source>(`/projects/${id}/provenance?index=${index}&revision=${revision}${historical.value!==null?'&historical=1':''}`).catch(async reason=>{if((reason as {status?:number}).status===409&&token===epoch){await catchUp();return null;}throw reason;});
     if(!source)return '';
     if(token!==epoch||project.value?.id!==id||project.value.revision!==revision||source.projectId!==id||source.index!==index||source.revision!==revision||source.label!==editor.mask.value[index])return '';
-    const label=(value:number)=>value===0?'擦除（0）':`${editor.segments.value.find(s=>s.id===value)?.name||'标签'}（${value}）`;
-    const text=source.annotations.length?`并列意见：${source.annotations.map(a=>`${a.name} · ${label(a.label)}`).join('；')}`:`来自：${source.author?.name||'作者未记录'} · ${label(source.label)}`;
+    const text=source.annotations.length?`并列意见：\n${source.annotations.map(a=>`${label(a.label)} · 来自：${a.name}`).join('\n')}`:`标注内容：${label(source.label)}\n来自：${source.author?.name||'作者未记录'}`;
     provenanceCache.set(key,text);while(provenanceCache.size>300)provenanceCache.delete(provenanceCache.keys().next().value!);return text;
   }
   function focusRegion(region:ParallelRegion,annotationId?:string){editor.point.value=region.bounds.min.map((v,a)=>Math.round((v+region.bounds.max[a])/2));highlightAnnotation.value=annotationId||null;}

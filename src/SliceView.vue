@@ -15,6 +15,8 @@ const emit=defineEmits<{zoom:[value:number];point:[value:number[]];start:[];stro
 const host=ref<HTMLDivElement|null>(null),canvas=ref<HTMLCanvasElement|null>(null),size=ref([300,300]),outline=shallowRef<RegionOutline|null>(null),grayMessage=ref('');
 const renderedSlice=ref(-1),renderCount=ref(0),grayBuilds=ref(0),renderMs=ref(0);
 const zooming=ref(false),authorText=ref('');let zoomStartY=0,zoomInitial=1,zoomPointer=-1,authorGeneration=0,authorTimer:ReturnType<typeof setTimeout>|null=null,authorIndex=-1;
+const hoverPosition=ref([12,12]);
+const annotationStyle=computed(()=>{const left=Math.max(8,Math.min(hoverPosition.value[0]+14,size.value[0]-220)),top=Math.max(8,Math.min(hoverPosition.value[1]+16,size.value[1]-80));return {left:`${left}px`,right:'auto',top:`${top}px`,maxWidth:`${Math.max(80,Math.min(340,size.value[0]-left-8))}px`,overflowWrap:'anywhere' as const};});
 const brushPoint=shallowRef<[number,number]|null>(null);
 let drawing=false,last:[number,number]|null=null,observer:ResizeObserver,renderer:SliceRenderer|null=null,frame:GrayFrame|null=null,grayClient:GrayRegionClient|null=null;
 let renderRAF=0,wheelRAF=0,wheelTarget:number|null=null,grayDirty=true,labelDirty=true,inside=false,lastClient:[number,number]|null=null,quietTimer:ReturnType<typeof setTimeout>|null=null;
@@ -58,6 +60,7 @@ function preview(){if(!inside||!lastClient||!p.hoverPreview||drawing||zooming.va
 function move(e:PointerEvent){
   if(zooming.value){if(e.pointerId===zoomPointer)emit('zoom',dragZoom(zoomInitial,zoomStartY,e.clientY));return;}
   lastClient=[e.clientX,e.clientY];const current=coords(e.clientX,e.clientY);
+  const rect=canvas.value!.getBoundingClientRect();hoverPosition.value=[e.clientX-rect.left,e.clientY-rect.top];
   brushPoint.value=current;
   if(!drawing){hoverAuthor(current);inside=!!current;if(current)preview();else{outline.value=null;grayClient?.clear();}return;}
   if(!current){last=null;return;}
@@ -82,12 +85,14 @@ function wheel(event:WheelEvent){
 function cancelGesture(){end();leave();}
 function clearAuthor(){authorGeneration++;authorIndex=-1;authorText.value='';if(authorTimer)clearTimeout(authorTimer);authorTimer=null;}
 function hoverAuthor(point:[number,number]|null){
-  if(!point||!p.provenance){clearAuthor();return;}
+  if(!point){clearAuthor();return;}
   const index=indexOf(planePoint(p.axis,p.point[p.axis],Math.round(point[0]),Math.round(point[1])),p.volume.dims);
-  if(!p.mask[index]&&!p.parallelMap?.has(index)){clearAuthor();return;}if(authorIndex===index)return;
-  clearAuthor();authorIndex=index;const generation=authorGeneration;authorTimer=setTimeout(async()=>{authorTimer=null;try{const text=await p.provenance!(index);if(generation===authorGeneration&&authorIndex===index)authorText.value=text;}catch{}},100);
+  const labels=(p.parallelMap?.get(index)||[p.mask[index]]).filter(id=>id&&p.segments.some(segment=>segment.id===id&&segment.visible));
+  if(!labels.length){clearAuthor();return;}if(authorIndex===index)return;
+  clearAuthor();authorIndex=index;authorText.value=`标注内容：${labels.map(id=>`${p.segments.find(segment=>segment.id===id)?.name||'标签'}（${id}）`).join('；')}${p.provenance?'':'\n本地标注'}`;
+  if(!p.provenance)return;const generation=authorGeneration;authorTimer=setTimeout(async()=>{authorTimer=null;try{const text=await p.provenance!(index);if(text&&generation===authorGeneration&&authorIndex===index)authorText.value=text;}catch{}},100);
 }
-watch([()=>p.volume,()=>p.point[p.axis],()=>p.provenanceKey,()=>p.zoom,()=>p.tool],()=>{clearAuthor();if(inside&&lastClient&&!drawing&&!zooming.value)hoverAuthor(coords(...lastClient));},{flush:'post'});
+watch([()=>p.volume,()=>p.point[p.axis],()=>p.provenanceKey,()=>p.zoom,()=>p.tool,()=>p.segments.map(segment=>`${segment.id}:${segment.name}:${segment.visible}`).join('|')],()=>{clearAuthor();if(inside&&lastClient&&!drawing&&!zooming.value)hoverAuthor(coords(...lastClient));},{flush:'post'});
 </script>
 <template>
   <section :class="['slice',`slice-${axis}`]" :data-zoom="zoom" :data-rendered-slice="renderedSlice" :data-renders="renderCount" :data-gray-builds="grayBuilds" :data-render-ms="renderMs">
@@ -97,7 +102,7 @@ watch([()=>p.volume,()=>p.point[p.axis],()=>p.provenanceKey,()=>p.zoom,()=>p.too
       <svg v-if="brushCursor" :class="['brush-cursor',{'eraser-cursor':tool==='erase'}]" :viewBox="`0 0 ${size[0]} ${size[1]}`" :aria-label="`${tool==='erase'?'橡皮擦':'画笔'}直径 ${diameter} ${volume.unit}`"><ellipse :cx="brushCursor.x" :cy="brushCursor.y" :rx="brushCursor.rx" :ry="brushCursor.ry"/><text :x="brushCursor.x+brushCursor.rx+7" :y="brushCursor.y-7">⌀ {{diameter}} {{volume.unit}}</text></svg>
       <svg v-if="outline?.path&&hoverPreview&&!drawing&&!zooming" class="gray-region-outline" :viewBox="`0 0 ${geometry.nx} ${geometry.ny}`" preserveAspectRatio="none" :style="{left:`${geometry.ox}px`,top:`${geometry.oy}px`,width:`${geometry.w}px`,height:`${geometry.h}px`}" aria-label="鼠标所在灰度区域轮廓"><path :d="outline.path" fill="none" stroke="#ffe26f" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>
       <span v-if="inside&&hoverPreview&&!drawing&&!zooming" class="gray-region-info">{{outline&&outline.count===0?'外围空气已排除':outline&&!outline.truncated?`${outline.count.toLocaleString()} 像素 · 灰度 ${+outline.minimum.toFixed(2)}～${+outline.maximum.toFixed(2)}`:grayMessage}}</span>
-      <span v-if="authorText&&!drawing&&!zooming" class="annotation-author" role="tooltip">{{authorText}}</span>
+      <span v-if="authorText&&!drawing&&!zooming" class="annotation-author" :style="annotationStyle" role="tooltip">{{authorText}}</span>
       <span class="edge top">{{edgeDirection(volume,geometry.b,true)}}</span><span class="edge bottom">{{edgeDirection(volume,geometry.b,false)}}</span><span class="edge left">{{edgeDirection(volume,geometry.a,false)}}</span><span class="edge right">{{edgeDirection(volume,geometry.a,true)}}</span>
     </div>
     <footer><button class="zoom-reset" :aria-label="`重置${direction(volume,axis)}缩放`" @click="emit('zoom',1)">{{Math.round(zoom*100)}}%</button><span>切片</span><input :aria-label="`${direction(volume,axis)}切片`" type="range" min="0" :max="volume.dims[axis]-1" :value="point[axis]" @input="slice(+inputValue($event))"/><span>{{point[axis]+1}}</span></footer>
