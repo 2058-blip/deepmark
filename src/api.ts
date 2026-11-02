@@ -1,5 +1,8 @@
 import {shallowRef} from 'vue';
 import {sha256Blob} from './browserCrypto.ts';
+import {readTransferBlob,transferAborted,transferProgress} from './transfer.ts';
+import type {TransferOptions,TransferProgress} from './transfer.ts';
+export type {TransferOptions,TransferProgress} from './transfer.ts';
 
 export type UserRole='dispatcher'|'worker';
 export type AuthUser={id:string;username:string;name:string;role:UserRole};
@@ -25,19 +28,30 @@ export async function api<T>(path:string,options:RequestInit={}):Promise<T>{
 export async function loadCurrentUser():Promise<AuthUser|null>{
   const result=await api<{user:AuthUser|null}>('/api/auth/me');authUser.value=result.user;return result.user;
 }
-export async function downloadAuthenticated(url:string,filename:string):Promise<void>{
-  const response=await authenticatedFetch(url);if(!response.ok)throw await responseError(response);
-  const blob=await response.blob(),objectUrl=URL.createObjectURL(blob),a=document.createElement('a');
+export async function downloadBlobAuthenticated(url:string,options:TransferOptions={}):Promise<Blob>{
+  options.onProgress?.(transferProgress(0,null));
+  const response=await authenticatedFetch(url,{signal:options.signal});if(!response.ok)throw await responseError(response);
+  return readTransferBlob(response,options);
+}
+export async function downloadAuthenticated(url:string,filename:string,options:TransferOptions={}):Promise<void>{
+  const blob=await downloadBlobAuthenticated(url,options);if(options.signal?.aborted)throw transferAborted();
+  const objectUrl=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=objectUrl;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(objectUrl),30000);
 }
 export async function fingerprint(file:Blob):Promise<string>{
   return sha256Blob(file);
 }
-export function uploadDataset(form:FormData,onProgress:(percent:number)=>void):Promise<{dataset:Dataset}>{
+export function uploadDataset(form:FormData,onProgress:(progress:TransferProgress)=>void,options:Pick<TransferOptions,'signal'>={}):Promise<{dataset:Dataset}>{
   return new Promise((resolve,reject)=>{
+    if(options.signal?.aborted){reject(transferAborted());return;}
     const request=new XMLHttpRequest();request.open('POST','/api/datasets/upload');request.withCredentials=true;request.setRequestHeader('X-Deepmark-Request','1');
-    request.upload.onprogress=event=>{if(event.lengthComputable)onProgress(Math.min(100,Math.round(event.loaded/event.total*100)));};
-    request.onload=()=>{let result;try{result=JSON.parse(request.responseText);}catch{reject(new Error('服务器返回了无效的上传结果。'));return;}if(request.status>=200&&request.status<300)resolve(result);else reject(Object.assign(new Error(result.error||'影像上传失败。'),{status:request.status}));};
-    request.onerror=()=>reject(new Error('上传连接中断，请检查网络后重试。'));request.onabort=()=>reject(new Error('上传已取消。'));request.send(form);
+    let progress=transferProgress(0,null);
+    const abort=()=>request.abort(),cleanup=()=>options.signal?.removeEventListener('abort',abort);
+    request.upload.onprogress=event=>{progress=transferProgress(event.loaded,event.lengthComputable?event.total:null);onProgress(progress);};
+    request.upload.onload=()=>{progress={...progress,complete:true};onProgress(progress);};
+    request.onload=()=>{cleanup();let result;try{result=JSON.parse(request.responseText);}catch{reject(new Error('服务器返回了无效的上传结果。'));return;}if(request.status>=200&&request.status<300)resolve(result);else reject(Object.assign(new Error(result.error||'影像上传失败。'),{status:request.status}));};
+    request.onerror=()=>{cleanup();reject(new Error('上传连接中断，请检查网络后重试。'));};request.onabort=()=>{cleanup();reject(transferAborted());};
+    options.signal?.addEventListener('abort',abort,{once:true});onProgress(progress);
+    try{if(options.signal?.aborted){cleanup();reject(transferAborted());return;}request.send(form);}catch(reason){cleanup();reject(reason);}
   });
 }

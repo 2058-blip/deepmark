@@ -39,7 +39,7 @@ export class SliceRenderer{
   }
   draw(frame:GrayFrame,size:number[],box:{ox:number;oy:number;w:number;h:number},point:number[],a:number,b:number,opacity:number){
     const ratio=window.devicePixelRatio||1,width=Math.round(size[0]*ratio),height=Math.round(size[1]*ratio);if(this.canvas.width!==width)this.canvas.width=width;if(this.canvas.height!==height)this.canvas.height=height;
-    const ctx=this.displayContext;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.globalAlpha=1;ctx.fillStyle='#080c11';ctx.fillRect(0,0,size[0],size[1]);ctx.imageSmoothingEnabled=false;
+    const ctx=this.displayContext;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.globalAlpha=1;ctx.fillStyle='#080c11';ctx.fillRect(0,0,width/ratio,height/ratio);ctx.imageSmoothingEnabled=false;
     const {ox,oy,w,h}=box;ctx.drawImage(frame.canvas,ox,oy,w,h);if(opacity>0){ctx.globalAlpha=opacity;ctx.drawImage(this.overlay,ox,oy,w,h);ctx.globalAlpha=1;}
     const x=ox+(point[a]+.5)/frame.width*w,y=oy+(frame.height-point[b]-.5)/frame.height*h;ctx.strokeStyle='#ffffff66';ctx.lineWidth=1;ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(x,oy);ctx.lineTo(x,oy+h);ctx.moveTo(ox,y);ctx.lineTo(ox+w,y);ctx.stroke();ctx.setLineDash([]);this.draws++;
   }

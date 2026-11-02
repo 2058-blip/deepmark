@@ -36,6 +36,7 @@ function fullTime(time:string){const date=new Date(time);return Number.isNaN(dat
 </script>
 <template>
   <section :class="['collaboration-panel',{'is-compact':compact||sidebar,'is-drawer':sidebar,'is-drawer-open':sidebar&&drawerOpen}]" :data-expanded="sidebar?drawerOpen:undefined" :data-author="person?.id" :data-online="connected" :data-pending="queueCount" :data-error="!!(error||cacheError)" :aria-busy="initializing||joining||exiting">
+    <button v-if="sidebar&&drawerOpen&&!maximized" class="collaboration-touch-backdrop" aria-label="收起实时协作面板" tabindex="-1" @click="drawerOpen=false"/>
     <header v-if="sidebar" class="collaboration-drawer-header">
       <button class="collaboration-drawer-toggle" :aria-label="`${drawerOpen?'收起':'展开'}实时协作`" :aria-expanded="drawerOpen" :aria-controls="drawerId" @click="drawerOpen=!drawerOpen"><UiIcon name="chevron" :size="16"/><strong>实时协作</strong></button>
       <span class="drawer-online-count" :class="{'is-online':connected&&presenceKnown}" aria-live="polite"><template v-if="connected&&presenceKnown">{{displayedMembers.length}}<span> 人在线</span></template><template v-else>{{connected?'连接中':'离线'}}</template></span>

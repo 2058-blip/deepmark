@@ -7,4 +7,5 @@ import './review.css';
 import './engineer.css';
 import './platformTheme.css';
 import './workstation.css';
+import './touch.css';
 createApp(App).mount('#root');

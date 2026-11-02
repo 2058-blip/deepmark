@@ -2,6 +2,9 @@
 import {computed,onBeforeUnmount,onMounted,ref} from 'vue';
 import {api,downloadAuthenticated,uploadDataset} from './api.ts';
 import type {AuthUser,Dataset,Group} from './api.ts';
+import type {TransferProgress as TransferState} from './api.ts';
+import {isTransferAborted} from './transfer.ts';
+import TransferProgress from './TransferProgress.vue';
 import CaseList from './CaseList.vue';
 import UiIcon from './UiIcon.vue';
 import './console.css';
@@ -18,7 +21,11 @@ const caseMetadata=ref<CaseInfo[]>([]),metadataRequest=new AbortController();
 const manualRefreshing=ref(false);
 const search=ref(''),filter=ref('all'),groupName=ref(''),joinCode=ref(''),claimGroup=ref('');
 const uploadFile=ref<File|null>(null),uploadName=ref(''),uploadInput=ref<HTMLInputElement|null>(null);
-const uploadStage=ref('正在上传…');
+const transfer=ref<TransferState|null>(null),transferTitle=ref(''),transferStage=ref('');
+let transferRequest:AbortController|null=null;
+const uploadStage=computed(()=>transfer.value?.complete||transfer.value?.percent===100?'服务器正在校验并发布…':transfer.value?.percent===null||!transfer.value?'正在上传…':`正在上传 ${transfer.value.percent}%`);
+const canCancelTransfer=computed(()=>!!transferRequest&&(busy.value!=='upload'||!transfer.value?.complete&&transfer.value?.percent!==100));
+function cancelTransfer(){if(canCancelTransfer.value)transferRequest?.abort();}
 const selectedId=ref<string|null>(null),detail=ref<StatusDetail|null>(null),detailLoading=ref(false),lastUpdated=ref(0);
 const filters=[{key:'all',label:'全部'},{key:'unassigned',label:'未标注'},{key:'in_progress',label:'进行中'},{key:'completed',label:'已完成'}] as const;
 let poll:ReturnType<typeof setInterval>|null=null;
@@ -66,23 +73,32 @@ async function refresh(initial=false,background=false){
   }catch(reason){error.value=(reason as Error).message;}
   finally{refreshing.value=false;manualRefreshing.value=false;loading.value=false;}
 }
-async function act(key:string,action:()=>Promise<void>){if(busy.value)return;busy.value=key;error.value='';notice.value='';try{await action();await refresh();}catch(reason){error.value=(reason as Error).message;}finally{busy.value='';}}
+async function act(key:string,action:()=>Promise<void>){if(busy.value)return;busy.value=key;error.value='';notice.value='';try{await action();await refresh();}catch(reason){if(isTransferAborted(reason))notice.value='传输已取消，可以重试。';else error.value=(reason as Error).message;}finally{busy.value='';}}
 async function createGroup(){const name=groupName.value.trim();if(!name)return;await act('create-group',async()=>{const result=await api<{group:Group}>('/api/groups',{method:'POST',body:JSON.stringify({name})});claimGroup.value=result.group.id;groupName.value='';notice.value=`已创建“${result.group.name}”，你是组长。`;});}
 async function joinGroup(){const code=joinCode.value.trim();if(!code)return;await act('join-group',async()=>{const result=await api<{group:Group}>('/api/groups/join',{method:'POST',body:JSON.stringify({code})});joinCode.value='';notice.value=`已加入“${result.group.name}”。`;});}
 function chooseUpload(event:Event){const input=event.target as HTMLInputElement;uploadFile.value=input.files?.[0]||null;if(uploadFile.value&&!uploadName.value)uploadName.value=uploadFile.value.name;}
 async function upload(){const file=uploadFile.value;if(!file)return;if(!/\.nii(?:\.gz)?$/i.test(file.name)){error.value='请选择 .nii 或 .nii.gz 影像文件。';return;}if(!file.size){error.value='影像文件为空，请重新选择。';return;}
-  await act('upload',async()=>{uploadStage.value='正在上传 0%';const form=new FormData();form.set('file',file);if(uploadName.value.trim())form.set('name',uploadName.value.trim());const result=await uploadDataset(form,percent=>{uploadStage.value=percent===100?'服务器正在校验并发布…':`正在上传 ${percent}%`;});uploadFile.value=null;uploadName.value='';if(uploadInput.value)uploadInput.value.value='';notice.value=`“${result.dataset.name}”已发布，等待组长认领。`;});
+  await act('upload',async()=>{
+    transferRequest=new AbortController();transfer.value={loaded:0,total:null,percent:null};transferTitle.value=`上传影像：${file.name}`;transferStage.value='正在上传影像…';
+    try{const form=new FormData();form.set('file',file);if(uploadName.value.trim())form.set('name',uploadName.value.trim());const result=await uploadDataset(form,progress=>{transfer.value=progress;transferStage.value=progress.complete||progress.percent===100?'上传已完成，服务器正在校验并发布…':'正在上传影像…';},{signal:transferRequest.signal});uploadFile.value=null;uploadName.value='';if(uploadInput.value)uploadInput.value.value='';notice.value=`“${result.dataset.name}”已发布，等待组长认领。`;}
+    finally{transferRequest=null;transfer.value=null;}
+  });
 }
 async function claim(dataset:Dataset){if(!claimGroup.value)return;await act(`claim:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/claim`,{method:'POST',body:JSON.stringify({groupId:claimGroup.value})});notice.value=`已认领“${dataset.name}”，小组成员现在可以共同标注。`;});}
 async function complete(dataset:Dataset){if(!canComplete(dataset)||!window.confirm(`将“${dataset.name}”标记为已完成？完成后小组成员将只能查看成果，请确认成员已同步当前工作。`))return;await act(`complete:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/complete`,{method:'POST',body:JSON.stringify({revision:dataset.revision})});notice.value=`“${dataset.name}”已完成，派活方可以下载成果。`;});}
-async function downloadResult(dataset:Dataset){if(dataset.status!=='completed'||!dataset.projectId)return;await act(`download:${dataset.id}`,async()=>{await downloadAuthenticated(`/api/collaboration/projects/${encodeURIComponent(dataset.projectId!)}/export`,`${dataset.name.replace(/\.nii(?:\.gz)?$/i,'')}-seg.zip`);notice.value='成果 ZIP 已请求下载。';});}
+async function downloadResult(dataset:Dataset){if(dataset.status!=='completed'||!dataset.projectId)return;await act(`download:${dataset.id}`,async()=>{
+  transferRequest=new AbortController();transfer.value={loaded:0,total:null,percent:null};transferTitle.value=`下载成果：${dataset.name}`;transferStage.value='正在生成并下载成果 ZIP…';
+  try{await downloadAuthenticated(`/api/collaboration/projects/${encodeURIComponent(dataset.projectId!)}/export`,`${dataset.name.replace(/\.nii(?:\.gz)?$/i,'')}-seg.zip`,{signal:transferRequest.signal,onProgress:progress=>{transfer.value=progress;transferStage.value=progress.complete?'下载完成，正在交给浏览器保存…':progress.loaded?'正在下载成果 ZIP…':'正在生成并下载成果 ZIP…';}});notice.value='成果 ZIP 下载完成，已交给浏览器保存。';}
+  finally{transferRequest=null;transfer.value=null;}
+});}
 function open(dataset:Dataset){if(canOpen(dataset)&&!busy.value)emit('open',dataset);}
 onMounted(()=>{void refresh(true);void loadCaseMetadata();poll=setInterval(()=>{if(!busy.value)void refresh(false,true);},5000);});
-onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();});
+onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();transferRequest?.abort();});
 </script>
 
 <template>
   <div class="console-page console-shell">
+    <div v-if="transfer" class="console-transfer-status"><TransferProgress :title="transferTitle" :progress="transfer" :stage="transferStage" :cancellable="canCancelTransfer" @cancel="cancelTransfer"/></div>
     <header class="console-topbar"><div class="console-brand"><strong>DeepMark</strong><span class="console-brand-role"><UiIcon :name="isDispatcher?'folder':'users'" :size="17"/>{{isDispatcher?'派活工作台':'干活工作台'}}</span></div><div class="console-account"><span class="console-account-avatar" aria-hidden="true">{{(user.name||user.username).slice(0,1)}}</span><span class="console-account-identity" :title="`${user.name} · @${user.username}`">{{user.name}} <small>@{{user.username}}</small></span><button :disabled="!!busy" @click="emit('logout')"><UiIcon name="logout" :size="17"/>退出登录</button></div></header>
     <main class="console-content">
       <section class="console-heading"><div><span class="eyebrow"><UiIcon :name="isDispatcher?'folder':'users'" :size="16"/>{{isDispatcher?'DATASET DELIVERY':'TEAM WORKSPACE'}}</span><h1>{{isDispatcher?'发布影像，跟进标注成果':'组成小组，协同完成标注'}}</h1><p>{{isDispatcher?'上传后的影像会进入待认领列表。你可以查看自己发布的数据集、监看标注并下载已完成成果。':'组长认领待标注影像，小组成员使用同一份实时协作工程。已完成任务保留为只读。'}}</p></div><button :disabled="manualRefreshing||!!busy" :aria-busy="manualRefreshing" @click="error='';refresh()"><UiIcon name="refresh" :size="17"/>刷新工作台</button></section>
@@ -108,3 +124,7 @@ onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();});
     </main>
   </div>
 </template>
+<style scoped>
+.console-transfer-status{position:fixed;right:24px;bottom:24px;z-index:40;width:min(420px,calc(100vw - 32px));filter:drop-shadow(0 5px 16px #173c3720)}
+@media(max-width:600px){.console-transfer-status{right:16px;bottom:max(16px,env(safe-area-inset-bottom))}}
+</style>

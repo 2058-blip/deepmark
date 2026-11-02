@@ -1,0 +1,143 @@
+/* Touch targets grow without disabling page scrolling or browser zoom. */
+button,a,input,select,textarea,summary{touch-action:manipulation}
+.collaboration-touch-backdrop{display:none}
+.touch-panel-backdrop,.touch-panel-close{display:none}
+.touch-controls{display:flex;flex-direction:column;gap:5px;padding:7px 12px;border-bottom:1px solid #dce8e4;background:#f1f9f7;color:#365b53;flex-shrink:0;z-index:4}
+.touch-mode-buttons{display:flex;gap:5px}
+.touch-mode-buttons>button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:38px;flex:1;padding:6px 8px;border-color:#c9dfd8;background:#fff;color:#43675c;font-size:12px}
+.touch-mode-buttons>button[aria-pressed=true]{border-color:#087f7c;background:#087f7c;color:#fff}
+.touch-hint{margin:0;color:#608076;font-size:10px;line-height:1.6;overflow-wrap:anywhere}
+@media(any-pointer:coarse){
+  body :is(button,summary){min-height:44px!important;min-width:44px!important}
+  body :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){min-height:44px!important;font-size:16px!important}
+  body :is(input[type=checkbox],input[type=radio]){width:22px!important;height:22px!important;flex-shrink:0}
+  body label:has(>input[type=checkbox]),body label:has(>input[type=radio]){min-height:44px;cursor:pointer}
+  input[type=range]{height:44px!important;min-width:24px}
+  input[type=range]::-webkit-slider-thumb{width:28px;height:28px;margin-top:-12px}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px}
+  .auth-workspace .auth-content{padding-bottom:max(30px,env(safe-area-inset-bottom))}
+  .console-shell .console-content{padding-bottom:max(32px,env(safe-area-inset-bottom))}
+  .console-shell .console-topbar{height:auto;min-height:72px;padding-top:max(8px,env(safe-area-inset-top));padding-bottom:8px}
+  .console-shell .console-account{flex-wrap:wrap;justify-content:flex-end}
+  .console-shell .console-account-identity{max-width:110px}
+  .console-page .case-list-view :is(.th-search input,.case-sort select){height:44px}
+  .console-shell .console-filters{gap:5px}
+  .console-shell .console-filters button{white-space:normal}
+  .console-shell .row-actions{gap:8px}
+  .dataset-dialog{max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
+  .dataset-dialog .datasets-header{align-items:center}
+  .dataset-dialog .dialog-close{flex-shrink:0}
+  .dataset-dialog .dataset-actions{flex-wrap:wrap}
+  .exit-actions{gap:10px}
+}
+.workstation.uses-touch{--rail-w:60px;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.workstation.uses-touch :is(button,summary){min-height:44px!important;min-width:44px!important}
+.workstation.uses-touch :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){min-height:44px!important;font-size:16px!important}
+.workstation.uses-touch :is(input[type=checkbox],input[type=radio]){width:22px!important;height:22px!important;flex-shrink:0}
+.workstation.uses-touch label:has(>input[type=checkbox]){min-height:44px}
+.workstation.uses-touch .workstation-rail{overflow-y:auto;overscroll-behavior:contain;gap:5px}
+.workstation.uses-touch .workstation-rail>button{width:50px;min-height:56px!important;flex-shrink:0}
+.workstation.uses-touch .rail-spacer{min-height:0}
+.workstation.uses-touch .case-navigation{width:48px;flex-basis:48px}
+.workstation.uses-touch .case-navigation>header{padding:0}
+.workstation.uses-touch .case-navigation>header>button{width:100%;padding:10px 0}
+.workstation.uses-touch .case-navigation.is-expanded{width:190px;flex-basis:190px}
+.workstation.uses-touch .case-navigation.is-expanded>header{padding:0 10px}
+.workstation.uses-touch .case-navigation-content{gap:17px}
+.workstation.uses-touch .sidebar{padding-inline:12px}
+.workstation.uses-touch .labels-heading{gap:6px;flex-wrap:wrap}
+.workstation.uses-touch .touch-panel-close{display:grid;place-items:center;padding:5px;border-color:#d6e7e1;background:#f3f9f7;flex-shrink:0}
+.workstation.uses-touch .segment{grid-template-columns:44px minmax(0,1fr) 44px;column-gap:6px;padding:8px 6px;min-height:106px}
+.workstation.uses-touch .segment .segment-visibility{width:44px;height:44px}
+.workstation.uses-touch .segment .segment-rename{width:44px;height:44px}
+.workstation.uses-touch .segment input[type=color]{width:44px;height:44px;margin:0;padding:8px;background:#fff9;border:1px solid #d5e4de;border-radius:5px}
+.workstation.uses-touch .segment-name-editor>textarea{font-size:16px;line-height:24px}
+.workstation.uses-touch .segment-name-editor>.segment-name-measure{font-size:16px;line-height:24px}
+.workstation.uses-touch input[type=range]{height:44px!important}
+.workstation.uses-touch input[type=range]::-webkit-slider-thumb{width:28px;height:28px;margin-top:-12px}
+.workstation.uses-touch input[type=range]::-moz-range-thumb{width:24px;height:24px}
+.workstation.uses-touch .editor-toolbar{flex-wrap:wrap;gap:5px;padding:5px 8px}
+.workstation.uses-touch .viewer-column{overflow-y:auto;overscroll-behavior:contain}
+.workstation.uses-touch .views{min-height:180px;flex-shrink:0}
+.workstation.uses-touch .tools{flex:1;justify-content:space-between}
+.workstation.uses-touch .tools>button{padding-inline:6px;gap:4px;min-width:52px!important;font-size:11px}
+.workstation.uses-touch .toolbar-history,.workstation.uses-touch .workstation-layout{gap:4px}
+.workstation.uses-touch .toolbar-browse-hint{display:none}
+.workstation.uses-touch .touch-controls{padding:6px 8px}
+.workstation.uses-touch .touch-mode-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.workstation.uses-touch .touch-mode-buttons>button{flex-direction:column;padding:4px 2px;gap:2px;font-size:11px;white-space:nowrap}
+.workstation.uses-touch .slice>header{height:46px;min-height:46px;padding-inline:8px}
+.workstation.uses-touch .slice>header .viewport-maximize{margin-left:auto;width:44px;height:44px}
+.workstation.uses-touch .slice>footer{height:54px;min-height:54px;padding-inline:6px;gap:5px}
+.workstation.uses-touch .slice footer .slice-page-input{width:46px;flex-basis:46px;padding:3px 2px}
+.workstation.uses-touch .zoom-reset{width:44px;padding:3px;font-size:9px}
+.workstation.uses-touch .info-bar{min-height:52px;height:auto}
+.workstation.uses-touch .info-page>.slice-page-input{width:46px}
+.workstation.uses-touch .image-identification{top:57px}
+.workstation.uses-touch .editor-help{max-height:calc(100% - 90px);overflow:auto;overscroll-behavior:contain;top:80px}
+.workstation.uses-touch .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open){flex-basis:48px;width:48px}
+.workstation.uses-touch .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open)>.collaboration-drawer-header{padding-inline:0}
+.workstation.uses-touch .collaboration-panel.is-compact.is-drawer .collaboration-drawer-toggle{min-width:44px}
+.workstation.uses-touch .collaboration-panel.is-compact.is-drawer .collaboration-history summary{display:flex;align-items:center}
+.workstation.uses-touch.is-viewport-maximized .touch-controls{position:absolute;left:50%;top:48px;transform:translateX(-50%);width:min(380px,calc(100% - 16px));border:1px solid #4a7067;border-radius:6px;opacity:.96;z-index:9;box-shadow:0 3px 15px #0004}
+.workstation.uses-touch.is-viewport-maximized .touch-hint{display:none}
+.workstation.uses-touch.is-viewport-maximized .slice>.canvas-host{inset:0}
+.workstation.uses-touch.is-viewport-maximized .canvas-host>.edge.top{top:116px}
+.workstation.uses-touch.is-viewport-maximized .canvas-host>.edge.bottom{bottom:58px}
+.workstation.uses-touch.is-viewport-maximized .viewer-workspace>.collaboration-panel.is-compact.is-drawer{flex-basis:0;width:0}
+@media(max-width:1100px){
+  .workstation.uses-touch .collaboration-panel.is-compact.is-drawer.is-drawer-open{position:absolute;right:0;top:0;bottom:0;width:min(320px,calc(100vw - var(--rail-w) - 12px));max-width:100%;z-index:21;box-shadow:-8px 0 30px #001a2444}
+  .workstation.uses-touch .collaboration-panel.is-drawer-open>.collaboration-touch-backdrop{display:block;position:absolute;right:100%;top:0;bottom:0;width:100vw;min-height:0!important;margin:0;padding:0;border:0;border-radius:0;background:#07171e55;box-shadow:none;z-index:-1}
+}
+@media(max-width:999px){
+  .workstation.uses-touch .sidebar{width:min(280px,calc(100vw - var(--rail-w) - 16px));z-index:19}
+  .workstation.uses-touch .case-navigation.is-expanded{position:absolute;left:var(--rail-w);top:0;bottom:0;width:min(260px,calc(100vw - var(--rail-w) - 16px));z-index:19;box-shadow:8px 0 24px #1638292b}
+  .workstation.uses-touch .touch-panel-backdrop{display:block;position:absolute;left:var(--rail-w);right:0;top:0;bottom:0;z-index:18;padding:0;margin:0;border:0;border-radius:0;background:#07171e55;box-shadow:none}
+}
+@media(max-width:560px){
+  .workstation.uses-touch .topbar{gap:6px;padding-inline:9px!important}
+  .workstation.uses-touch .workstation-title{display:none}
+  .workstation.uses-touch .top-actions{gap:6px}
+  .workstation.uses-touch .workstation-sync{font-size:9px}
+  .workstation.uses-touch .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 100%;gap:4px}
+  .workstation.uses-touch .tools>button{width:100%;min-width:44px!important}
+  .workstation.uses-touch .workstation-layout{margin-left:auto}
+  .workstation.uses-touch .toolbar-history{flex:0 0 100%;padding:0;border:0}
+  .workstation.uses-touch .slice>header small{font-size:8px}
+  .workstation.uses-touch .slice>footer>span:not(.slice-page-control){display:none}
+  .workstation.uses-touch .info-sync{font-size:9px}
+  .workstation.uses-touch .info-bar>.info-case{display:none}
+  .workstation.uses-touch .collaboration-panel.is-compact.is-drawer>.collaboration-drawer-header{padding-inline:10px}
+  .workstation.uses-touch .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open)>.collaboration-drawer-header{padding-inline:0}
+}
+@media(max-width:760px){
+  .workstation.uses-touch .views[data-layout=columns]{min-height:540px}
+  .workstation.uses-touch .views[data-layout=focus]{min-height:360px}
+}
+@media(max-height:500px){
+  .workstation.uses-touch .topbar{height:52px;min-height:52px!important;padding-block:4px!important}
+  .workstation.uses-touch .viewer-column{overflow-y:auto;overscroll-behavior:contain}
+  .workstation.uses-touch .views{flex:1 0 280px;min-height:280px}
+  .workstation.uses-touch .views[data-layout=focus]{min-height:360px}
+  .workstation.uses-touch .statusbar{display:none}
+  .workstation.uses-touch .touch-hint{display:none}
+  .workstation.uses-touch .touch-mode-buttons>button{flex-direction:row}
+  .workstation.uses-touch.is-viewport-maximized .viewer-column{overflow:hidden}
+  .workstation.uses-touch.is-viewport-maximized .views{flex:1;min-height:0}
+}
+/* Keep every action reachable on small phones with both side cards folded. */
+@media(max-width:380px){
+  .workstation.uses-touch .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 100%;gap:4px}
+  .workstation.uses-touch .tools>button{width:100%;min-width:44px!important;padding-inline:4px;gap:3px;font-size:10px}
+  .workstation.uses-touch .toolbar-history,.workstation.uses-touch .workstation-layout{padding:0;border:0}
+  .workstation.uses-touch:not(.is-viewport-maximized) .touch-mode-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .workstation.uses-touch .slice>header small{display:none}
+  .workstation.uses-touch:not(.is-viewport-maximized) .slice>footer{display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-rows:44px 44px;gap:4px 6px;height:100px;min-height:100px;padding:4px 6px}
+  .workstation.uses-touch:not(.is-viewport-maximized) .slice>footer>input[type=range]{grid-column:1/-1;grid-row:1;min-width:0;margin:0}
+  .workstation.uses-touch:not(.is-viewport-maximized) .slice>footer>.zoom-reset{grid-column:1;grid-row:2}
+  .workstation.uses-touch:not(.is-viewport-maximized) .slice>footer>.slice-page-control{grid-column:2;grid-row:2;justify-self:end}
+  .workstation.uses-touch .info-sync{display:none}
+  .workstation.uses-touch:not(.is-viewport-maximized) .views{min-height:240px}
+  .workstation.uses-touch:not(.is-viewport-maximized) .views[data-layout=columns]{min-height:720px}
+  .workstation.uses-touch:not(.is-viewport-maximized) .views[data-layout=focus]{min-height:480px}
+}

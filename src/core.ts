@@ -139,7 +139,7 @@ export function planePoint(axis: Axis, slice: number, u: number, v: number): [nu
   p[axis] = slice; p[a] = u; p[b] = v; return p;
 }
 export function paint(labels: Uint16Array, volume: Pick<Volume, 'dims' | 'spacing'>, axis: Axis, slice: number,
-  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number, recordTouches = false, excluded?: (x:number,y:number)=>boolean,ownership?:{personalValue:(index:number,fallback:number)=>number|null;deferErase?:boolean}) {
+  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number, recordTouches = false, excluded?: (x:number,y:number)=>boolean,ownership?:{personalValue:(index:number,fallback:number)=>number|null;deferErase?:boolean},displayBefore?:Map<number,number>) {
   const [a, b] = planeAxes(axis), radius = diameter / 2;
   const du = radius / volume.spacing[a], dv = radius / volume.spacing[b];
   for (let y = Math.max(0, Math.ceil(v - dv)); y <= Math.min(volume.dims[b] - 1, Math.floor(v + dv)); y++) {
@@ -150,6 +150,7 @@ export function paint(labels: Uint16Array, volume: Pick<Volume, 'dims' | 'spacin
       const own=ownership?ownership.personalValue(i,labels[i]):labels[i],current=value===0&&ownership?own:labels[i];
       if(current===null||(!recordTouches&&current===value)||(eraseOnly!==undefined&&current!==eraseOnly))continue;
       if (!before.has(i)) before.set(i,own??0);
+      if(displayBefore&&!displayBefore.has(i))displayBefore.set(i,labels[i]);
       if(!ownership?.deferErase||value!==0)labels[i] = value;
     }
   }

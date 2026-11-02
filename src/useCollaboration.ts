@@ -11,6 +11,7 @@ import type {Draft,DraftIndex,LiveDelta,Operation,ParallelRegion,Person,Presence
 import {allOperations,cacheDataset,listDrafts,readDataset,readDraft,writeLocal,writeView} from './localCache.ts';
 import type {DraftDelta} from './localCache.ts';
 import {api as platformApi,authUser,downloadAuthenticated,fingerprint,loadCurrentUser} from './api.ts';
+import type {TransferOptions} from './api.ts';
 type History={revision:number;op:string;author:string;name:string;kind:string;time:string};
 const base='/api/collaboration',sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function api<T>(path:string,data?:unknown):Promise<T>{
@@ -93,8 +94,11 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   }
   function capture():Draft|null{
     if(!project.value||!person.value||!canWrite.value||!editor.volume.value||historical.value!==null)return null;
-    const partial=editor.pendingChange();if(!partial)partialId=null;else partialId??=operationId();
-    const draft:Draft={key:draftKey(),author:{...person.value},project:{...structuredClone(project.value),mask:''},name:editor.volume.value.name,mask:editor.mask.value.slice().buffer,ownedMask:ownershipKnown?ownershipBits.slice().buffer:undefined,segments:snapshotSegments(editor.segments.value),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
+    // Touch previews can still be cancelled by a second finger. Persist their
+    // baseline, never a recoverable edit that could reappear after cancellation.
+    const interruptible=editor.isInterruptibleStroke(),partial=interruptible?null:editor.pendingChange();if(!partial)partialId=null;else partialId??=operationId();
+    const display=editor.mask.value.slice();if(interruptible)editor.restorePendingBase(display);
+    const draft:Draft={key:draftKey(),author:{...person.value},project:{...structuredClone(project.value),mask:''},name:editor.volume.value.name,mask:display.buffer,ownedMask:ownershipKnown?ownershipBits.slice().buffer:undefined,segments:snapshotSegments(editor.segments.value),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
   }
   function persistWrite(draft:Draft|null,op?:Operation,removeOp?:string,delta?:DraftDelta){
     const operations=queue.map(item=>({...item}));
@@ -121,7 +125,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     if(event.revision<=lastFetchedRevision)return;incoming.set(event.revision,event);
     while(incoming.has(lastFetchedRevision+1)){
       const next=incoming.get(lastFetchedRevision+1)!,stroke=canWrite.value?editor.pendingDisplayChange():null;incoming.delete(next.revision);
-      applyLocal(editor.mask.value,next.patch);overlayLocal();if(stroke)stroke.indices.forEach((i,k)=>{editor.mask.value[i]=stroke.after[k];});
+      editor.restorePendingBase();applyLocal(editor.mask.value,next.patch);overlayLocal();editor.rebasePending(editor.mask.value);if(stroke)stroke.indices.forEach((i,k)=>{editor.mask.value[i]=stroke.after[k];});
       for(const [i,author]of next.owners||[])if(ownershipKnown){if(author===person.value?.id)ownershipBits[i>>>3]|=1<<(i&7);else ownershipBits[i>>>3]&=~(1<<(i&7));}
       project.value={...project.value,mask:'',revision:next.revision,latestRevision:next.revision,regions:next.regions,labels:next.labels,status:next.status,finalizedBy:next.finalizedBy??project.value.finalizedBy,finalizedAt:next.finalizedAt??project.value.finalizedAt,finalRevision:next.finalRevision??project.value.finalRevision};lastFetchedRevision=next.revision;
       updateLabels(next.labels);editor.revision.value++;editor.readOnly.value=isReadOnly();editor.dirty.value=queue.some(op=>!acknowledged.has(op.op));offlineSource.value=false;
@@ -149,7 +153,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
       if(mask.length!==editor.mask.value.length)throw new Error('服务器工程与当前影像尺寸不一致。');
       const writable=!accessRevoked.value&&authUser.value?.role==='worker'&&state.canWrite===true&&state.status!=='finalized'&&state.datasetStatus!=='completed';
       if(!writable&&queue.length){exitNotice.value='任务已转为只读；尚未提交的工作保留在本地缓存，当前显示服务器成果。';queue=[];queueCount.value=0;}
-      const stroke=writable?editor.pendingDisplayChange():null;if(writable)for(const op of queue)if(!acknowledged.has(op.op))applyLocal(mask,op.patch,true);if(stroke)stroke.indices.forEach((i,k)=>{mask[i]=stroke.after[k];});
+      const stroke=writable?editor.pendingDisplayChange():null;if(writable)for(const op of queue)if(!acknowledged.has(op.op))applyLocal(mask,op.patch,true);editor.rebasePending(mask);if(stroke)stroke.indices.forEach((i,k)=>{mask[i]=stroke.after[k];});
       ownershipBits=owned||new Uint8Array(Math.ceil(mask.length/8));ownershipKnown=!!owned;
       editor.mask.value=mask;editor.revision.value++;project.value=state;offlineSource.value=false;if(expectedHistory===null)lastFetchedRevision=state.revision;
       updateLabels(state.labels);for(const revision of incoming.keys())if(revision<=state.revision)incoming.delete(revision);
@@ -259,7 +263,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   async function viewHistory(revision:number|null){if(queue.length||editor.strokeActive.value||exiting.value||fetching)return;const previous=historical.value;if(previous===null)await cacheNow();if(revision===null)lastFetchedRevision=-1;historical.value=revision;editor.readOnly.value=true;await refresh();if(error.value){historical.value=previous;editor.readOnly.value=isReadOnly();}}
   async function addLabel(){if(!project.value||!canWrite.value||historical.value!==null)return;try{const result=await request<{label:Omit<Segment,'visible'>;delta?:LiveDelta}>(`/projects/${project.value.id}/labels`,{});if(result.delta)receiveDelta(result.delta);if(!editor.segments.value.some(s=>s.id===result.label.id))editor.segments.value.push({...result.label,visible:true});editor.selected.value=result.label.id;cacheGeneration++;scheduleCache();}catch(reason){error.value=(reason as Error).message;}}
   async function updateLabel(label:Segment){if(!project.value||!person.value||!canWrite.value||historical.value!==null)return;if(!label.name.trim()||label.name.length>60){label.name=project.value.labels.find(s=>s.id===label.id)?.name||`标注 ${label.id}`;error.value='标签名称不能为空，已恢复原名称。';return;}cacheGeneration++;const op:Operation={...operation({indices:new Uint32Array(),before:new Uint16Array(),after:new Uint16Array()},'label'),label:{id:label.id,name:label.name,color:label.color}};queue.push(op);editor.dirty.value=true;mark();void pump();void persistWrite(null,op).catch(()=>{});scheduleCache();}
-  async function exportServer(){if(!project.value||queue.length||unsaved.value||authUser.value?.role==='dispatcher'&&project.value.datasetStatus!=='completed')return;const params=new URLSearchParams();if(historical.value!==null)params.set('revision',String(historical.value));try{await downloadAuthenticated(`${base}/projects/${project.value.id}/export?${params}`,`${editor.volume.value?.name.replace(/\.nii(\.gz)?$/i,'')||'标注成果'}-seg.zip`);}catch(reason){error.value=(reason as Error).message;}}
+  async function exportServer(options:TransferOptions={}):Promise<boolean>{if(!project.value||queue.length||unsaved.value||authUser.value?.role==='dispatcher'&&project.value.datasetStatus!=='completed')return false;const params=new URLSearchParams();if(historical.value!==null)params.set('revision',String(historical.value));try{await downloadAuthenticated(`${base}/projects/${project.value.id}/export?${params}`,`${editor.volume.value?.name.replace(/\.nii(\.gz)?$/i,'')||'标注成果'}-seg.zip`,options);return true;}catch(reason){if((reason as Error).name!=='AbortError')error.value=(reason as Error).message;return false;}}
   async function exportLocal(){
     if(!editor.volume.value||editor.busy.value||authUser.value?.role==='dispatcher'&&project.value?.datasetStatus!=='completed')return;editor.endStroke();editor.busy.value=true;editor.status.value='正在压缩本地副本 ZIP…';
     try{const v=editor.volume.value,archive=await annotationArchive(exportNifti(v,editor.mask.value),editor.segments.value,{source:v.name,local:true,projectId:project.value?.id,revision:historical.value??project.value?.revision,parallelRegions:project.value?.regions});download(archive,`本地工作副本-${person.value?.name||'标注'}.zip`,'application/zip');editor.status.value='已请求下载本地副本 ZIP。';}
@@ -269,8 +273,8 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   let viewTimer:ReturnType<typeof setTimeout>|null=null;
   watch(()=>JSON.stringify(view()),()=>{if(active.value&&historical.value===null){cacheGeneration++;if(viewTimer)clearTimeout(viewTimer);viewTimer=setTimeout(()=>void cacheView().catch(()=>{}),400);}});
   const poll=setInterval(()=>{void catchUp();},5000),partialCache=setInterval(()=>{if(editor.strokeActive.value&&active.value)void cacheNow().catch(()=>{});},15000);
-  const visibility=()=>{if(document.visibilityState==='hidden'&&active.value){editor.endStroke();void cacheNow().catch(()=>{});}};
-  const beforeUnload=(event:BeforeUnloadEvent)=>{if(active.value&&(queue.length||editor.strokeActive.value||cacheError.value)){editor.endStroke();void cacheNow().catch(()=>{});event.preventDefault();event.returnValue='';}};
+  const visibility=()=>{if(document.visibilityState==='hidden'&&active.value){editor.interruptStroke();void cacheNow().catch(()=>{});}};
+  const beforeUnload=(event:BeforeUnloadEvent)=>{if(active.value&&(queue.length||editor.strokeActive.value||cacheError.value)){editor.interruptStroke();void cacheNow().catch(()=>{});event.preventDefault();event.returnValue='';}};
   document.addEventListener('visibilitychange',visibility);window.addEventListener('beforeunload',beforeUnload);
   onBeforeUnmount(()=>{void cacheNow().catch(()=>{});detach();clearInterval(poll);clearInterval(partialCache);if(viewTimer)clearTimeout(viewTimer);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('beforeunload',beforeUnload);});
   const provenanceCache=new Map<string,string>();

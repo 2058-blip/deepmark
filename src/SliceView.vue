@@ -11,14 +11,21 @@ import {SliceRenderer} from './sliceRenderer.ts';
 import type {GrayFrame} from './sliceRenderer.ts';
 import {GrayRegionClient} from './grayRegionClient.ts';
 import type {GrayMode,RegionOutline} from './grayRegions.ts';
-const p=withDefaults(defineProps<{volume:Volume;mask:Uint16Array;axis:Axis;point:number[];revision:number;segments:Segment[];opacity:number;center:number;width:number;tool:Tool;diameter:number;thresholdPreview:ThresholdRange|null;parallelMap?:Map<number,number[]>;hoverPreview?:boolean;regionWidth?:number;regionMode?:GrayMode;allowEdit?:boolean;airCache?:ExteriorAirCache|null;zoom?:number;active?:boolean;maximized?:boolean;provenance?:(index:number)=>Promise<string>;provenanceKey?:string}>(),{hoverPreview:false,regionWidth:100,regionMode:'bands',allowEdit:true,zoom:1,active:false,maximized:false});
-const emit=defineEmits<{zoom:[value:number];point:[value:number[]];activate:[axis:Axis];focus:[axis:Axis];'window-level':[center:number,width:number];start:[];stroke:[axis:Axis,slice:number,u:number,v:number];end:[];region:[axis:Axis,slice:number,pixels:Uint32Array]}>();
+import {pinchView,touchPair,touchSlice,touchTap} from './touchGeometry.ts';
+import type {TouchPoint} from './touchGeometry.ts';
+import {registerTouchCanvas,touchCanvasAllowed} from './touchSession.ts';
+const p=withDefaults(defineProps<{volume:Volume;mask:Uint16Array;axis:Axis;point:number[];revision:number;segments:Segment[];opacity:number;center:number;width:number;tool:Tool;diameter:number;thresholdPreview:ThresholdRange|null;parallelMap?:Map<number,number[]>;hoverPreview?:boolean;regionWidth?:number;regionMode?:GrayMode;allowEdit?:boolean;airCache?:ExteriorAirCache|null;zoom?:number;active?:boolean;maximized?:boolean;provenance?:(index:number)=>Promise<string>;provenanceKey?:string;touchMode?:'slice'|'paint'|'pan'|'window'}>(),{hoverPreview:false,regionWidth:100,regionMode:'bands',allowEdit:true,zoom:1,active:false,maximized:false,touchMode:'slice'});
+const emit=defineEmits<{zoom:[value:number];point:[value:number[]];activate:[axis:Axis];focus:[axis:Axis];'window-level':[center:number,width:number];start:[pointerType?:string];cancel:[];stroke:[axis:Axis,slice:number,u:number,v:number];end:[];region:[axis:Axis,slice:number,pixels:Uint32Array]}>();
 const host=ref<HTMLDivElement|null>(null),canvas=ref<HTMLCanvasElement|null>(null),size=ref([300,300]),outline=shallowRef<RegionOutline|null>(null),grayMessage=ref('');
 const renderedSlice=ref(-1),renderCount=ref(0),grayBuilds=ref(0),renderMs=ref(0);
 const slicePage=ref(String(p.point[p.axis]+1));
-const gesture=ref<'zoom'|'pan'|'window'|null>(null),pan=ref<[number,number]>([0,0]),authorText=ref('');
+const gesture=ref<'zoom'|'pan'|'window'|'slice'|'pinch'|null>(null),pan=ref<[number,number]>([0,0]),authorText=ref('');
 const navigating=computed(()=>gesture.value!==null);
 let gestureStart:[number,number]=[0,0],panInitial:[number,number]=[0,0],zoomInitial=1,windowInitial:[number,number]=[0,1],gesturePointer=-1,drawPointer=-1,authorGeneration=0,authorTimer:ReturnType<typeof setTimeout>|null=null,authorIndex=-1;
+const touches=new Map<number,TouchPoint>(),ignoredTouches=new Set<number>();
+let unregisterTouchCanvas:(()=>void)|null=null;
+let touchStart:TouchPoint={x:0,y:0},touchStarted=0,touchSliceInitial=0,touchBlocked=false,touchRegion=false,penPointer=-1;
+let pinchInitial:{center:[number,number];distance:number;zoom:number;pan:[number,number]}|null=null;
 const hoverPosition=ref([12,12]);
 const annotationStyle=computed(()=>{const left=Math.max(8,Math.min(hoverPosition.value[0]+14,size.value[0]-220)),top=Math.max(8,Math.min(hoverPosition.value[1]+16,size.value[1]-80));return {left:`${left}px`,right:'auto',top:`${top}px`,maxWidth:`${Math.max(80,Math.min(340,size.value[0]-left-8))}px`,overflowWrap:'anywhere' as const};});
 const brushPoint=shallowRef<[number,number]|null>(null);
@@ -47,11 +54,11 @@ watch([()=>p.center,()=>p.width],()=>{grayDirty=true;schedule();},{flush:'post'}
 watch([()=>p.mask,()=>p.revision,()=>p.thresholdPreview,()=>p.airCache,()=>p.parallelMap,()=>p.segments.map(s=>`${s.id}:${s.color}:${s.visible}`).join('|')],()=>{labelDirty=true;schedule();},{flush:'post'});
 watch([()=>p.point[geometry.value.a],()=>p.point[geometry.value.b],()=>p.opacity,()=>size.value,()=>p.zoom,()=>pan.value[0],()=>pan.value[1]],schedule,{flush:'post'});
 watch([()=>p.hoverPreview,()=>p.regionMode,()=>p.regionWidth,()=>p.airCache],()=>{resetRegion();schedule();},{flush:'post'});
-watch(()=>p.tool,()=>{if(drawing||navigating.value)end();grayClient?.clear();outline.value=null;if(inside&&p.hoverPreview)preview();});
+watch([()=>p.tool,()=>p.touchMode],()=>{cancelGesture();grayClient?.clear();outline.value=null;if(inside&&p.hoverPreview)preview();});
 watch(()=>p.volume,()=>{cancelGesture();pan.value=[0,0];});
-watch(()=>p.allowEdit,value=>{if(!value&&drawing)end();});
-onMounted(()=>{window.addEventListener('blur',cancelGesture);renderer=new SliceRenderer(canvas.value!);observer=new ResizeObserver(entries=>{size.value=[Math.max(80,entries[0].contentRect.width),Math.max(80,entries[0].contentRect.height)];});observer.observe(host.value!);schedule();});
-onBeforeUnmount(()=>{clearAuthor();window.removeEventListener('blur',cancelGesture);observer?.disconnect();if(renderRAF)cancelAnimationFrame(renderRAF);if(wheelRAF)cancelAnimationFrame(wheelRAF);if(quietTimer)clearTimeout(quietTimer);grayClient?.destroy();renderer?.destroy();});
+watch(()=>p.allowEdit,value=>{if(!value)cancelGesture();});
+onMounted(()=>{unregisterTouchCanvas=registerTouchCanvas(canvas.value!,cancelGesture);window.addEventListener('blur',resetInteractions);document.addEventListener('visibilitychange',visibility);window.addEventListener('pointerup',clearIgnoredTouch);window.addEventListener('pointercancel',clearIgnoredTouch);renderer=new SliceRenderer(canvas.value!);observer=new ResizeObserver(entries=>{size.value=[Math.max(80,entries[0].contentRect.width),Math.max(80,entries[0].contentRect.height)];});observer.observe(host.value!);schedule();});
+onBeforeUnmount(()=>{cancelGesture();unregisterTouchCanvas?.();clearAuthor();window.removeEventListener('blur',resetInteractions);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pointerup',clearIgnoredTouch);window.removeEventListener('pointercancel',clearIgnoredTouch);observer?.disconnect();if(renderRAF)cancelAnimationFrame(renderRAF);if(wheelRAF)cancelAnimationFrame(wheelRAF);if(quietTimer)clearTimeout(quietTimer);grayClient?.destroy();renderer?.destroy();});
 function coords(clientX:number,clientY:number):[number,number]|null{const rect=canvas.value!.getBoundingClientRect();return sliceCoords(geometry.value,clientX-rect.left,clientY-rect.top);}
 function currentTransform(){const g=geometry.value,r=renderedGeometry;return !!r&&r.ox===g.ox&&r.oy===g.oy&&r.w===g.w&&r.h===g.h;}
 function client(){
@@ -67,6 +74,8 @@ function prepare(){
 function seed(point:[number,number]){const {nx,ny}=geometry.value;return Math.round(point[0])+nx*(ny-1-Math.round(point[1]));}
 function preview(){if(!inside||!lastClient||!p.hoverPreview||drawing||navigating.value||quietTimer)return;const point=coords(...lastClient);if(!point){outline.value=null;grayClient?.clear();return;}prepare()?.hover(seed(point));}
 function move(e:PointerEvent){
+  if(e.pointerType==='touch'){moveTouch(e);return;}
+  if(drawing&&e.pointerId!==drawPointer)return;
   if(navigating.value){
     if(e.pointerId!==gesturePointer)return;
     if(!(e.buttons&(gesture.value==='pan'?4:2))){end(e);return;}
@@ -86,6 +95,8 @@ function move(e:PointerEvent){
   const previous=last||current,steps=Math.max(1,Math.ceil(Math.hypot(current[0]-previous[0],current[1]-previous[1])*2));for(let i=1;i<=steps;i++)emit('stroke',p.axis,p.point[p.axis],previous[0]+(current[0]-previous[0])*i/steps,previous[1]+(current[1]-previous[1])*i/steps);last=current;
 }
 function start(e:PointerEvent){
+  if(e.pointerType==='touch'){startTouch(e);return;}
+  if(e.pointerType==='pen'){cancelTouches();penPointer=e.pointerId;}
   emit('activate',p.axis);clearAuthor();
   let pendingSlice=false;
   if(wheelRAF){cancelAnimationFrame(wheelRAF);wheelRAF=0;const target=wheelTarget;wheelTarget=null;if(target!==null){slice(target);pendingSlice=true;}}
@@ -98,14 +109,22 @@ function start(e:PointerEvent){
   lastClient=[e.clientX,e.clientY];inside=true;
   if(p.tool==='region'){if(p.allowEdit)prepare()?.select(seed(point));return;}
   if(!p.allowEdit||(p.tool!=='paint'&&p.tool!=='erase'))return;
-  drawing=true;drawPointer=e.pointerId;grayClient?.clear();outline.value=null;canvas.value!.setPointerCapture(e.pointerId);emit('start');move(e);
+  drawing=true;drawPointer=e.pointerId;grayClient?.clear();outline.value=null;canvas.value!.setPointerCapture(e.pointerId);emit('start',e.pointerType);move(e);
 }
 function end(event?:PointerEvent){
+  if(event?.pointerType==='touch'){endTouch(event);return;}
+  if(event?.pointerId===penPointer)penPointer=-1;
   if(navigating.value){if(event&&event.pointerId!==gesturePointer)return;gesture.value=null;const id=gesturePointer;gesturePointer=-1;if(id>=0&&canvas.value?.hasPointerCapture(id))canvas.value.releasePointerCapture(id);brushPoint.value=null;inside=false;return;}
   if(drawing){if(event&&event.pointerId!==drawPointer)return;drawing=false;last=null;const id=drawPointer;drawPointer=-1;if(id>=0&&canvas.value?.hasPointerCapture(id))canvas.value.releasePointerCapture(id);emit('end');preview();}
 }
-function resetView(){end();pan.value=[0,0];emit('zoom',1);emit('activate',p.axis);clearAuthor();brushPoint.value=null;outline.value=null;grayClient?.clear();}
-function leave(){clearAuthor();brushPoint.value=null;inside=false;outline.value=null;grayMessage.value='';grayClient?.clear();}
+function resetView(){cancelGesture();pan.value=[0,0];emit('zoom',1);emit('activate',p.axis);clearAuthor();brushPoint.value=null;outline.value=null;grayClient?.clear();}
+function leave(event?:PointerEvent){
+  if(event?.pointerType!=='touch')clearAuthor();brushPoint.value=null;inside=false;outline.value=null;grayMessage.value='';
+  // Touch releases implicitly leave the canvas. Hide the preview without cancelling
+  // the region selection just queued on pointerup; explicit cancellation paths call
+  // leave() without an event and still invalidate the worker request.
+  if(event?.pointerType!=='touch'||touches.size>0)grayClient?.clear();
+}
 function slice(value:number){emit('activate',p.axis);const q=[...p.point];q[p.axis]=Math.max(0,Math.min(p.volume.dims[p.axis]-1,value));emit('point',q);}
 function resetSlicePage(){slicePage.value=String(p.point[p.axis]+1);}
 function commitSlicePage(){const index=slicePageIndex(slicePage.value,p.volume.dims[p.axis]);if(index===null){resetSlicePage();return;}slicePage.value=String(index+1);if(index!==p.point[p.axis])slice(index);}
@@ -114,7 +133,93 @@ function wheel(event:WheelEvent){
   if(quietTimer)clearTimeout(quietTimer);quietTimer=setTimeout(()=>{quietTimer=null;preview();},100);
   if(!wheelRAF)wheelRAF=requestAnimationFrame(()=>{wheelRAF=0;const target=wheelTarget;wheelTarget=null;if(target!==null)slice(target);});
 }
-function cancelGesture(){end();leave();}
+function release(id:number){if(canvas.value?.hasPointerCapture(id))canvas.value.releasePointerCapture(id);}
+function cancelDrawing(releaseCapture=true){if(!drawing)return;drawing=false;last=null;const id=drawPointer;drawPointer=-1;emit('cancel');if(releaseCapture)release(id);}
+function cancelTouches(){
+  for(const id of touches.keys())ignoredTouches.add(id);
+  const ids=[...touches.keys()];touches.clear();touchBlocked=true;touchRegion=false;pinchInitial=null;
+  if(drawing)cancelDrawing();gesture.value=null;gesturePointer=-1;for(const id of ids)release(id);
+}
+function cancelGesture(){const id=gesturePointer;cancelDrawing();cancelTouches();gesture.value=null;gesturePointer=-1;release(id);penPointer=-1;leave();}
+function resetInteractions(){cancelGesture();ignoredTouches.clear();touchBlocked=false;}
+function visibility(){if(document.visibilityState==='hidden')resetInteractions();}
+function clearIgnoredTouch(event:PointerEvent){if(event.pointerType==='pen'&&event.pointerId===penPointer)penPointer=-1;if(event.pointerType==='touch'&&ignoredTouches.delete(event.pointerId)&&!touches.size&&!ignoredTouches.size)touchBlocked=false;}
+function pointerInterrupted(event:PointerEvent){
+  if(event.pointerType==='touch'){
+    // A capture released intentionally has already been removed from touches.
+    if(touches.has(event.pointerId)){cancelTouches();leave();}
+    if(event.type==='pointercancel')ignoredTouches.delete(event.pointerId);
+    if(!touches.size&&!ignoredTouches.size)touchBlocked=false;
+    return;
+  }
+  if(event.pointerId===drawPointer||event.pointerId===gesturePointer||event.pointerId===penPointer)cancelGesture();
+}
+function localPoint(point:TouchPoint):[number,number]{const rect=canvas.value!.getBoundingClientRect();return [point.x-rect.left,point.y-rect.top];}
+function rememberPosition(point:TouchPoint){lastClient=[point.x,point.y];hoverPosition.value=localPoint(point);}
+function readyPoint(point:TouchPoint){
+  const rect=canvas.value!.getBoundingClientRect(),ratio=window.devicePixelRatio||1;
+  return renderedVolume===p.volume&&renderedSlice.value===p.point[p.axis]&&currentTransform()&&Math.abs(canvas.value!.width-rect.width*ratio)<=2&&Math.abs(canvas.value!.height-rect.height*ratio)<=2?coords(point.x,point.y):null;
+}
+function beginPinch(){
+  // The first finger still owns its capture during the new two-finger gesture.
+  cancelDrawing(false);touchRegion=false;grayClient?.clear();outline.value=null;brushPoint.value=null;inside=false;
+  const pair=[...touches.values()];if(pair.length!==2)return;
+  const info=touchPair(pair[0],pair[1]);pinchInitial={center:localPoint({x:info.center[0],y:info.center[1]}),distance:Math.max(1,info.distance),zoom:p.zoom,pan:[...pan.value]};gesture.value='pinch';
+}
+function startTouch(event:PointerEvent){
+  event.preventDefault();emit('activate',p.axis);clearAuthor();
+  if(!touchCanvasAllowed(canvas.value!)||penPointer>=0||ignoredTouches.size){ignoredTouches.add(event.pointerId);return;}
+  if(!touches.size&&!ignoredTouches.size)touchBlocked=false;
+  const point={x:event.clientX,y:event.clientY};touches.set(event.pointerId,point);canvas.value!.setPointerCapture(event.pointerId);
+  if(touches.size===2&&!touchBlocked){beginPinch();return;}
+  if(touches.size>2){cancelTouches();return;}
+  if(touchBlocked)return;
+  // Do not begin a touch against a wheel-selected slice that has not rendered yet.
+  if(wheelRAF){cancelAnimationFrame(wheelRAF);wheelRAF=0;const target=wheelTarget;wheelTarget=null;if(target!==null)slice(target);touchBlocked=true;return;}
+  touchStart=point;touchStarted=performance.now();touchSliceInitial=p.point[p.axis];gestureStart=[point.x,point.y];panInitial=[...pan.value];windowInitial=[p.center,p.width];rememberPosition(point);
+  const current=readyPoint(point);inside=!!current;
+  if(p.touchMode!=='paint'){gesture.value=p.touchMode;brushPoint.value=null;outline.value=null;grayClient?.clear();return;}
+  if(!current||!p.allowEdit)return;
+  brushPoint.value=current;
+  if(p.tool==='region'){touchRegion=true;preview();return;}
+  if(p.tool!=='paint'&&p.tool!=='erase')return;
+  drawing=true;drawPointer=event.pointerId;last=null;grayClient?.clear();outline.value=null;emit('start','touch');drawAt(current);
+}
+function drawAt(current:[number,number]|null){
+  if(!current){last=null;return;}
+  const previous=last||current,steps=Math.max(1,Math.ceil(Math.hypot(current[0]-previous[0],current[1]-previous[1])*2));
+  for(let i=1;i<=steps;i++)emit('stroke',p.axis,p.point[p.axis],previous[0]+(current[0]-previous[0])*i/steps,previous[1]+(current[1]-previous[1])*i/steps);last=current;
+}
+function moveTouch(event:PointerEvent){
+  if(!touches.has(event.pointerId))return;event.preventDefault();
+  const point={x:event.clientX,y:event.clientY};touches.set(event.pointerId,point);if(touchBlocked)return;
+  if(gesture.value==='pinch'&&pinchInitial&&touches.size===2){
+    const pair=[...touches.values()],info=touchPair(pair[0],pair[1]),next=pinchView(pinchInitial.zoom,pinchInitial.pan,size.value,pinchInitial.center,pinchInitial.distance,localPoint({x:info.center[0],y:info.center[1]}),info.distance);
+    pan.value=next.pan;emit('zoom',next.zoom);return;
+  }
+  rememberPosition(point);const dx=point.x-touchStart.x,dy=point.y-touchStart.y;
+  if(gesture.value==='slice'){const target=touchSlice(touchSliceInitial,touchStart.y,point.y,p.volume.dims[p.axis]);if(target!==p.point[p.axis])slice(target);return;}
+  if(gesture.value==='pan'){pan.value=[panInitial[0]+dx,panInitial[1]+dy];return;}
+  if(gesture.value==='window'){const next=dragWindowLevel(windowInitial[0],windowInitial[1],dx,dy);emit('window-level',next.center,next.width);return;}
+  const current=readyPoint(point);brushPoint.value=current;inside=!!current;
+  if(drawing){if(!current){last=null;return;}drawAt(current);return;}
+  if(touchRegion){if(current)preview();else{outline.value=null;grayClient?.clear();}}
+}
+function endTouch(event:PointerEvent){
+  event.preventDefault();
+  if(ignoredTouches.delete(event.pointerId)){if(!touches.size&&!ignoredTouches.size)touchBlocked=false;return;}
+  if(!touches.has(event.pointerId))return;
+  const wasBlocked=touchBlocked,wasPinch=gesture.value==='pinch',point={x:event.clientX,y:event.clientY};touches.delete(event.pointerId);
+  if(wasPinch||touches.size){touchBlocked=true;touchRegion=false;pinchInitial=null;gesture.value=null;cancelDrawing();release(event.pointerId);if(!touches.size)touchBlocked=false;return;}
+  const region=touchRegion;touchRegion=false;gesture.value=null;pinchInitial=null;
+  if(!wasBlocked){
+    rememberPosition(point);
+    if(drawing&&event.pointerId===drawPointer){drawing=false;last=null;drawPointer=-1;emit('end');}
+    else if(region&&p.allowEdit&&p.tool==='region'){const current=readyPoint(point);if(current)prepare()?.select(seed(current));}
+    else if(p.touchMode==='slice'&&touchTap(touchStart,point,performance.now()-touchStarted)){inside=!!coords(point.x,point.y);hoverAuthor(coords(point.x,point.y));}
+  }else cancelDrawing();
+  release(event.pointerId);touchBlocked=false;brushPoint.value=null;inside=false;outline.value=null;
+}
 function clearAuthor(){authorGeneration++;authorIndex=-1;authorText.value='';if(authorTimer)clearTimeout(authorTimer);authorTimer=null;}
 function hoverAuthor(point:[number,number]|null){
   if(!point){clearAuthor();return;}
@@ -127,12 +232,12 @@ function hoverAuthor(point:[number,number]|null){
 watch([()=>p.volume,()=>p.point[p.axis],()=>p.provenanceKey,()=>p.zoom,()=>pan.value[0],()=>pan.value[1],()=>p.tool,()=>p.segments.map(segment=>`${segment.id}:${segment.name}:${segment.visible}`).join('|')],()=>{clearAuthor();if(inside&&lastClient&&!drawing&&!navigating.value)hoverAuthor(coords(...lastClient));},{flush:'post'});
 </script>
 <template>
-  <section :class="['slice',`slice-${axis}`,{'is-active':active}]" :data-maximized="maximized" :data-zoom="zoom" :data-pan-x="pan[0]" :data-pan-y="pan[1]" :data-gesture="gesture" :data-rendered-slice="renderedSlice" :data-renders="renderCount" :data-gray-builds="grayBuilds" :data-render-ms="renderMs" @focusin="emit('activate',axis)" @pointerenter="emit('activate',axis)">
+  <section :class="['slice',`slice-${axis}`,{'is-active':active}]" :data-touch-mode="touchMode" :data-maximized="maximized" :data-zoom="zoom" :data-pan-x="pan[0]" :data-pan-y="pan[1]" :data-gesture="gesture" :data-rendered-slice="renderedSlice" :data-renders="renderCount" :data-gray-builds="grayBuilds" :data-render-ms="renderMs" @focusin="emit('activate',axis)" @pointerenter="emit('activate',axis)">
     <header tabindex="0" title="单击选中视图；双击标题或按空格最大化 / 恢复" @click="emit('activate',axis)" @dblclick="emit('focus',axis)"><span class="view-dot"/>{{direction(volume,axis)}}<span v-if="thresholdPreview" class="preview-badge">预览</span><span v-else-if="parallelMap?.size" class="preview-badge">并列标注</span><small>{{['I','J','K'][axis]}} = {{point[axis]+1}} / {{volume.dims[axis]}}</small><button class="viewport-maximize" :aria-label="`${maximized?'恢复多视图':`最大化${direction(volume,axis)}视图`}`" :title="maximized?'恢复多视图 · Esc / 空格':'最大化此视图 · 双击标题 / 空格'" :aria-pressed="maximized" @click.stop="emit('focus',axis)" @dblclick.stop><UiIcon :name="maximized?'restore':'maximize'" :size="16"/></button></header>
     <div ref="host" class="canvas-host" @wheel.prevent="wheel">
-      <canvas ref="canvas" @pointerenter="move" @pointerleave="leave" @pointerdown="start" @pointermove="move" @pointerup="end" @pointercancel="end" @lostpointercapture="end" @contextmenu.prevent/>
+      <canvas ref="canvas" @pointerenter="move" @pointerleave="leave" @pointerdown="start" @pointermove="move" @pointerup="end" @pointercancel="pointerInterrupted" @lostpointercapture="pointerInterrupted" @contextmenu.prevent/>
       <svg v-if="brushCursor" :class="['brush-cursor',{'eraser-cursor':tool==='erase'}]" :viewBox="`0 0 ${size[0]} ${size[1]}`" :aria-label="`${tool==='erase'?'橡皮擦':'画笔'}直径 ${diameter} ${volume.unit}`"><ellipse :cx="brushCursor.x" :cy="brushCursor.y" :rx="brushCursor.rx" :ry="brushCursor.ry"/><text :x="brushCursor.x+brushCursor.rx+7" :y="brushCursor.y-7">⌀ {{diameter}} {{volume.unit}}</text></svg>
-      <svg v-if="outline?.path&&hoverPreview&&!drawing&&!navigating" class="gray-region-outline" :viewBox="`0 0 ${geometry.nx} ${geometry.ny}`" preserveAspectRatio="none" :style="{left:`${geometry.ox}px`,top:`${geometry.oy}px`,width:`${geometry.w}px`,height:`${geometry.h}px`}" aria-label="鼠标所在灰度区域轮廓"><path :d="outline.path" fill="none" stroke="#ffe26f" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>
+      <svg v-if="outline?.path&&hoverPreview&&!drawing&&!navigating" class="gray-region-outline" :viewBox="`0 0 ${geometry.nx} ${geometry.ny}`" preserveAspectRatio="none" :style="{left:`${geometry.ox}px`,top:`${geometry.oy}px`,width:`${geometry.w}px`,height:`${geometry.h}px`}" aria-label="当前指向的灰度区域轮廓"><path :d="outline.path" fill="none" stroke="#ffe26f" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>
       <span v-if="inside&&hoverPreview&&!drawing&&!navigating" class="gray-region-info">{{outline&&outline.count===0?'外围空气已排除':outline&&!outline.truncated?`${outline.count.toLocaleString()} 像素 · 灰度 ${+outline.minimum.toFixed(2)}～${+outline.maximum.toFixed(2)}`:grayMessage}}</span>
       <span v-if="authorText&&!drawing&&!navigating" class="annotation-author" :style="annotationStyle" role="tooltip">{{authorText}}</span>
       <span class="edge top">{{edgeDirection(volume,geometry.b,true)}}</span><span class="edge bottom">{{edgeDirection(volume,geometry.b,false)}}</span><span class="edge left">{{edgeDirection(volume,geometry.a,false)}}</span><span class="edge right">{{edgeDirection(volume,geometry.a,true)}}</span>
