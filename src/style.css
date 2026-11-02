@@ -1,20 +1,20 @@
 /* ===== Design tokens ===== */
 :root{
-  --bg:#f3f5f8;
+  --bg:#f4f8f8;
   --panel:#ffffff;
-  --panel-2:#f8fafc;
-  --panel-3:#f1f4f8;
-  --border:#e3e8ef;
-  --border-strong:#d2d9e3;
-  --text:#1f2937;
-  --text-2:#475467;
-  --muted:#748094;
-  --faint:#a1abb9;
-  --primary:#3a7bc8;
-  --primary-hover:#2f6bb2;
-  --primary-soft:#ebf3fc;
-  --primary-soft-2:#d9e8f8;
-  --primary-ring:#3a7bc833;
+  --panel-2:#f8fbfb;
+  --panel-3:#f0f6f5;
+  --border:#e2e7e9;
+  --border-strong:#cddcda;
+  --text:#18272c;
+  --text-2:#46565c;
+  --muted:#6c7e81;
+  --faint:#879899;
+  --primary:#087f7c;
+  --primary-hover:#066c69;
+  --primary-soft:#e7f9f7;
+  --primary-soft-2:#c4efea;
+  --primary-ring:#13b8b52b;
   --success:#2b9a74;
   --success-soft:#e8f6f0;
   --success-line:#cfeadf;
@@ -28,13 +28,13 @@
   --violet-soft:#f6f2fc;
   --violet-line:#e3d9f3;
   --image-bg:#080c11;
-  --radius:10px;
+  --radius:6px;
   --radius-sm:6px;
   --shadow-sm:0 1px 2px rgba(16,24,40,.04);
   --shadow:0 1px 2px rgba(16,24,40,.04),0 2px 6px rgba(16,24,40,.04);
   --shadow-lg:0 12px 40px rgba(16,24,40,.14);
-  --topbar-h:56px;
-  font-family:Inter,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --topbar-h:64px;
+  font-family:Inter,"Noto Sans CJK SC","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
   font-size:13px;line-height:1.5;color:var(--text);background:var(--bg);
   font-synthesis:none;color-scheme:light;-webkit-font-smoothing:antialiased;
 }
@@ -50,8 +50,8 @@ button,input,select{font:inherit;color:inherit}
 :where(button,input,select,a):focus-visible{outline:2px solid var(--primary-ring);outline-offset:1px}
 .primary{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:600}
 .primary:hover:not(:disabled){background:var(--primary-hover);border-color:var(--primary-hover);color:#fff}
-.primary:active:not(:disabled){background:#295f9f}
-.primary:disabled{background:#a9c3e2;border-color:#a9c3e2;color:#fff;opacity:1}
+.primary:active:not(:disabled){background:#066e6b}
+.primary:disabled{background:#a8ceca;border-color:#a8ceca;color:#fff;opacity:1}
 
 :where(input[type=number],input[type=text],input[type=search],input:not([type]),select){height:30px;background:var(--panel);border:1px solid var(--border-strong);border-radius:var(--radius-sm);color:var(--text);padding:0 9px;font-size:12px;transition:border-color .15s,box-shadow .15s}
 :where(input[type=number],input[type=text],input[type=search],input:not([type]),select):hover:not(:disabled){border-color:#bcc6d3}
@@ -198,8 +198,8 @@ h1{font-size:18px;font-weight:600;letter-spacing:.3px;margin:2px 0 0;color:var(-
 @keyframes dm-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.busy-card::before{animation-duration:2.4s}}
 
-/* ===== Detail layer: numbering, mono figures, bilingual labels, yellow selection marks ===== */
-:root{--mono:ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,monospace;--mark:#f0b429;--mark-soft:#fff6dc}
+/* ===== Detail layer: numbering, mono figures, bilingual labels, shared selection marks ===== */
+:root{--mono:ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,monospace;--mark:#13b8b5;--mark-soft:#e7f9f7}
 /* "// ENGLISH" page eyebrows */
 .main-heading .eyebrow,.datasets-header .eyebrow{font-family:var(--mono);letter-spacing:1.5px;color:var(--muted)}
 .main-heading .eyebrow::before,.datasets-header .eyebrow::before{content:"// ";color:var(--primary);font-weight:600}
@@ -214,7 +214,7 @@ h1{font-size:18px;font-weight:600;letter-spacing:.3px;margin:2px 0 0;color:var(-
 /* Monospaced figures (only where the text is digits / Latin, so Chinese keeps its normal spacing) */
 .slice header small,.slice footer span:last-child,.range-label span{font-family:var(--mono);letter-spacing:.2px}
 .slice header small{font-size:11px}
-/* Yellow selection marks (buttons and links stay blue; the selected label keeps its blue bar) */
+/* Selection marks follow the shared platform accent. */
 .tools button{position:relative}
 .tools button.active::after{content:"";position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top-left-radius:var(--radius-sm);background:linear-gradient(135deg,var(--mark) 50%,transparent 50%)}
 .slice:hover header,.slice:focus-within header{box-shadow:inset 3px 0 0 var(--mark)}
