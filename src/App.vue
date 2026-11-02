@@ -16,7 +16,7 @@ import {cacheDataset,readDataset} from './localCache.ts';
 import {api,authUser,authenticatedFetch,loadCurrentUser,responseError} from './api.ts';
 import type {AuthUser,Dataset} from './api.ts';
 const editor=useEditor();
-const {excludeAir,airThreshold,airCache,zooms,volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,viewBusy:busy,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,canReplace,load,startStroke,endStroke,stroke,runThreshold,undo,loadSegmentation}=editor;
+const {airCache,zooms,volume,mask,segments,selected,tool,diameter,opacity,point,revision,center,width,thresholdMin,thresholdMax,previewEnabled,showDatasets,status,viewBusy:busy,dirty,history,future,active,minimum,maximum,thresholdValid,thresholdPreview,hoverPreview,regionWidth,regionMode,selectRegion,canReplace,load,startStroke,endStroke,stroke,runThreshold,undo,loadSegmentation}=editor;
 const collaboration=useCollaboration(editor);
 const {active:collaborating,queueCount,unsaved,showDrafts,drafts,parallelMap,project}=collaboration;
 const checkingAuth=ref(true),inEditor=ref(false),shellError=ref(''),closing=ref(false),currentDataset=ref<Dataset|null>(null);
@@ -97,7 +97,6 @@ onMounted(async()=>{window.addEventListener('keydown',viewportKey);try{await loa
 onBeforeUnmount(()=>window.removeEventListener('keydown',viewportKey));
 function setWindow(event:Event,which:'center'|'width'){const value=Number(inputValue(event));if(!Number.isFinite(value)||(which==='width'&&value<1))return;if(which==='width')width.value=value;else center.value=value;}
 function fullWindow(){if(volume.value){center.value=(volume.value.min+volume.value.max)/2;width.value=Math.max(1,volume.value.max-volume.value.min);}}
-function setAirThreshold(event:Event){const raw=inputValue(event);const n=Number(raw);if(raw.trim()!==''&&Number.isFinite(n))airThreshold.value=n;}
 function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number.isFinite(n)&&n>=.1)regionWidth.value=n;}
 </script>
 <template>
@@ -112,8 +111,6 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
     </header>
     <input ref="segInput" hidden type="file" accept=".nii,.nii.gz" @change="chooseSegmentation"/>
     <div class="workspace"><aside class="sidebar">
-      <div class="section-heading">工作空间<em class="en">WORKSPACE</em></div>
-      <div class="file-card"><span class="eyebrow">当前影像</span><strong :title="volume?.name">{{volume?.name||'尚未加载影像'}}</strong><small>{{volume?`${volume.dims.join(' × ')} · ${volume.spacing.map(n=>+n.toFixed(3)).join(' / ')} 间距`:'支持 .nii / .nii.gz'}}</small></div>
       <div class="section-heading">分割标签<em class="en">LABELS</em><button aria-label="新增标签" :disabled="!volume||editingBlocked||segments.length>=64" @click="addSegment">＋</button></div>
       <div class="segment-list">
         <div v-for="s in segments" :key="s.id" :class="['segment',{selected:selected===s.id}]" :style="{'--segment-color':s.color}" @click="selected=s.id">
@@ -138,9 +135,8 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
         <p v-if="!thresholdValid" class="field-error" role="alert">请输入有效范围，最小值不能大于最大值。</p><p v-if="!active.visible" class="field-error">请先显示当前标签，再预览或应用。</p>
         <label class="preview-toggle"><input v-model="previewEnabled" type="checkbox"/>预览选区（尚未写入标注）</label><p class="hint">应用后，以此范围替换当前标签；范围内覆盖其他标签，范围外保留其他标签。包含上下限，可一次撤销。</p><button class="primary" :disabled="!thresholdValid||!active.visible||editingBlocked" @click="runThreshold">应用阈值分割</button>
       </div>
-      <template v-else><label class="range-label">画笔直径<span>{{diameter}} {{volume?.unit||'mm'}}</span><input v-model.number="diameter" type="range" min="1" max="50"/></label><p class="hint">{{collaborating?'同一区域修改会保留他人意见；橡皮只删除自己在当前标签中的标注。':'画笔覆盖其他标签；橡皮只擦除当前标签。'}}先显示当前标签，再进行编辑。</p></template>
-      <div class="gray-settings"><label class="preview-toggle"><input v-model="excludeAir" type="checkbox"/>排除外围空气</label><label v-if="excludeAir">空气上限<input aria-label="空气上限" type="number" :value="airThreshold" @input="setAirThreshold($event)"/></label><p class="hint">排除与当前切片边界连通的低灰度空气，保留内部气腔。阈值分割按原始 K 平面逐层识别；已有标注保留，仍可擦除。</p></div>
-      <div class="gray-settings"><label class="preview-toggle"><input v-model="hoverPreview" type="checkbox" :disabled="!volume"/>悬停显示灰度区域轮廓</label><label>分区方式<select v-model="regionMode" aria-label="灰度分区方式" :disabled="!volume"><option value="bands">灰度区间分区</option><option value="level">悬停灰度等值区域</option></select></label><label v-if="regionMode==='bands'">灰度区间宽度<input aria-label="灰度区间宽度" type="number" min=".1" step="1" :value="regionWidth" :disabled="!volume" @input="setRegionWidth"/></label><p class="hint">黄色轮廓仅为预览。选择“灰度分区”，点击轮廓内区域可加入当前标签，仅作用于当前切片。</p></div>
+      <label v-else class="range-label">画笔直径<span>{{diameter}} {{volume?.unit||'mm'}}</span><input v-model.number="diameter" type="range" min="1" max="50"/></label>
+      <div v-if="tool==='region'" class="gray-settings"><label class="preview-toggle"><input v-model="hoverPreview" type="checkbox" :disabled="!volume"/>悬停显示灰度区域轮廓</label><label>分区方式<select v-model="regionMode" aria-label="灰度分区方式" :disabled="!volume"><option value="bands">灰度区间分区</option><option value="level">悬停灰度等值区域</option></select></label><label v-if="regionMode==='bands'">灰度区间宽度<input aria-label="灰度区间宽度" type="number" min=".1" step="1" :value="regionWidth" :disabled="!volume" @input="setRegionWidth"/></label><p class="hint">黄色轮廓仅为预览。选择“灰度分区”，点击轮廓内区域可加入当前标签，仅作用于当前切片。</p></div>
       <div class="history"><button title="撤销 · Ctrl+Z" :disabled="!history.length||editingBlocked" @click="undo()"><UiIcon name="undo" :size="14"/>↶ 撤销</button><button title="重做 · Ctrl+Shift+Z / Ctrl+Y" :disabled="!future.length||editingBlocked" @click="undo(true)"><UiIcon name="redo" :size="14"/>↷ 重做</button></div>
       <div class="section-heading">影像显示<em class="en">DISPLAY</em></div><div class="window-inputs"><label>窗位<input type="number" :disabled="!volume" :value="center" @input="setWindow($event,'center')"/></label><label>窗宽<input type="number" min="1" :disabled="!volume" :value="width" @input="setWindow($event,'width')"/></label></div>
       <div class="presets"><button :disabled="!volume" @click="center=-600;width=1500">肺窗</button><button :disabled="!volume" @click="center=40;width=400">软组织</button><button :disabled="!volume" @click="center=400;width=1800">骨窗</button><button :disabled="!volume" @click="fullWindow">全范围</button></div>

@@ -160,7 +160,7 @@ h1{font-size:18px;font-weight:600;letter-spacing:.3px;margin:2px 0 0;color:var(-
 .slice-1 .view-dot{background:#4fae75;box-shadow:0 0 0 3px #4fae7522}
 .slice-0 .view-dot{background:#d7ae2c;box-shadow:0 0 0 3px #d7ae2c22}
 .canvas-host{position:relative;flex:1;min-height:240px;overflow:hidden;background:var(--image-bg)}
-.canvas-host canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.canvas-host canvas{position:absolute;inset:0;width:100%;height:100%;cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 9 9'%3E%3Ccircle cx='4' cy='4' r='2' fill='%23e1f2ff' stroke='%2310151d' stroke-width='1.5'/%3E%3C/svg%3E") 4 4,default;touch-action:none}
 .edge{position:absolute;color:#9fb0c3;font:10px/1 ui-monospace,Consolas,monospace;pointer-events:none}
 .edge.top{top:7px;left:50%}.edge.bottom{bottom:7px;left:50%}.edge.left{left:7px;top:50%}.edge.right{right:7px;top:50%}
 .slice footer{height:34px;flex-shrink:0;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 12px;color:var(--muted);font-size:11px}

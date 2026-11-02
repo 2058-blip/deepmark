@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, triggerRef } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, triggerRef, watch } from 'vue';
 import { applyThreshold, exportNifti, makeDemo, paint } from './core.ts';
 import type { Axis, Change, ThresholdRange, Volume } from './core.ts';
 import { colors, download, initialSegments, readFile } from './view.ts';
@@ -11,14 +11,15 @@ import {annotationArchive} from './exportArchive.ts';
 export function useEditor() {
   const volume=shallowRef<Volume|null>(null),mask=shallowRef<Uint16Array>(new Uint16Array());
   const segments=ref<Segment[]>(initialSegments()),selected=ref(1),tool=ref<Tool>('paint');
-  const excludeAir=ref(true),airThreshold=ref(-900),zooms=ref([1,1,1]);
+  const excludeAir=computed(()=>true),airThreshold=ref(-900),zooms=ref([1,1,1]);
   const airCache=computed(()=>volume.value&&excludeAir.value?new ExteriorAirCache(volume.value,airThreshold.value):null);
   const diameter=ref(8),opacity=ref(.45),point=ref([0,0,0]),revision=ref(0);
   const center=ref(40),width=ref(400),thresholdMin=ref('0'),thresholdMax=ref('100'),previewEnabled=ref(true);
   const showDatasets=ref(false),status=ref('打开 NIfTI 影像，开始分割标注'),busy=ref(false),dirty=ref(false);
   const readOnly=ref(false),strokeActive=ref(false),viewBusy=computed(()=>busy.value||readOnly.value);
   const editLocked=ref(false);
-  const hoverPreview=ref(true),regionWidth=ref(100),regionMode=ref<GrayMode>('bands');
+  const hoverPreview=ref(false),regionWidth=ref(100),regionMode=ref<GrayMode>('bands');
+  watch(tool,value=>{hoverPreview.value=value==='region';},{flush:'sync'});
   const history=shallowRef<Change[]>([]),future=shallowRef<Change[]>([]),pending=new Map<number,number>();
   const active=computed(()=>segments.value.find(s=>s.id===selected.value)!);
   const minimum=computed(()=>Number(thresholdMin.value)),maximum=computed(()=>Number(thresholdMax.value));
