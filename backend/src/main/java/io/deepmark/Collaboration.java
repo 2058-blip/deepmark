@@ -29,6 +29,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -50,7 +53,7 @@ public final class Collaboration {
             String status, String finalizedBy, String finalizedAt, Long finalRevision) {}
     private record State(SharedModel.Model model, List<Map<String,Object>> labels, String status,
             String finalizedBy, String finalizedAt, Long finalRevision) {}
-    private record Peer(WsContext context, String cookie, String project, String dataset) {}
+    private record Peer(WsContext context, String cookie, String project, String dataset, String userId) {}
     public static final class Failure extends RuntimeException {
         public final int status;
         public Failure(int status, String message) { super(message); this.status = status; }
@@ -74,6 +77,9 @@ public final class Collaboration {
     }
 
     public void install(Javalin app) {
+        // Expired sessions and revoked memberships must disappear even while no one edits.
+        ScheduledExecutorService presenceChecks=Executors.newSingleThreadScheduledExecutor(task->{Thread thread=new Thread(task,"deepmark-presence");thread.setDaemon(true);return thread;});
+        app.events(events->{events.serverStarted(()->presenceChecks.scheduleWithFixedDelay(this::refreshPresence,5,5,TimeUnit.SECONDS));events.serverStopping(presenceChecks::shutdownNow);});
         app.before(BASE + "/*", ctx -> {if(!"GET".equals(ctx.req().getMethod()))platform.auth.checkMutation(ctx);});
         app.exception(Failure.class, (error, ctx) -> ctx.status(error.status).json(map("error", error.getMessage())));
         app.exception(SharedModel.Failure.class, (error, ctx) -> ctx.status(error.status).json(map("error", error.getMessage())));
@@ -99,6 +105,11 @@ public final class Collaboration {
         app.get(BASE + "/projects/{id}/history", ctx -> {
             Auth.User user = user(ctx);
             ctx.json(platform.db.read(c -> { Project p=readable(c,user,ctx.pathParam("id")); return map("events", history(c,p.id)); }));
+        });
+        app.get(BASE + "/projects/{id}/presence", ctx -> {
+            Auth.User user=user(ctx);String id=ctx.pathParam("id");
+            platform.db.read(c->{readable(c,user,id);return null;});
+            ctx.json(presence(id));
         });
         app.get(BASE + "/projects/{id}/events", ctx -> {
             Auth.User user = user(ctx); Long after=optionalLong(ctx.queryParam("after"));
@@ -134,9 +145,10 @@ public final class Collaboration {
                     Project p=platform.db.read(c->readable(c,user,id));
                     ctx.session.setMaxTextMessageSize(MAX_MESSAGE);
                     ctx.session.setMaxBinaryMessageSize(MAX_MESSAGE);
-                    Peer peer=new Peer(ctx,cookie,id,p.dataset);peers.put(ctx.sessionId(),peer);
+                    Peer peer=new Peer(ctx,cookie,id,p.dataset,user.id());peers.put(ctx.sessionId(),peer);
                     long readyRevision=platform.db.read(c->project(c,id).revision);
                     send(peer,map("type","ready","projectId",id,"revision",readyRevision,"canWrite",canWrite(user,p.dataset),"datasetStatus",platform.dataset(p.dataset).get("status")));
+                    broadcastPresence(id);
                 } catch(RuntimeException error) {ctx.closeSession(1008,"Unauthorized project");}
             });
             ws.onMessage(ctx -> {
@@ -153,8 +165,8 @@ public final class Collaboration {
                     Map<String,Object> ack=map("type","ack","requestId",requestId,"serverMs",(System.nanoTime()-started)/1_000_000.0);ack.putAll(result);send(peer,ack);
                 } catch(Exception error) {send(peer,map("type","error","requestId",requestId,"status",status(error),"message",safeMessage(error)));}
             });
-            ws.onClose(ctx -> peers.remove(ctx.sessionId()));
-            ws.onError(ctx -> {peers.remove(ctx.sessionId());ctx.closeSession(1011,"Connection failed");});
+            ws.onClose(ctx -> peerLeft(ctx.sessionId()));
+            ws.onError(ctx -> {peerLeft(ctx.sessionId());ctx.closeSession(1011,"Connection failed");});
         });
     }
 
@@ -166,7 +178,7 @@ public final class Collaboration {
             if(!expectedFingerprint.equals(fingerprint)||!fingerprint.equals(sha256(source.bytes())))throw new Failure(409,"服务器影像已变化，请重新下载后再打开工程。");
             Nifti.Volume volume=Nifti.parse(source.bytes());String id=sha256((dataset+fingerprint).getBytes(StandardCharsets.UTF_8)).substring(0,32);
             if(one(c,"SELECT id FROM collab_projects WHERE id=?",id)==null){
-                List<Map<String,Object>> labels=initialLabels();String name=String.valueOf(source.metadata().getOrDefault("name","影像.nii"));
+                List<Map<String,Object>> labels=initialLabels(user);String name=String.valueOf(source.metadata().getOrDefault("name","影像.nii"));
                 exec(c,"INSERT INTO collab_projects(id,dataset,fingerprint,count,header,dims,little,name,labels) VALUES(?,?,?,?,?,?,?,?,?)",id,dataset,fingerprint,volume.count(),volume.header(),json(volume.dims()),volume.littleEndian()?1:0,name,json(labels));
                 Project p=project(c,id);SharedModel.Model model=new SharedModel.Model(volume.dims());
                 snapshot(c,p,model);models.put(id,new Cached(0,model));trimModels();
@@ -189,10 +201,10 @@ public final class Collaboration {
             if(action.equals("labels")){
                 List<Map<String,Object>> labels=copyLabels(p.labels);Map<String,Object> label=null;
                 if(body.has("id")){long labelId=number(body,"id");for(Map<String,Object> row:labels)if(((Number)row.get("id")).longValue()==labelId)label=row;if(label==null)throw new Failure(400,"标签不存在。");}
-                else {int next=labels.stream().mapToInt(l->((Number)l.get("id")).intValue()).max().orElse(0)+1;if(labels.size()>=64||next>65535)throw new Failure(400,"标签数量已达上限。");String[] colors={"#fb9f67","#859dff","#ed78b6","#e5d46f","#74c5f4"};label=map("id",next,"name","标注 "+next,"color",colors[Math.floorMod(next-2,colors.length)]);labels.add(label);}
+                else {int next=labels.stream().mapToInt(l->((Number)l.get("id")).intValue()).max().orElse(0)+1;if(labels.size()>=64||next>65535)throw new Failure(400,"标签数量已达上限。");String[] colors={"#fb9f67","#859dff","#ed78b6","#e5d46f","#74c5f4"};label=newLabel(next,"标注 "+next,colors[Math.floorMod(next-2,colors.length)],user);labels.add(label);}
                 if(body.has("name")){String name=text(body,"name").trim();if(name.isEmpty()||name.length()>60)throw new Failure(400,"标签名称无效。");label.put("name",name);}
                 if(body.has("color")){String color=text(body,"color");if(!color.matches("#[a-fA-F0-9]{6}"))throw new Failure(400,"颜色无效。");label.put("color",color);}
-                long revision=saveEvent(c,p,author,op,"标签设置",model,List.of(),List.of(),null,null,labels,p.status,map("labelId",label.get("id")));
+                long revision=saveEvent(c,p,author,op,body.has("id")?"标签设置":"新增标签",model,List.of(),List.of(),null,null,labels,p.status,map("labelId",label.get("id")));
                 return map("revision",revision,"label",label);
             }
             if(action.equals("operations")){
@@ -323,9 +335,21 @@ public final class Collaboration {
         return map("bytes",bytes.toByteArray(),"revision",target);
     }
 
-    private void broadcast(String project,Map<String,Object> event){if(event==null)return;for(Peer peer:peers.values())if(peer.project.equals(project)){
-        try {Auth.User user=platform.auth.fromCookie(peer.cookie);platform.requireRead(user,peer.dataset);send(peer,event);}catch(RuntimeException error){peers.remove(peer.context.sessionId());peer.context.closeSession(1008,"Project access revoked");}
-    }}
+    private void broadcast(String project,Map<String,Object> event){if(event==null)return;boolean removed=false;for(Peer peer:peers.values())if(peer.project.equals(project)){
+        if(peerUser(peer)!=null)send(peer,event);else removed=true;
+    }if(removed)broadcastPresence(project);}
+    private Auth.User peerUser(Peer peer){
+        try{Auth.User user=platform.auth.fromCookie(peer.cookie);if(user==null||!user.id().equals(peer.userId))throw new Failure(401,"Session changed");platform.requireRead(user,peer.dataset);return user;}
+        catch(RuntimeException error){peers.remove(peer.context.sessionId(),peer);peer.context.closeSession(1008,"Project access revoked");return null;}
+    }
+    private Map<String,Object> presence(String project){
+        Map<String,Map<String,Object>> members=new java.util.TreeMap<>();
+        for(Peer peer:peers.values())if(peer.project.equals(project)){Auth.User user=peerUser(peer);if(user!=null)members.put(user.id(),map("id",user.id(),"name",user.name(),"role",user.role()));}
+        return map("projectId",project,"members",new ArrayList<>(members.values()));
+    }
+    private void broadcastPresence(String project){Map<String,Object> event=presence(project);event.put("type","presence");for(Peer peer:peers.values())if(peer.project.equals(project))send(peer,event);}
+    private void peerLeft(String session){Peer peer=peers.remove(session);if(peer!=null)broadcastPresence(peer.project);}
+    private void refreshPresence(){try{Set<String> projects=new HashSet<>();for(Peer peer:peers.values())projects.add(peer.project);for(String project:projects)broadcastPresence(project);}catch(RuntimeException ignored){/* A transient database error must not terminate future access checks. */}}
     private void send(Peer peer,Object value){synchronized(peer){try{peer.context.send(platform.mapper.writeValueAsString(value));}catch(Exception error){peers.remove(peer.context.sessionId());peer.context.closeSession(1011,"Connection failed");}}}
     private <T>T write(Database.SqlFunction<T> action){try{return platform.db.transaction(action);}catch(RuntimeException error){platform.db.read(c->{models.clear();return null;});throw error;}}
     private Project project(Connection c,String id)throws Exception {
@@ -334,7 +358,8 @@ public final class Collaboration {
     }
     private List<Map<String,Object>> parseLabels(String raw)throws Exception{return platform.mapper.readValue(raw,LABELS);}
     private List<Map<String,Object>> copyLabels(List<Map<String,Object>> labels){List<Map<String,Object>> result=new ArrayList<>();for(Map<String,Object> label:labels)result.add(new LinkedHashMap<>(label));return result;}
-    private static List<Map<String,Object>> initialLabels(){return new ArrayList<>(List.of(map("id",1,"name","标注 1","color","#4ed1ad")));}
+    private static Map<String,Object> newLabel(int id,String name,String color,Auth.User user){return map("id",id,"name",name,"color",color,"createdBy",map("id",user.id(),"name",user.name()),"createdAt",Instant.now().toString());}
+    private static List<Map<String,Object>> initialLabels(Auth.User user){return new ArrayList<>(List.of(newLabel(1,"标注 1","#4ed1ad",user)));}
     private static JsonNode findLabel(JsonNode labels,int id){for(JsonNode label:labels)if(label.path("id").asInt()==id)return label;return null;}
     private Auth.User user(Context ctx){Auth.User user=platform.auth.require(ctx);String author=ctx.header("X-Deepmark-Author");if(author!=null&&!author.equals(user.id()))throw new Failure(401,"当前账户身份已变化，请重新登录。");return user;}
     private JsonNode body(Context ctx)throws Exception {String raw=ctx.body();if(raw.length()>MAX_MESSAGE)throw new Failure(413,"操作数据超过上限。");JsonNode value;try{value=platform.mapper.readTree(raw);}catch(java.io.IOException error){throw new Failure(400,"请求格式无效。");}if(value==null||!value.isObject())throw new Failure(400,"请求格式无效。");return value;}
