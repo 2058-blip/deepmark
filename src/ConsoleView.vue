@@ -13,6 +13,7 @@ type StatusDetail={dataset:Dataset;members?:MemberStatus[];history?:HistoryEvent
 type CaseInfo={file:string;patient?:string;description?:string};
 const datasets=ref<Dataset[]>([]),groups=ref<Group[]>([]),loading=ref(true),refreshing=ref(false),busy=ref(''),error=ref(''),notice=ref('');
 const caseMetadata=ref<CaseInfo[]>([]),metadataRequest=new AbortController();
+const manualRefreshing=ref(false);
 const search=ref(''),filter=ref('all'),groupName=ref(''),joinCode=ref(''),claimGroup=ref('');
 const uploadFile=ref<File|null>(null),uploadName=ref(''),uploadInput=ref<HTMLInputElement|null>(null);
 const selectedId=ref<string|null>(null),detail=ref<StatusDetail|null>(null),detailLoading=ref(false),lastUpdated=ref(0);
@@ -52,15 +53,15 @@ async function readDetail(id:string,quiet=false){
   finally{if(selectedId.value===id)detailLoading.value=false;}
 }
 async function selectDetail(dataset:Dataset){selectedId.value=dataset.id;detail.value={dataset};error.value='';await readDetail(dataset.id);}
-async function refresh(initial=false){
-  if(refreshing.value)return;refreshing.value=true;if(initial)loading.value=true;
+async function refresh(initial=false,background=false){
+  if(refreshing.value)return;refreshing.value=true;manualRefreshing.value=!initial&&!background;if(initial)loading.value=true;
   try{
     const [listed,joined]=await Promise.all([api<{datasets:Dataset[]}>('/api/datasets'),isDispatcher.value?Promise.resolve({groups:[] as Group[]}):api<{groups:Group[]}>('/api/groups')]);
     datasets.value=listed.datasets;groups.value=joined.groups;
     if(!leaderGroups.value.some(group=>group.id===claimGroup.value))claimGroup.value=leaderGroups.value[0]?.id||'';
     lastUpdated.value=Date.now();if(selectedId.value)await readDetail(selectedId.value,true);
   }catch(reason){error.value=(reason as Error).message;}
-  finally{refreshing.value=false;loading.value=false;}
+  finally{refreshing.value=false;manualRefreshing.value=false;loading.value=false;}
 }
 async function act(key:string,action:()=>Promise<void>){if(busy.value)return;busy.value=key;error.value='';notice.value='';try{await action();await refresh();}catch(reason){error.value=(reason as Error).message;}finally{busy.value='';}}
 async function createGroup(){const name=groupName.value.trim();if(!name)return;await act('create-group',async()=>{const result=await api<{group:Group}>('/api/groups',{method:'POST',body:JSON.stringify({name})});claimGroup.value=result.group.id;groupName.value='';notice.value=`已创建“${result.group.name}”，你是组长。`;});}
@@ -73,7 +74,7 @@ async function claim(dataset:Dataset){if(!claimGroup.value)return;await act(`cla
 async function complete(dataset:Dataset){if(!canComplete(dataset)||!window.confirm(`将“${dataset.name}”标记为已完成？完成后小组成员将只能查看成果，请确认成员已同步当前工作。`))return;await act(`complete:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/complete`,{method:'POST',body:JSON.stringify({revision:dataset.revision})});notice.value=`“${dataset.name}”已完成，派活方可以下载成果。`;});}
 async function downloadResult(dataset:Dataset){if(dataset.status!=='completed'||!dataset.projectId)return;await act(`download:${dataset.id}`,async()=>{await downloadAuthenticated(`/api/collaboration/projects/${encodeURIComponent(dataset.projectId!)}/export`,`${dataset.name.replace(/\.nii(?:\.gz)?$/i,'')}-seg.zip`);notice.value='成果 ZIP 已请求下载。';});}
 function open(dataset:Dataset){if(canOpen(dataset)&&!busy.value)emit('open',dataset);}
-onMounted(()=>{void refresh(true);void loadCaseMetadata();poll=setInterval(()=>{if(!busy.value)void refresh();},5000);});
+onMounted(()=>{void refresh(true);void loadCaseMetadata();poll=setInterval(()=>{if(!busy.value)void refresh(false,true);},5000);});
 onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();});
 </script>
 
@@ -81,7 +82,7 @@ onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();});
   <div class="console-page">
     <header class="console-topbar"><div class="console-brand">✚ DeepMark <span>{{isDispatcher?'派活工作台':'干活工作台'}}</span></div><div class="console-account"><span>{{user.name}} <small>@{{user.username}}</small></span><button :disabled="!!busy" @click="emit('logout')">退出登录</button></div></header>
     <main class="console-content">
-      <section class="console-heading"><div><span class="eyebrow">{{isDispatcher?'DATASET DELIVERY':'TEAM WORKSPACE'}}</span><h1>{{isDispatcher?'发布影像，跟进标注成果':'组成小组，协同完成标注'}}</h1><p>{{isDispatcher?'上传后的影像会进入待认领列表。你可以查看自己发布的数据集、监看标注并下载已完成成果。':'组长认领待标注影像，小组成员使用同一份实时协作工程。已完成任务保留为只读。'}}</p></div><button :disabled="refreshing||!!busy" @click="error='';refresh()">{{refreshing?'正在更新…':'刷新工作台'}}</button></section>
+      <section class="console-heading"><div><span class="eyebrow">{{isDispatcher?'DATASET DELIVERY':'TEAM WORKSPACE'}}</span><h1>{{isDispatcher?'发布影像，跟进标注成果':'组成小组，协同完成标注'}}</h1><p>{{isDispatcher?'上传后的影像会进入待认领列表。你可以查看自己发布的数据集、监看标注并下载已完成成果。':'组长认领待标注影像，小组成员使用同一份实时协作工程。已完成任务保留为只读。'}}</p></div><button :disabled="manualRefreshing||!!busy" :aria-busy="manualRefreshing" @click="error='';refresh()">刷新工作台</button></section>
       <p v-if="error" class="console-error" role="alert">{{error}}</p><p v-if="notice" class="console-notice" role="status">{{notice}}</p>
       <section v-if="isDispatcher" class="console-card console-upload"><div><h2>发布待标注影像</h2><p>支持三维灰度 NIfTI-1：.nii / .nii.gz。</p></div><form @submit.prevent="upload"><label>影像文件<input ref="uploadInput" type="file" accept=".nii,.nii.gz" required :disabled="!!busy" @change="chooseUpload"/></label><label>显示名称<input v-model="uploadName" maxlength="160" placeholder="选填，默认使用文件名" :disabled="!!busy"/></label><button class="primary" :disabled="!uploadFile||!!busy">{{busy==='upload'?'正在上传并发布…':'上传并发布'}}</button><small v-if="uploadFile">{{uploadFile.name}} · {{formatSize(uploadFile.size)}}</small></form></section>
       <section v-else class="console-team-grid">

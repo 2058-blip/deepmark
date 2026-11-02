@@ -48,7 +48,7 @@ async function chooseSegmentation(event:Event){const element=event.target as HTM
 async function loadServerResult(){if(!datasetId.value)return false;datasetOpening.value=true;try{const ok=await collaboration.openProject(datasetId.value);if(!ok)status.value=`团队标注加载失败：${collaboration.error.value}`;return ok;}finally{datasetOpening.value=false;}}
 async function openDataset(file:File,id?:string){
   await collaboration.sessionReady;if(collaborating.value&&!await collaboration.switchDataset())return false;
-  datasetOpening.value=true;try{if(id)await cacheDataset(id,file);if(!await load(file,true))return false;datasetId.value=id||null;if(id&&collaboration.person.value&&!await loadServerResult())throw new Error(collaboration.error.value||'团队标注未能加载，请重试。');return true;}finally{datasetOpening.value=false;}
+  datasetOpening.value=true;try{if(id)await cacheDataset(id,file);if(!await load(file,true))throw new Error(status.value||'影像未能打开。');datasetId.value=id||null;if(id&&collaboration.person.value&&!await loadServerResult())throw new Error(collaboration.error.value||'团队标注未能加载，请重试。');return true;}finally{datasetOpening.value=false;}
 }
 async function showLocal(){await collaboration.reloadDrafts();showDrafts.value=true;}
 async function restoreLocal(key:string){if(collaborating.value&&!await collaboration.switchDataset())throw new Error('请先处理当前工作副本。');const id=await collaboration.restoreDraft(key);if(!id)throw new Error(collaboration.error.value||'恢复失败。');datasetId.value=id;inEditor.value=true;}

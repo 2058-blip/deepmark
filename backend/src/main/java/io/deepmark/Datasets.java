@@ -265,6 +265,10 @@ public final class Datasets {
             if (start > end || start >= size) { rangeError(ctx, size); return; }
             ctx.status(206).header("Content-Range", "bytes " + start + "-" + end + "/" + size);
         }
+        // These lengths and byte ranges refer to the immutable source file.
+        // A second HTTP gzip layer would invalidate Content-Length and truncate
+        // incompressible .nii.gz downloads. Keep this response byte-for-byte.
+        ctx.minSizeForCompression(Integer.MAX_VALUE);
         ctx.contentType("application/octet-stream");
         ctx.header("Accept-Ranges", "bytes").header("Cache-Control", "private, no-store");
         ctx.header("ETag", "\"" + metadata(id).get("fingerprint") + "\"");
