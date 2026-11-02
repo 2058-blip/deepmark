@@ -4,6 +4,8 @@ DeepMark 提供数据发布人员与标注人员两套工作台，以及共享�
 
 Node.js 24+ 用于前端构建、测试和开发编排。生产 API、WebSocket 和 `dist` 网页均由 Java 进程提供。当前编辑器没有使用 Cornerstone3D，也没有在浏览器或 Node.js 中运行 3D Slicer 的 Qt/VTK 代码。
 
+本分支提供浅色标注工作台、切面最大化、自适应标签编辑与协作身份展示。界面操作和运行方式见 [工作台说明](docs/ui-integration.md)，双账号验收见 [多人协作测试步骤](docs/collaboration-manual-test.md)。在线成员与标签创建者由本分支的 Java 接口提供。
+
 ## 账户角色与任务流程
 
 注册时选择角色，登录后进入对应工作台。权限由服务器账户与会话确定。

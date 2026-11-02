@@ -2,6 +2,7 @@
 import {computed,onBeforeUnmount,onMounted,ref} from 'vue';
 import {api,downloadAuthenticated} from './api.ts';
 import type {AuthUser,Dataset,Group} from './api.ts';
+import CaseList from './CaseList.vue';
 import './console.css';
 
 const props=defineProps<{user:AuthUser}>();
@@ -9,7 +10,9 @@ const emit=defineEmits<{open:[dataset:Dataset];logout:[]}>();
 type MemberStatus={id?:string;userId?:string;name?:string;username?:string;online?:boolean;lastSeen?:string;revision?:number;pending?:number;status?:string};
 type HistoryEvent={revision?:number;kind?:string;name?:string;author?:string;time?:string};
 type StatusDetail={dataset:Dataset;members?:MemberStatus[];history?:HistoryEvent[]};
+type CaseInfo={file:string;patient?:string;description?:string};
 const datasets=ref<Dataset[]>([]),groups=ref<Group[]>([]),loading=ref(true),refreshing=ref(false),busy=ref(''),error=ref(''),notice=ref('');
+const caseMetadata=ref<CaseInfo[]>([]),metadataRequest=new AbortController();
 const search=ref(''),filter=ref('all'),groupName=ref(''),joinCode=ref(''),claimGroup=ref('');
 const uploadFile=ref<File|null>(null),uploadName=ref(''),uploadInput=ref<HTMLInputElement|null>(null);
 const selectedId=ref<string|null>(null),detail=ref<StatusDetail|null>(null),detailLoading=ref(false),lastUpdated=ref(0);
@@ -32,6 +35,16 @@ function ownGroup(dataset:Dataset){return groups.value.find(group=>group.id===da
 function canComplete(dataset:Dataset){const group=ownGroup(dataset);return !isDispatcher.value&&dataset.status==='in_progress'&&!!group&&(group.isLeader||group.leaderId===props.user.id);}
 function canOpen(dataset:Dataset){return isDispatcher.value?!!dataset.projectId:dataset.status!=='unassigned'&&!!ownGroup(dataset);}
 function memberState(member:MemberStatus){return member.online===true?'在线':member.online===false?'离线':member.status||'小组成员';}
+async function loadCaseMetadata(){
+  // This optional static file only supplies display text. Dataset access and task status always come from the authenticated API.
+  try{
+    const value=await api<unknown>('/cases.json',{signal:metadataRequest.signal});
+    if(Array.isArray(value))caseMetadata.value=value.flatMap(entry=>{
+      if(!entry||typeof entry!=='object')return [];const item=entry as Record<string,unknown>;
+      return typeof item.file==='string'?[{file:item.file,patient:typeof item.patient==='string'?item.patient:'',description:typeof item.description==='string'?item.description:''}]:[];
+    });
+  }catch{caseMetadata.value=[];}
+}
 async function readDetail(id:string,quiet=false){
   if(!quiet)detailLoading.value=true;
   try{const result=await api<StatusDetail>(`/api/datasets/${encodeURIComponent(id)}/status`);if(selectedId.value===id)detail.value=result;}
@@ -60,8 +73,8 @@ async function claim(dataset:Dataset){if(!claimGroup.value)return;await act(`cla
 async function complete(dataset:Dataset){if(!canComplete(dataset)||!window.confirm(`将“${dataset.name}”标记为已完成？完成后小组成员将只能查看成果，请确认成员已同步当前工作。`))return;await act(`complete:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/complete`,{method:'POST',body:JSON.stringify({revision:dataset.revision})});notice.value=`“${dataset.name}”已完成，派活方可以下载成果。`;});}
 async function downloadResult(dataset:Dataset){if(dataset.status!=='completed'||!dataset.projectId)return;await act(`download:${dataset.id}`,async()=>{await downloadAuthenticated(`/api/collaboration/projects/${encodeURIComponent(dataset.projectId!)}/export`,`${dataset.name.replace(/\.nii(?:\.gz)?$/i,'')}-seg.zip`);notice.value='成果 ZIP 已请求下载。';});}
 function open(dataset:Dataset){if(canOpen(dataset)&&!busy.value)emit('open',dataset);}
-onMounted(()=>{void refresh(true);poll=setInterval(()=>{if(!busy.value)void refresh();},5000);});
-onBeforeUnmount(()=>{if(poll)clearInterval(poll);});
+onMounted(()=>{void refresh(true);void loadCaseMetadata();poll=setInterval(()=>{if(!busy.value)void refresh();},5000);});
+onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();});
 </script>
 
 <template>
@@ -77,7 +90,15 @@ onBeforeUnmount(()=>{if(poll)clearInterval(poll);});
       </section>
       <section class="console-card console-datasets"><div class="console-section-heading"><div><h2>{{isDispatcher?'我发布的数据集':'可认领影像与小组任务'}}</h2><p>{{lastUpdated?`最近更新 ${new Date(lastUpdated).toLocaleTimeString('zh-CN')} · 每 5 秒自动刷新`:'正在获取工作台数据…'}}</p></div><label v-if="!isDispatcher&&leaderGroups.length" class="console-claim-group">认领到小组<select v-model="claimGroup" :disabled="!!busy"><option v-for="group in leaderGroups" :key="group.id" :value="group.id">{{group.name}}</option></select></label></div>
         <div class="console-list-toolbar"><div class="console-filters"><button v-for="option in filters" :key="option.key" :class="{active:filter===option.key}" @click="filter=option.key">{{option.label}} <span>{{counts[option.key]}}</span></button></div><input v-model="search" type="search" aria-label="搜索数据集" placeholder="搜索影像名称或小组"/></div>
-        <p v-if="loading" class="console-empty">正在读取数据集…</p><div v-else-if="filtered.length" class="console-dataset-list"><article v-for="dataset in filtered" :key="dataset.id" :class="['console-dataset',{selected:selectedId===dataset.id}]"><div class="console-dataset-info"><div><strong>{{dataset.name}}</strong><span :class="['console-status',dataset.status]">{{stateName(dataset.status)}}</span></div><p>{{formatSize(dataset.size)}} · {{dataset.format}}<span v-if="dataset.groupName"> · {{dataset.groupName}}</span><span v-if="dataset.revision!==undefined"> · 修订 {{dataset.revision}}</span></p><small>更新于 {{time(dataset.modified)}}</small></div><div class="console-dataset-actions"><button :disabled="!!busy" @click="selectDetail(dataset)">详细状态</button><button v-if="!isDispatcher&&dataset.status==='unassigned'" class="primary" :disabled="!claimGroup||!!busy" :title="!leaderGroups.length?'只有组长可以认领，请先创建小组或联系组长':''" @click="claim(dataset)">{{busy===`claim:${dataset.id}`?'正在认领…':'组长认领'}}</button><button v-else-if="canOpen(dataset)" :class="{primary:dataset.status==='in_progress'&&!isDispatcher}" :disabled="!!busy" @click="open(dataset)">{{isDispatcher?'只读监看':dataset.status==='completed'?'查看成果':'进入协同标注'}}</button><button v-if="canComplete(dataset)" :disabled="!!busy" @click="complete(dataset)">提交完成</button><button v-if="dataset.status==='completed'&&dataset.projectId" :disabled="!!busy" @click="downloadResult(dataset)">{{busy===`download:${dataset.id}`?'正在下载…':'下载成果'}}</button></div></article></div><div v-else class="console-empty"><strong>{{search?'没有匹配的数据集':'这里还没有数据集'}}</strong><p>{{isDispatcher?'上传影像后，会在这里显示发布状态。':'派活方发布影像后，组长可以在这里认领。'}}</p></div>
+        <CaseList :datasets="filtered" :loading="loading" :busy="!!busy||refreshing" :selected-id="selectedId" :metadata="caseMetadata" :total-count="datasets.length" :empty-message="isDispatcher?'上传影像后，会在这里显示发布状态。':'派活方发布影像后，组长可以在这里认领。'" @refresh="error='';refresh()">
+          <template #actions="{dataset}">
+            <button :disabled="!!busy" @click="selectDetail(dataset)">详细状态</button>
+            <button v-if="!isDispatcher&&dataset.status==='unassigned'" class="primary" :disabled="!claimGroup||!!busy" :title="!leaderGroups.length?'只有组长可以认领，请先创建小组或联系组长':''" @click="claim(dataset)">{{busy===`claim:${dataset.id}`?'正在认领…':'组长认领'}}</button>
+            <button v-else-if="canOpen(dataset)" :class="{primary:dataset.status==='in_progress'&&!isDispatcher}" :disabled="!!busy" @click="open(dataset)">{{isDispatcher?'只读监看':dataset.status==='completed'?'查看成果':'进入协同标注'}}</button>
+            <button v-if="canComplete(dataset)" :disabled="!!busy" @click="complete(dataset)">提交完成</button>
+            <button v-if="dataset.status==='completed'&&dataset.projectId" :disabled="!!busy" @click="downloadResult(dataset)">{{busy===`download:${dataset.id}`?'正在下载…':'下载成果'}}</button>
+          </template>
+        </CaseList>
       </section>
       <section v-if="selectedId&&detail" class="console-card console-detail" aria-labelledby="dataset-detail-title"><div class="console-section-heading"><div><h2 id="dataset-detail-title">{{detail.dataset.name}} · 详细状态</h2><p>{{detailLoading?'正在读取详细状态…':'状态随工作台自动更新'}}</p></div><button @click="selectedId=null;detail=null">收起</button></div><dl class="console-detail-grid"><div><dt>任务状态</dt><dd>{{stateName(detail.dataset.status)}}</dd></div><div><dt>标注小组</dt><dd>{{detail.dataset.groupName||'尚未认领'}}</dd></div><div><dt>当前修订</dt><dd>{{detail.dataset.revision??'暂无操作'}}</dd></div><div><dt>最近更新</dt><dd>{{time(detail.dataset.modified)}}</dd></div><div v-for="([label,value],index) in detailProgress" :key="index"><dt>{{label}}</dt><dd>{{value}}</dd></div></dl><div class="console-detail-columns"><div><h3>成员状态</h3><ul v-if="detail.members?.length" class="console-member-list"><li v-for="(member,index) in detail.members" :key="member.id||member.userId||index"><span><strong>{{member.name||member.username||'小组成员'}}</strong><small v-if="member.username">@{{member.username}}</small></span><span :class="['console-presence',{online:member.online}]">{{memberState(member)}}<small v-if="member.pending!==undefined"> · 待同步 {{member.pending}}</small><small v-if="member.revision!==undefined"> · 修订 {{member.revision}}</small><small v-if="member.lastSeen"> · {{time(member.lastSeen)}}</small></span></li></ul><p v-else class="console-muted">{{detail.dataset.status==='unassigned'?'尚未分配标注小组。':'暂无成员活动记录。'}}</p></div><div><h3>最近标注记录</h3><ol v-if="detail.history?.length" class="console-history-list"><li v-for="(event,index) in detail.history.slice(0,20)" :key="`${event.revision}:${index}`"><strong>{{event.name||event.author||'成员'}}<span v-if="event.revision!==undefined"> · 修订 {{event.revision}}</span></strong><span>{{event.kind||'标注更新'}} · {{time(event.time)}}</span></li></ol><p v-else class="console-muted">暂无标注操作记录。</p></div></div></section>
     </main>

@@ -1,5 +1,7 @@
 import type {Segment} from './view.ts';
 export type Person={id:string;name:string;username?:string;role?:'dispatcher'|'worker'|'engineer'|'admin'};
+export type PresenceMember={id:string;name:string;role:'dispatcher'|'worker'};
+export type PresenceState={projectId:string;members:PresenceMember[]};
 export type Identity=Person & {resumeKey:string;updated:number};
 export type ParallelAnnotation={id:string;author:string;name:string;values:[number,number][];created:string};
 export type ParallelRegion={id:string;indices:number[];annotations:ParallelAnnotation[];bounds:{min:number[];max:number[]};created:string;updated:string};

@@ -1,2 +1,13 @@
-.tools{grid-template-columns:repeat(3,minmax(0,1fr))}.gray-settings{display:flex;flex-direction:column;gap:9px;border:1px solid #3b4142;background:#e5d46f05;border-radius:7px;padding:11px}.gray-settings>label{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;color:#a8b6c5;font-size:11px}.gray-settings>label.preview-toggle{justify-content:flex-start;line-height:1.6}.gray-settings select,.gray-settings input[type=number]{background:#101822;border:1px solid #394859;border-radius:4px;padding:6px;color:#dbe3ec;width:100%;min-width:0}.gray-region-outline{position:absolute;pointer-events:none;overflow:visible}.gray-region-info{position:absolute;left:12px;bottom:15px;max-width:calc(100% - 25px);font-size:10px;line-height:1.6;color:#e4d89f;background:#111923dd;padding:3px 6px;border-radius:4px;pointer-events:none}.gray-region-outline path{filter:drop-shadow(0 0 1px #10151d)}
-.brush-cursor{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}.brush-cursor ellipse{fill:none;stroke:#b9ffe9;stroke-width:1.5;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 1px #000)}.brush-cursor text{fill:#d8fff2;font-size:11px;paint-order:stroke;stroke:#10151d;stroke-width:3px;stroke-linejoin:round}.eraser-cursor ellipse{stroke:#ffb4ba;stroke-dasharray:4 3}.eraser-cursor text{fill:#ffd2d6}
+.gray-settings{display:flex;flex-direction:column;gap:8px;border:1px solid var(--border);background:var(--panel-2);border-radius:8px;padding:10px 12px}
+.gray-settings>label{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px;color:var(--text-2);font-size:11px}
+.gray-settings>label.preview-toggle{justify-content:flex-start;flex-wrap:nowrap;gap:7px;line-height:1.5;font-size:11.5px;cursor:pointer}
+.gray-settings select,.gray-settings input[type=number]{width:100%;min-width:0}
+/* Overlays drawn on the dark image canvas: keep high-contrast colours */
+.gray-region-outline{position:absolute;pointer-events:none;overflow:visible}
+.gray-region-info{position:absolute;left:10px;bottom:10px;max-width:calc(100% - 20px);font-size:10.5px;line-height:1.6;color:#f1e6a6;background:rgba(10,15,22,.82);padding:2px 7px;border-radius:4px;pointer-events:none;font-variant-numeric:tabular-nums}
+.gray-region-outline path{filter:drop-shadow(0 0 1px #10151d)}
+.brush-cursor{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+.brush-cursor ellipse{fill:none;stroke:#b9e3ff;stroke-width:1.5;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 1px #000)}
+.brush-cursor text{fill:#e1f2ff;font-size:11px;paint-order:stroke;stroke:#10151d;stroke-width:3px;stroke-linejoin:round}
+.eraser-cursor ellipse{stroke:#ffb4ba;stroke-dasharray:4 3}
+.eraser-cursor text{fill:#ffd2d6}

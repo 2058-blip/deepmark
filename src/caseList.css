@@ -1,0 +1,101 @@
+/* Case list page — shares tokens and shell classes (.topbar/.state/.statusbar…) with the workbench */
+.case-main{max-width:1440px;width:100%;margin:0 auto;padding:20px 24px 16px}
+.case-toolbar{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.case-toolbar .state{margin-right:4px}
+.case-toolbar select{height:34px;min-width:170px}
+.case-toolbar button{height:34px}
+.case-notice{flex-shrink:0;font-size:11.5px;color:var(--warning);background:var(--warning-soft);border:1px solid var(--warning-line);border-radius:8px;padding:7px 12px;margin:0 0 12px}
+.case-page .datasets-error{flex-shrink:0}
+.case-card{flex:1;min-height:0;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);scrollbar-width:thin}
+.case-card>.datasets-empty{margin:16px;border-radius:8px}
+.case-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12.5px}
+.case-table thead th{position:sticky;top:0;z-index:1;background:var(--panel-2);border-bottom:1px solid var(--border);color:var(--muted);font-size:11.5px;font-weight:500;text-align:left;padding:9px 14px;letter-spacing:.3px}
+.case-table td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text-2)}
+.case-table tbody tr:last-child td{border-bottom:0}
+/* Column search boxes in the table header, right of the column name */
+.th-search{display:flex;align-items:center;gap:8px;min-width:0}
+.th-search>span{flex-shrink:0;white-space:nowrap}
+.th-search input{flex:1;min-width:0;max-width:280px;height:28px;font-size:12px;font-weight:400;letter-spacing:0;padding:0 8px;background:var(--panel)}
+.case-table tbody tr.no-match:hover{background:transparent}
+.no-match td{padding:36px 14px;text-align:center}
+.no-match strong{display:block;color:var(--text-2);font-size:13px;margin-bottom:4px}
+.no-match span{color:var(--muted);font-size:12px}
+.case-table tbody tr{transition:background-color .15s}
+.case-table tbody tr:hover{background:#f7fafd}
+.case-table tbody tr.downloading{background:var(--primary-soft)}
+/* Yellow selection mark on hovered / downloading row */
+.case-table tbody tr:not(.no-match):hover>td:first-child,.case-table tbody tr.downloading>td:first-child{box-shadow:inset 3px 0 0 var(--mark)}
+.patient-cell{display:flex;align-items:baseline;gap:10px;min-width:0}
+.row-index{flex-shrink:0;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--faint);min-width:18px}
+.case-table tbody tr:hover .row-index,.case-table tbody tr.downloading .row-index{color:var(--text)}
+td.col-date{font-family:var(--mono);font-size:12px;white-space:pre}
+.col-patient{width:18%}.col-desc{width:34%}.col-file{width:20%}.col-date{width:14%}.col-action{width:200px}
+.patient-name{font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.case-desc{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6;color:var(--text-2)}
+.placeholder{color:var(--faint)}
+.col-file .file-name{display:block;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col-file small{display:block;margin-top:2px;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col-date{font-variant-numeric:tabular-nums;white-space:nowrap}
+td.col-date{color:var(--text)}
+.row-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.row-actions button{height:30px;padding:0 14px}
+.row-actions a,.row-actions .download-disabled{font-size:12px;white-space:nowrap}
+.row-actions a{color:var(--primary);text-decoration:none}
+.row-actions a:hover{color:var(--primary-hover);text-decoration:underline}
+.row-actions .download-disabled{color:var(--faint)}
+.row-progress{display:flex;flex-direction:column;gap:5px}
+.row-progress progress{width:100%;height:6px;accent-color:var(--primary)}
+.row-progress small{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.row-progress button{font-size:11px;padding:2px 8px}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(max-width:1100px){
+  .case-main{padding:16px}
+  .case-table,.case-table tbody,.case-table tr,.case-table td{display:block;width:auto}
+  .case-table thead{display:block;position:sticky;top:0;z-index:1}
+  .case-table thead tr{display:flex;gap:10px;padding:8px 14px;background:var(--panel-2);border-bottom:1px solid var(--border)}
+  .case-table thead th{position:static;display:block;padding:0;border:0;background:transparent}
+  .case-table thead th.col-patient{flex:1;min-width:0}.case-table thead th.col-desc{flex:1.4;min-width:0}
+  .case-table thead th.col-file,.case-table thead th.col-date,.case-table thead th.col-action{display:none}
+  .th-search input{max-width:none}
+  .case-table tbody tr.no-match{display:block}
+  .case-table tbody tr{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:12px 14px;border-bottom:1px solid var(--border)}
+  .case-table td{padding:0;border:0}
+  .case-table td.col-patient{grid-column:1}
+  .case-table td.col-date{grid-column:2;grid-row:1;text-align:right;font-size:11.5px;color:var(--muted)}
+  .case-table td.col-desc,.case-table td.col-file{grid-column:1/-1}
+  .case-table td.col-action{grid-column:1/-1;margin-top:6px}
+  .row-actions{justify-content:flex-start}
+  .case-table tbody tr:not(.no-match):hover>td:first-child,.case-table tbody tr.downloading>td:first-child{box-shadow:none}
+  .case-table tbody tr:not(.no-match):hover,.case-table tbody tr.downloading{box-shadow:inset 3px 0 0 var(--mark)}
+}
+@media(max-width:650px){.case-toolbar select{flex:1;min-width:0}.case-table thead tr{flex-direction:column}}
+
+/* The authenticated console owns all dataset actions and permission checks. */
+.case-list-view{min-width:0;display:flex;flex-direction:column;gap:12px}
+.case-list-view .case-toolbar{justify-content:flex-end}
+.case-count{margin-right:auto;color:var(--muted,#748094);font-size:12px;line-height:1.6}
+.case-list-view .case-card{flex:none;max-height:620px}
+.case-list-view .case-table tbody tr.console-dataset{display:table-row;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.case-list-view .case-table tbody tr.console-dataset:hover{background:var(--primary-soft,#edf5ff)}
+.case-list-view .case-table tbody tr.console-dataset.selected{background:var(--primary-soft,#edf5ff)}
+.case-list-view .col-patient{width:16%}.case-list-view .col-desc{width:24%}.case-list-view .col-file{width:22%}.case-list-view .col-date{width:16%}.case-list-view .col-action{width:22%}
+.case-file-heading{display:flex;align-items:flex-start;flex-wrap:wrap;gap:6px;min-width:0}
+.case-list-view .case-file-heading .file-name{max-width:100%;font-size:12.5px}
+.case-list-view .row-actions{flex-wrap:wrap;gap:6px;min-width:0}
+.case-list-view .row-actions button{height:auto;min-height:30px;padding:5px 9px;font-size:11.5px;line-height:1.5}
+.case-list-view td.col-date{font-size:11px;white-space:normal;line-height:1.8}
+.case-list-view .th-search{flex-wrap:wrap;gap:5px}
+.case-list-view .th-search input{flex-basis:100%;width:100%;max-width:none}
+.case-metadata-note{margin:0;color:var(--muted,#748094);font-size:11px;line-height:1.7}
+.case-list-view .console-status{white-space:nowrap;font-size:10px}
+@media(max-width:1100px){
+  .case-list-view .case-table tbody tr.console-dataset{display:grid;grid-template-columns:1fr auto;gap:5px 16px;padding:12px 14px;border-bottom:1px solid var(--border,#e3e8ef)}
+  .case-list-view .case-table td{width:auto}
+  .case-list-view .case-card{max-height:none}
+  .case-list-view .case-table thead th.col-patient,.case-list-view .case-table thead th.col-desc{width:auto}
+  .case-list-view .th-search{flex-wrap:nowrap}
+  .case-list-view .th-search input{flex-basis:auto;width:auto}
+  .case-list-view .row-actions{justify-content:flex-start}
+  .case-list-view td.col-date{white-space:nowrap}
+}
+@media(max-width:650px){.case-list-view .case-toolbar{align-items:stretch}.case-count{flex-basis:100%}.case-sort{flex:1;min-width:0}.case-sort select{width:100%}}

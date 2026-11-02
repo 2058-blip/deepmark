@@ -1,0 +1,8 @@
+[
+  { "file": "影鉴测试/volume_lung.nii.gz", "patient": "示例患者 A · P0001", "description": "胸部 CT 平扫（示例描述），用于肺部区域分割练习。" },
+  { "file": "影鉴测试/volume_liver.nii.gz", "patient": "示例患者 B · P0002", "description": "上腹部 CT（示例描述），用于肝脏轮廓标注练习。" },
+  { "file": "影鉴测试/volume_kidney.nii.gz", "patient": "示例患者 C · P0003", "description": "腹部 CT（示例描述），用于双肾分割练习。" },
+  { "file": "影鉴测试/volume_bone.nii.gz", "patient": "示例患者 D · P0004", "description": "骨骼 CT（示例描述），建议使用骨窗与阈值工具。" },
+  { "file": "影鉴测试/volume_foot.nii.gz", "patient": "示例患者 E · P0005", "description": "足部 CT（示例描述），用于骨结构标注练习。" },
+  { "file": "合成练习影像.nii.gz", "patient": "合成数据（非真实患者）", "description": "由 npm run sample-data 生成的合成练习影像，不含患者资料。" }
+]

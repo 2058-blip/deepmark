@@ -5,4 +5,6 @@ import './threshold.css';
 import './workspace.css';
 import './review.css';
 import './engineer.css';
+import './platformTheme.css';
+import './workstation.css';
 createApp(App).mount('#root');

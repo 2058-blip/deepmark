@@ -6,7 +6,7 @@ import {exportNifti,makeDemo,parseNifti} from '../src/core.ts';
 
 test('ZIP round trip preserves segmentation geometry and Unicode label definitions',async()=>{
   const volume=makeDemo(),mask=new Uint16Array(volume.data.length);mask[125]=7;mask[50000]=300;
-  const nifti=exportNifti(volume,mask),labels=[{id:7,name:'肺部',color:'#123456'},{id:300,name:'病灶',color:'#abcdef'}];
+  const nifti=exportNifti(volume,mask),labels=[{id:7,name:'肺部',color:'#123456',createdBy:{id:'engineer-1',name:'张医生'},createdAt:'2026-11-02T10:00:00Z'},{id:300,name:'病灶',color:'#abcdef'}];
   const archive=await annotationArchive(nifti,labels,{source:volume.name}),files=unzipSync(new Uint8Array(archive));
   assert.ok(archive.byteLength<nifti.byteLength/5);assert.ok(nifti.byteLength>0);
   assert.deepEqual(Object.keys(files).sort(),['README.txt','labels.json','manifest.json','segmentation.nii']);

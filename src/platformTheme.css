@@ -1,0 +1,53 @@
+/* Apply the existing light UI tokens to the new authenticated platform shell. */
+.auth-page,.console-page{background:var(--bg);color:var(--text);min-height:100dvh}
+.auth-page{height:100dvh;overflow:auto;flex:none}
+.console-page{height:100dvh;overflow:auto}
+.console-content{flex:none;overflow:visible;min-height:0}
+.console-topbar{min-height:var(--topbar-h);padding:14px 24px;background:var(--panel);border-color:var(--border)}
+.console-brand,.console-card h2,.console-card h3,.console-group strong,.console-dataset-info strong,.console-detail-grid dd,.console-member-list strong,.console-history-list strong{color:var(--text)}
+.console-brand>span{color:var(--muted);border-color:var(--border-strong)}
+.console-account,.auth-card form>label,.console-upload form>label,.console-team-forms label,.console-claim-group{color:var(--text-2)}
+.auth-intro>p,.auth-role-summary,.auth-role small,.auth-security,.console-account small,.console-heading p,.console-card>p,.console-section-heading p,.console-upload>div>p,.console-group p,.console-group .console-members,.console-muted,.console-dataset-info p,.console-dataset-info small,.console-detail-grid dt,.console-member-list small,.console-presence,.console-history-list li>span,.console-history-list strong>span{color:var(--muted)}
+.auth-role-summary strong{color:var(--primary)}
+.auth-card,.console-card{background:var(--panel);border-color:var(--border);box-shadow:var(--shadow)}
+.auth-tabs{background:var(--panel-3)}
+.auth-tabs button{color:var(--muted)}
+.auth-tabs button.active{background:var(--panel);color:var(--primary);box-shadow:var(--shadow-sm)}
+.auth-card input:not([type=radio]),.console-page input:not([type=file]):not([type=checkbox]):not([type=radio]),.console-page select{min-height:38px;height:38px;padding:8px 10px;background:var(--panel);border-color:var(--border-strong);color:var(--text)}
+.auth-card input:focus,.console-page input:focus,.console-page select:focus{outline-color:var(--primary-ring)}
+.auth-card fieldset{border-color:var(--border-strong)}
+.auth-card legend{color:var(--text-2)}
+.auth-role strong{color:var(--text)}
+.auth-role input{accent-color:var(--primary)}
+.console-error{color:var(--danger);background:var(--danger-soft);border-color:var(--danger-line)}
+.console-notice{color:var(--success);background:var(--success-soft);border-color:var(--success-line)}
+.console-upload input[type=file]{color:var(--text-2)}
+.console-upload input[type=file]::file-selector-button{color:var(--text-2);background:var(--panel-3);border-color:var(--border-strong)}
+.console-upload form>small{color:var(--muted)}
+.console-group,.console-team-forms form+form,.console-detail-columns,.console-member-list li,.console-history-list li{border-color:var(--border)}
+.console-role{color:var(--primary);background:var(--primary-soft);border-color:var(--primary-soft-2)}
+.console-group code{color:var(--primary);background:var(--panel-2);border-color:var(--border)}
+.console-filters button{background:var(--panel-3);color:var(--text-2)}
+.console-filters button.active{background:var(--primary-soft);color:var(--primary);border-color:var(--primary-soft-2)}
+.console-dataset{background:var(--panel-2);border-color:var(--border)}
+.console-dataset.selected{border-color:var(--primary)}
+.console-status{background:var(--panel-3);color:var(--text-2)}
+.console-status.in_progress{background:var(--warning-soft);color:var(--warning)}
+.console-status.completed{background:var(--success-soft);color:var(--success)}
+.console-empty{color:var(--muted);border-color:var(--border-strong)}
+.console-empty strong{color:var(--text-2)}
+.console-presence.online{color:var(--success)}
+.console-page button:focus-visible,.auth-page button:focus-visible{outline-color:var(--primary)}
+.console-loading{color:var(--muted);background:var(--bg)}
+.collaboration-history{color:var(--text-2)}
+.collaboration-history time{color:var(--muted)}
+.app[data-testid=annotation-editor] .tools{grid-template-columns:repeat(2,minmax(0,1fr))}
+.app[data-testid=annotation-editor] .topbar{height:auto;min-height:var(--topbar-h);padding-block:8px}
+.app[data-testid=annotation-editor] .top-actions{flex-wrap:wrap;justify-content:flex-end}
+/* The author's tooltip remains dark so it can be read over the CT image. */
+.annotation-author{position:absolute;left:12px;right:12px;top:12px;padding:7px 10px;background:#101c2ded;border:1px solid #566c89;border-radius:6px;color:#edf5ff;font-size:12px;pointer-events:none;z-index:5;white-space:pre-wrap}
+.zoom-reset{font-size:11px;padding:3px 6px}
+.canvas-host{overflow:hidden}
+.console-page .case-list-view .th-search input{min-height:28px;height:28px;padding:0 8px}
+.console-page .case-list-view .case-sort select{min-height:34px;height:34px;padding:0 28px 0 9px}
+@media(max-width:760px){.console-content{padding:20px 14px}.console-topbar{padding:14px 16px}.auth-page{height:auto}.app[data-testid=annotation-editor] .topbar{align-items:flex-start}.app[data-testid=annotation-editor] .top-actions{gap:6px}}
