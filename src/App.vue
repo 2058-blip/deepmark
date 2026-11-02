@@ -11,8 +11,8 @@ import { useCollaboration } from './useCollaboration.ts';
 import { indexOf } from './core.ts';
 import type { Axis } from './core.ts';
 import type { Tool } from './view.ts';
-import { download,inputValue } from './view.ts';
-import {cacheDataset} from './localCache.ts';
+import { download,inputValue,fileFingerprints } from './view.ts';
+import {cacheDataset,readDataset} from './localCache.ts';
 import {api,authUser,authenticatedFetch,loadCurrentUser,responseError} from './api.ts';
 import type {AuthUser,Dataset} from './api.ts';
 const editor=useEditor();
@@ -21,6 +21,7 @@ const collaboration=useCollaboration(editor);
 const {active:collaborating,queueCount,unsaved,showDrafts,drafts,parallelMap,project}=collaboration;
 const checkingAuth=ref(true),inEditor=ref(false),shellError=ref(''),closing=ref(false),currentDataset=ref<Dataset|null>(null);
 const datasetId=ref<string|null>(null);
+let loadedFingerprint:string|undefined;
 const datasetOpening=ref(false),editingBlocked=computed(()=>!authUser.value||!inEditor.value||authUser.value.role!=='worker'||!collaboration.canWrite.value||busy.value||datasetOpening.value||!!datasetId.value&&!collaborating.value);
 watch(editingBlocked,value=>{editor.editLocked.value=value;},{immediate:true});
 watch(authUser,(user,previous)=>{if(previous&&previous.id!==user?.id){inEditor.value=false;datasetId.value=null;currentDataset.value=null;showDrafts.value=false;}});
@@ -48,7 +49,14 @@ async function chooseSegmentation(event:Event){const element=event.target as HTM
 async function loadServerResult(){if(!datasetId.value)return false;datasetOpening.value=true;try{const ok=await collaboration.openProject(datasetId.value);if(!ok)status.value=`团队标注加载失败：${collaboration.error.value}`;return ok;}finally{datasetOpening.value=false;}}
 async function openDataset(file:File,id?:string){
   await collaboration.sessionReady;if(collaborating.value&&!await collaboration.switchDataset())return false;
-  datasetOpening.value=true;try{if(id)await cacheDataset(id,file);if(!await load(file,true))throw new Error(status.value||'影像未能打开。');datasetId.value=id||null;if(id&&collaboration.person.value&&!await loadServerResult())throw new Error(collaboration.error.value||'团队标注未能加载，请重试。');return true;}finally{datasetOpening.value=false;}
+  datasetOpening.value=true;try{
+    const cached=id?await readDataset(id):undefined;
+    if(id&&id===datasetId.value&&volume.value&&fileFingerprints.get(file)===loadedFingerprint&&loadedFingerprint)editor.install(volume.value);
+    else if(!await load(file,true))throw new Error(status.value||'影像未能打开。');
+    loadedFingerprint=fileFingerprints.get(file)||cached?.fingerprint;
+    if(id&&(!cached?.fingerprint||cached.fingerprint!==loadedFingerprint))await cacheDataset(id,file,loadedFingerprint);
+    datasetId.value=id||null;if(id&&collaboration.person.value&&!await loadServerResult())throw new Error(collaboration.error.value||'团队标注未能加载，请重试。');return true;
+  }finally{datasetOpening.value=false;}
 }
 async function showLocal(){await collaboration.reloadDrafts();showDrafts.value=true;}
 async function restoreLocal(key:string){if(collaborating.value&&!await collaboration.switchDataset())throw new Error('请先处理当前工作副本。');const id=await collaboration.restoreDraft(key);if(!id)throw new Error(collaboration.error.value||'恢复失败。');datasetId.value=id;inEditor.value=true;}
@@ -65,8 +73,16 @@ async function openConsoleDataset(dataset:Dataset){
   if(datasetOpening.value||!authUser.value)return;shellError.value='';datasetOpening.value=true;
   try{
     if(collaborating.value&&!await collaboration.switchDataset())throw new Error('请先同步或保留当前工作副本。');
-    const response=await authenticatedFetch(dataset.downloadUrl||`/api/datasets/${encodeURIComponent(dataset.id)}/download`);if(!response.ok)throw await responseError(response);
-    const file=new File([await response.blob()],dataset.name,{type:'application/octet-stream'});
+    // Recheck current access and the immutable image fingerprint before using a cached image.
+    const {dataset:latest}=await api<{dataset:Dataset}>(`/api/datasets/${encodeURIComponent(dataset.id)}`);
+    dataset=latest;
+    const cached=await readDataset(dataset.id);
+    let file:File;
+    if(cached?.fingerprint&&cached.fingerprint===dataset.fingerprint&&cached.file.size===dataset.size){file=cached.file;fileFingerprints.set(file,cached.fingerprint);}
+    else{
+      const response=await authenticatedFetch(dataset.downloadUrl||`/api/datasets/${encodeURIComponent(dataset.id)}/download`);if(!response.ok)throw await responseError(response);
+      file=new File([await response.blob()],dataset.name,{type:'application/octet-stream'});
+    }
     if(!await openDataset(file,dataset.id))throw new Error(collaboration.error.value||status.value||'影像未能打开。');
     currentDataset.value=dataset;inEditor.value=true;
   }catch(reason){shellError.value=(reason as Error).message;}finally{datasetOpening.value=false;}

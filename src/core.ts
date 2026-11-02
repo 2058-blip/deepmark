@@ -1,6 +1,6 @@
 export type Volume = {
   name: string; dims: [number, number, number]; spacing: [number, number, number];
-  data: Float32Array; header: Uint8Array; little: boolean; min: number; max: number;
+  data: Float32Array|Int16Array|Uint16Array|Int8Array|Uint8Array; header: Uint8Array; little: boolean; min: number; max: number;
   affine: number[][]; oblique: boolean; unit: string;
 };
 export type Axis = 0 | 1 | 2;
@@ -12,7 +12,7 @@ export type ThresholdRange = { minimum: number; maximum: number; label: number }
 export function thresholdLabel(gray: number, current: number, range: ThresholdRange): number {
   return gray >= range.minimum && gray <= range.maximum ? range.label : current === range.label ? 0 : current;
 }
-export function applyThreshold(data: Float32Array, labels: Uint16Array, range: ThresholdRange, excluded?: (index:number)=>boolean,personalValue?:(index:number)=>number|null,deferErase=false): { change: Change | null; matched: number } {
+export function applyThreshold(data: ArrayLike<number>, labels: Uint16Array, range: ThresholdRange, excluded?: (index:number)=>boolean,personalValue?:(index:number)=>number|null,deferErase=false): { change: Change | null; matched: number } {
   if (data.length !== labels.length) throw new Error('分割尺寸与影像不一致。');
   if (!Number.isFinite(range.minimum) || !Number.isFinite(range.maximum) || range.minimum > range.maximum)
     throw new Error('请输入有效灰度范围，最小值不能大于最大值。');
@@ -69,10 +69,23 @@ export function parseNifti(buffer: ArrayBuffer, name = 'volume.nii'): Volume {
   let intercept = view.getFloat32(116, little);
   if (slope === 0) { slope = 1; intercept = 0; }
   if (!Number.isFinite(slope) || !Number.isFinite(intercept)) throw new Error('影像灰度缩放参数无效。');
-  const data = new Float32Array(count);
+  // Unscaled 8/16-bit integers are represented exactly by Float32. Retain their
+  // native buffer when possible instead of allocating and converting a second full CT.
+  const nativeLittle=new Uint8Array(new Uint16Array([1]).buffer)[0]===1;
+  let direct:Volume['data']|undefined;
+  if(slope===1&&intercept===0){
+    if(kind===2)direct=new Uint8Array(buffer,offset,count);
+    else if(kind===256)direct=new Int8Array(buffer,offset,count);
+    else if(offset%2===0&&little===nativeLittle){
+      if(kind===4)direct=new Int16Array(buffer,offset,count);
+      else if(kind===512)direct=new Uint16Array(buffer,offset,count);
+    }
+  }
+  const data = direct||new Float32Array(count);
   let min = Infinity, max = -Infinity;
   const read = (view[method as keyof DataView] as (offset: number, little: boolean) => number).bind(view);
-  for (let i = 0; i < count; i++) {
+  if(direct){for(let i=0;i<count;i++){const value=direct[i];if(value<min)min=value;if(value>max)max=value;}}
+  else for (let i = 0; i < count; i++) {
     const value = read(offset + i * bytes, little) * slope + intercept;
     if (!Number.isFinite(value) || Math.abs(value) > 3.402823466e38) throw new Error('影像包含无法显示的非有限灰度值。');
     data[i] = value; min = Math.min(min, value); max = Math.max(max, value);

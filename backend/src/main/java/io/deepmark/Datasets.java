@@ -34,6 +34,9 @@ public final class Datasets {
     static final long MAX_UPLOAD_BYTES = 512L * 1024 * 1024;
     private final Platform platform;
     private final Path directory;
+    public record Geometry(String fingerprint, Nifti.Volume volume, Map<String,Object> metadata) {}
+    private record CheckedFile(Path path, java.nio.file.attribute.BasicFileAttributes attributes, Geometry geometry) {}
+    private final java.util.concurrent.ConcurrentHashMap<String,CheckedFile> geometries=new java.util.concurrent.ConcurrentHashMap<>();
 
     public Datasets(Platform platform, Path directory) {
         this.platform = platform;
@@ -43,6 +46,10 @@ public final class Datasets {
 
     public void register(Javalin app) {
         app.get("/api/datasets", ctx -> ctx.json(Map.of("datasets", list(platform.auth.require(ctx)))));
+        app.get("/api/datasets/{id}", ctx -> {
+            String id=ctx.pathParam("id");platform.requireRead(platform.auth.require(ctx),id);
+            ctx.json(Map.of("dataset",metadata(id)));
+        });
         app.post("/api/datasets/upload", this::upload);
         app.post("/api/datasets/{id}/claim", ctx -> {
             Auth.User user = platform.auth.requireRole(ctx, "worker");
@@ -191,7 +198,7 @@ public final class Datasets {
             }
             if (size == 0) throw new BadRequestResponse("影像文件为空。");
             byte[] sourceBytes = Files.readAllBytes(temporary);
-            Nifti.parse(sourceBytes);
+            Nifti.Volume volume=Nifti.parse(sourceBytes);
             boolean compressed = sourceBytes.length > 1 && (sourceBytes[0] & 255) == 31 && (sourceBytes[1] & 255) == 139;
             String id = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(UUID.randomUUID().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             String filename = id + (compressed ? ".nii.gz" : ".nii");
@@ -209,6 +216,7 @@ public final class Datasets {
                 return null;
             });
             published = true;
+            geometries.put(id,new CheckedFile(destination,Files.readAttributes(destination,java.nio.file.attribute.BasicFileAttributes.class),new Geometry(fingerprint,volume,metadata(id))));
             ctx.status(201).json(Map.of("dataset", metadata(id)));
         } catch (IllegalArgumentException error) { throw new BadRequestResponse("影像格式无效：" + error.getMessage()); }
         finally { Files.deleteIfExists(temporary); if (!published && saved != null) Files.deleteIfExists(saved); }
@@ -224,6 +232,24 @@ public final class Datasets {
             return new Source(file, bytes, actual, metadata);
         } catch (IOException error) { throw new HttpResponseException(410, "原始影像已移除。"); }
         catch (java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
+    }
+
+    /** Validate immutable images once per file identity; never retain the large CT bytes. */
+    public Geometry geometry(String id) {
+        Path file=sourcePath(id);
+        try {
+            var attrs=Files.readAttributes(file,java.nio.file.attribute.BasicFileAttributes.class);
+            CheckedFile cached=geometries.get(id);
+            if(cached!=null&&cached.path.equals(file)&&cached.attributes.size()==attrs.size()
+                    &&cached.attributes.lastModifiedTime().equals(attrs.lastModifiedTime())
+                    &&cached.attributes.creationTime().equals(attrs.creationTime())
+                    &&java.util.Objects.equals(cached.attributes.fileKey(),attrs.fileKey()))return cached.geometry;
+            Source source=resolve(id);
+            Geometry geometry=new Geometry(source.fingerprint(),Nifti.parse(source.bytes()),source.metadata());
+            var after=Files.readAttributes(file,java.nio.file.attribute.BasicFileAttributes.class);
+            if(attrs.size()!=after.size()||!attrs.lastModifiedTime().equals(after.lastModifiedTime()))throw new ConflictResponse("影像正在变化，请重试。");
+            geometries.put(id,new CheckedFile(file,after,geometry));return geometry;
+        }catch(IOException error){throw new HttpResponseException(410,"原始影像已移除。");}
     }
 
     private Path sourcePath(String id) {

@@ -9,6 +9,7 @@ import {download,readFile} from './view.ts';
 import type {useEditor} from './useEditor.ts';
 import type {Draft,DraftIndex,LiveDelta,Operation,ParallelRegion,Person,PresenceMember,PresenceState,Project,ViewState} from './collaborationTypes.ts';
 import {allOperations,cacheDataset,listDrafts,readDataset,readDraft,writeLocal,writeView} from './localCache.ts';
+import type {DraftDelta} from './localCache.ts';
 import {api as platformApi,authUser,downloadAuthenticated,fingerprint,loadCurrentUser} from './api.ts';
 type History={revision:number;op:string;author:string;name:string;kind:string;time:string};
 const base='/api/collaboration',sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -22,7 +23,14 @@ function encode(change:Change){
   order.forEach((k,n)=>{view.setUint32(n*8,change.indices[k],true);view.setUint16(n*8+4,change.before[k],true);view.setUint16(n*8+6,change.after[k],true);});return base64(bytes);
 }
 function applyLocal(mask:Uint16Array,patch:string,preserveErase=false){const bytes=Uint8Array.from(atob(patch),c=>c.charCodeAt(0)),view=new DataView(bytes.buffer);for(let n=0;n<bytes.length;n+=8){const value=view.getUint16(n+6,true);if(!preserveErase||value!==0)mask[view.getUint32(n,true)]=value;}}
-async function inflateBytes(value:string){const raw=Uint8Array.from(atob(value),c=>c.charCodeAt(0));return new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
+async function inflateBytes(value:string):Promise<Uint8Array<ArrayBuffer>>{
+  if(typeof Worker!=='undefined')return new Promise((resolve,reject)=>{
+    const worker=new Worker(new URL('./maskCodec.worker.ts',import.meta.url),{type:'module'});
+    worker.onmessage=event=>{worker.terminate();if(event.data.error)reject(new Error(event.data.error));else resolve(new Uint8Array(event.data.raw));};
+    worker.onerror=event=>{worker.terminate();reject(new Error(event.message||'标注解压失败。'));};worker.postMessage(value);
+  });
+  const raw=Uint8Array.from(atob(value),c=>c.charCodeAt(0));return new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+}
 async function inflate(value:string){const bytes=await inflateBytes(value);return new Uint16Array(bytes.buffer);}
 async function deflate(value:ArrayBuffer){const bytes=await new Response(new Blob([value]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();return base64(new Uint8Array(bytes));}
 export function useCollaboration(editor:ReturnType<typeof useEditor>){
@@ -69,7 +77,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     return ownershipKnown&&(ownershipBits[index>>>3]&(1<<(index&7)))?fallback:null;
   }
   const draftKey=()=>person.value&&project.value?`${person.value.id}:${project.value.id}`:'';
-  const captureSignatures=new WeakMap<Draft,string>();let lastFullSignature='';
+  const captureSignatures=new WeakMap<Draft,string>();let lastFullSignature='',lastFullAt=0;
   const fullSignature=()=>`${draftKey()}:${editor.revision.value}:${project.value?.revision}:${queue.length}:${JSON.stringify(editor.segments.value)}`;
   function mark(){queueCount.value=queue.length;syncText.value=queue.length?`有 ${queue.length} 笔待上传${connected.value?'':'，等待网络恢复'}`:error.value?'上传异常，工作保留在本地':connected.value?'':'连接中，可继续本地编辑';}
   async function ensureSession(){
@@ -88,15 +96,15 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     const partial=editor.pendingChange();if(!partial)partialId=null;else partialId??=operationId();
     const draft:Draft={key:draftKey(),author:{...person.value},project:{...structuredClone(project.value),mask:''},name:editor.volume.value.name,mask:editor.mask.value.slice().buffer,ownedMask:ownershipKnown?ownershipBits.slice().buffer:undefined,segments:snapshotSegments(editor.segments.value),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
   }
-  function persistWrite(draft:Draft|null,op?:Operation,removeOp?:string){
+  function persistWrite(draft:Draft|null,op?:Operation,removeOp?:string,delta?:DraftDelta){
     const operations=queue.map(item=>({...item}));
-    const action=persist.catch(()=>{}).then(()=>writeLocal({operations,...(draft?{draft}:{}),...(op?{operation:op}:{}),...(removeOp?{removeOp}:{})}));
-    persist=action.then(()=>{if(draft){lastCached.value=draft.updated;lastFullSignature=captureSignatures.get(draft)||'';}cacheError.value='';});
+    const action=persist.catch(()=>{}).then(()=>writeLocal({operations,...(draft?{draft}:{}),...(op?{operation:op}:{}),...(removeOp?{removeOp}:{}),...(delta?{delta}:{})}));
+    persist=action.then(()=>{if(draft){lastCached.value=draft.updated;lastFullAt=Date.now();lastFullSignature=captureSignatures.get(draft)||'';}if(delta)lastCached.value=delta.updated;cacheError.value='';});
     void persist.catch(reason=>{cacheError.value=`本地缓存失败：${(reason as Error).message}。请先导出成果。`;});return persist;
   }
   async function cacheView(){const key=draftKey();if(!key||historical.value!==null)return;const saved=view();const action=persist.catch(()=>{}).then(()=>writeView(key,saved));persist=action;void action.catch(reason=>{cacheError.value=(reason as Error).message;});await action;}
   async function cacheNow(){if(active.value&&fullSignature()===lastFullSignature){await cacheView();return null;}const draft=capture();if(draft)await persistWrite(draft);else await persist;return draft;}
-  function scheduleCache(){if(cacheTimer||cacheWriting||!active.value)return;const token=epoch;cacheTimer=setTimeout(()=>{cacheTimer=null;if(token!==epoch)return;cacheWriting=true;void cacheNow().catch(()=>{}).finally(()=>{cacheWriting=false;});},150);}
+  function scheduleCache(){if(cacheTimer||cacheWriting||!active.value||!canWrite.value)return;const token=epoch;cacheTimer=setTimeout(()=>{cacheTimer=null;if(token!==epoch)return;cacheWriting=true;void cacheNow().catch(()=>{}).finally(()=>{cacheWriting=false;});},Math.max(1000,15000-(Date.now()-lastFullAt)));}
   async function reloadDrafts(){drafts.value=(await listDrafts()).filter(draft=>draft.author.id===authUser.value?.id).sort((a,b)=>b.updated-a.updated);}
   function rejectWaiting(){for(const item of waiting.values()){clearTimeout(item.timer);item.reject(new Error('实时连接已断开，正在重试。'));}waiting.clear();}
   function detach(){epoch++;lastFetchedRevision=-1;stopped=true;socket?.close();socket=null;rejectWaiting();incoming.clear();acknowledged.clear();if(cacheTimer)clearTimeout(cacheTimer);cacheTimer=null;if(reconnect)clearTimeout(reconnect);if(retry)clearTimeout(retry);editor.setChangeHandler(null);editor.setPersonalValueHandler(null);ownershipBits=new Uint8Array();ownershipKnown=false;regionSource=null;ownOpinions.clear();editor.readOnly.value=true;project.value=null;queue=[];queueCount.value=0;connected.value=false;onlineMembers.value=[];presenceKnown.value=false;presenceError.value='';presenceVersion++;history.value=[];historyReady.value=false;historyError.value='';historical.value=null;highlightAnnotation.value=null;error.value='';syncText.value='';partialId=null;}
@@ -119,7 +127,13 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
       updateLabels(next.labels);editor.revision.value++;editor.readOnly.value=isReadOnly();editor.dirty.value=queue.some(op=>!acknowledged.has(op.op));offlineSource.value=false;
       history.value=[{revision:next.revision,op:next.op,author:next.author,name:next.name,kind:next.kind,time:next.time},...history.value.filter(item=>item.revision!==next.revision)].slice(0,100);
       historyReady.value=true;historyError.value='';
-      error.value='';scheduleCache();
+      error.value='';
+      if(canWrite.value){
+        cacheGeneration++;
+        const delta:DraftDelta={key:draftKey(),generation:cacheGeneration,patch:next.patch,owners:next.owners,project:{...project.value,mask:''},segments:snapshotSegments(editor.segments.value),view:view(),updated:Date.now(),needsCheckpoint:queue.some(op=>!acknowledged.has(op.op)),op:next.op};
+        void persistWrite(null,undefined,undefined,delta).catch(()=>{});
+      }
+      scheduleCache();
     }
     mark();if(incoming.size&&!fetching)void catchUp();
   }
@@ -129,7 +143,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     try{
       const response=await request<Project|{unchanged:true;revision:number}>(`/projects/${id}${expectedHistory===null?force?'':`?ifRevision=${lastFetchedRevision}`:`?revision=${expectedHistory}`}`);
       if('unchanged' in response){if(token===epoch){offlineSource.value=false;error.value='';mark();}return;}
-      const state=response,mask=await inflate(state.mask),owned=await readOwnership(state);
+      const state=response,[mask,owned]=await Promise.all([inflate(state.mask),readOwnership(state)]);
       if(token!==epoch||historical.value!==expectedHistory)return;
       if(expectedHistory===null&&state.revision<(project.value?.revision??0))return;
       if(mask.length!==editor.mask.value.length)throw new Error('服务器工程与当前影像尺寸不一致。');
@@ -160,7 +174,11 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
         if(result.delta)receiveDelta(result.delta);
         if(result.parallelCount)editor.status.value='存在不同标注意见，已在对应区域保留并列标注。';
         if(result.protectedCount)editor.status.value=`已保留 ${result.protectedCount} 个他人标注体素；只能删除自己的标注。`;
-        queue=queue.filter(item=>item.key!==op.key);acknowledged.delete(op.op);void persistWrite(null,undefined,op.key).catch(()=>{});scheduleCache();error.value='';mark();
+        queue=queue.filter(item=>item.key!==op.key);acknowledged.delete(op.op);
+        // Local persistence never delays the next network operation. Delete its retry record
+        // only after the authoritative journal write succeeds; a failed write retains it for recovery.
+        const journal=persist;void journal.then(()=>persistWrite(null,undefined,op.key)).catch(()=>{});
+        scheduleCache();error.value='';mark();
         if(result.duplicate&&result.revision<=lastFetchedRevision)await refresh(true);
       }
     }catch(reason){if(token===epoch){error.value=(reason as Error).message;const status=(reason as {status?:number}).status;if(status===403||status===423){accessRevoked.value=true;project.value={...project.value!,canWrite:false};editor.readOnly.value=true;}mark();if(status===401)void ensureSession().catch(()=>{});}}finally{sending=false;if(token===epoch){mark();if(queue.length&&canWrite.value)retry=setTimeout(()=>void pump(),500);}}
@@ -190,12 +208,14 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     queue=canWrite.value?(await allOperations()).filter(op=>op.project===state.id&&op.key.startsWith(person.value!.id+':')).sort((a,b)=>a.created-b.created):[];
     if(canWrite.value&&draft?.pending&&!queue.some(op=>op.op===draft.pending!.op)){queue.push(draft.pending);await writeLocal({operation:draft.pending});}
     editor.history.value=[];editor.future.value=[];editor.setChangeHandler(canWrite.value?enqueue:null);historical.value=null;
-    editor.mask.value=canWrite.value&&draft&&(offline||blockedLocal.value)?new Uint16Array(draft.mask.slice(0)):await inflate(state.mask);
-    const owned=offline&&draft?.ownedMask?new Uint8Array(draft.ownedMask.slice(0)):await readOwnership(state);ownershipBits=owned||new Uint8Array(Math.ceil(editor.mask.value.length/8));ownershipKnown=!!owned;editor.setPersonalValueHandler(personalValue);
+    const [mask,owned]=await Promise.all([canWrite.value&&draft&&(offline||blockedLocal.value)?new Uint16Array(draft.mask.slice(0)):inflate(state.mask),offline&&draft?.ownedMask?new Uint8Array(draft.ownedMask.slice(0)):readOwnership(state)]);
+    editor.mask.value=mask;
+    ownershipBits=owned||new Uint8Array(Math.ceil(editor.mask.value.length/8));ownershipKnown=!!owned;editor.setPersonalValueHandler(personalValue);
     editor.segments.value=(offline&&draft?draft.segments:state.labels).map(s=>({...s,visible:('visible' in s)&&typeof s.visible==='boolean'?s.visible:true}));
     for(const op of queue){applyLocal(editor.mask.value,op.patch,true);if(op.label){const row=editor.segments.value.find(s=>s.id===op.label!.id);if(row){row.name=op.label.name;row.color=op.label.color;}}}
     if(draft)restoreView(draft.view);if(!canWrite.value&&draft?.needsCheckpoint)exitNotice.value='此任务只读；未提交工作保留在原本地副本，当前展示服务器成果。';editor.revision.value++;editor.readOnly.value=isReadOnly();
-    editor.dirty.value=queue.length>0;mark();connect();scheduleCache();
+    cacheGeneration=Math.max(cacheGeneration,draft?.generation||0)+1;
+    editor.dirty.value=queue.length>0;mark();connect();if(canWrite.value)await cacheNow();
     if(!offline)void loadHistory(state.id);
   }
   async function openProject(datasetId:string):Promise<boolean>{
@@ -203,10 +223,12 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     try{
       const original=await readDataset(datasetId);if(!original)throw new Error('请先重新下载影像，建立完整本地缓存。');
       await ensureSession();
-      const digest=await fingerprint(original.file),state=await request<Project>('/projects',{datasetId,fingerprint:digest}),draft=authUser.value.role==='worker'?await readDraft(`${person.value!.id}:${state.id}`):undefined;
-      if(!await readDataset(`project:${state.id}`))await cacheDataset(`project:${state.id}`,new File([original.file],original.name));
+      const digest=original.fingerprint||await fingerprint(original.file),state=await request<Project>('/projects',{datasetId,fingerprint:digest});
+      let draft=authUser.value.role==='worker'?await readDraft(`${person.value!.id}:${state.id}`,false):undefined;
+      if(draft?.blocked)draft=await readDraft(draft.key);
       await attach(state,draft);
-      await refresh();editor.status.value=`已加载 ${editor.volume.value?.name||'影像'} 的团队最新成果`;return true;
+      // WebSocket ready/catch-up closes the join-to-subscribe race without another full-state request.
+      editor.status.value=`已加载 ${editor.volume.value?.name||'影像'} 的团队最新成果`;return true;
     }catch(reason){detach();error.value=(reason as Error).message;return false;}finally{joining.value=false;}
   }
   async function restoreDraft(key:string){
@@ -246,7 +268,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   watch(()=>editor.strokeActive.value,value=>{if(!value)scheduleCache();});
   let viewTimer:ReturnType<typeof setTimeout>|null=null;
   watch(()=>JSON.stringify(view()),()=>{if(active.value&&historical.value===null){cacheGeneration++;if(viewTimer)clearTimeout(viewTimer);viewTimer=setTimeout(()=>void cacheView().catch(()=>{}),400);}});
-  const poll=setInterval(()=>{void catchUp();},5000),partialCache=setInterval(()=>{if(editor.strokeActive.value&&active.value)void cacheNow().catch(()=>{});},700);
+  const poll=setInterval(()=>{void catchUp();},5000),partialCache=setInterval(()=>{if(editor.strokeActive.value&&active.value)void cacheNow().catch(()=>{});},15000);
   const visibility=()=>{if(document.visibilityState==='hidden'&&active.value){editor.endStroke();void cacheNow().catch(()=>{});}};
   const beforeUnload=(event:BeforeUnloadEvent)=>{if(active.value&&(queue.length||editor.strokeActive.value||cacheError.value)){editor.endStroke();void cacheNow().catch(()=>{});event.preventDefault();event.returnValue='';}};
   document.addEventListener('visibilitychange',visibility);window.addEventListener('beforeunload',beforeUnload);

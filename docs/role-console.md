@@ -37,7 +37,7 @@ DeepMark 使用 Vue 3/TypeScript 网页界面，Java 17、Javalin 6 和 SQLite �
 - 浏览器使用 HttpOnly、SameSite=Lax 会话 Cookie。修改请求需要 `X-Deepmark-Request: 1`，并接受同源校验；WebSocket 使用同一会话及任务权限。
 - 同一浏览器重新登录时更换当前会话；其他设备的独立会话继续有效。注销会使当前会话失效。
 
-远程部署应使用 HTTPS，并代理同源的 API 与 WebSocket。密码载荷加密仍需要 HTTPS 保护网页、公钥、会话和标注数据；HTTP 仅供本机回环地址开发测试。后端只信任本机反向代理提供的 HTTPS 协议头。
+默认远程部署使用 HTTPS，并代理同源的 API 与 WebSocket。密码载荷加密不能替代 HTTPS 对网页、公钥、会话和标注数据的保护。局域网 HTTP 测试可显式设置 `DEEPMARK_ALLOW_HTTP=1`；网页会启用 HTTP 兼容加密与影像指纹计算，账号和任务权限仍然检查。后端只信任本机反向代理提供的 HTTPS 协议头。
 
 ## 构建与运行
 

@@ -46,7 +46,14 @@ public final class Collaboration {
     private final Platform platform;
     /** Accessed only while holding the shared Database lock. */
     private final LinkedHashMap<String, Cached> models = new LinkedHashMap<>(8, .75f, true);
+    private final long modelCacheBudget=Math.max(256L*1024*1024,Math.min(2L*1024*1024*1024,Runtime.getRuntime().maxMemory()/3));
     private final Map<String, Peer> peers = new ConcurrentHashMap<>();
+    private record EncodedMask(long revision,String mask) {}
+    private final Map<String,EncodedMask> encodedMasks=new ConcurrentHashMap<>();
+    private final Set<String> checkpointPending=ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.ExecutorService checkpoints=Executors.newSingleThreadExecutor(task->{Thread thread=new Thread(task,"deepmark-checkpoint");thread.setDaemon(true);return thread;});
+    private record PackedSnapshot(byte[] mask,byte[] owners,byte[] authors,byte[] regions) {}
+    private record Checkpoint(Project project,Map<String,Object> snapshot,List<Map<String,Object>> events) {}
     private record Cached(long revision, SharedModel.Model model) {}
     private record Project(String id, String dataset, String fingerprint, int count, byte[] header,
             int[] dims, boolean little, String name, List<Map<String,Object>> labels, long revision,
@@ -79,7 +86,7 @@ public final class Collaboration {
     public void install(Javalin app) {
         // Expired sessions and revoked memberships must disappear even while no one edits.
         ScheduledExecutorService presenceChecks=Executors.newSingleThreadScheduledExecutor(task->{Thread thread=new Thread(task,"deepmark-presence");thread.setDaemon(true);return thread;});
-        app.events(events->{events.serverStarted(()->presenceChecks.scheduleWithFixedDelay(this::refreshPresence,5,5,TimeUnit.SECONDS));events.serverStopping(presenceChecks::shutdownNow);});
+        app.events(events->{events.serverStarted(()->presenceChecks.scheduleWithFixedDelay(this::refreshPresence,5,5,TimeUnit.SECONDS));events.serverStopping(()->{presenceChecks.shutdownNow();checkpoints.shutdownNow();});});
         app.before(BASE + "/*", ctx -> {if(!"GET".equals(ctx.req().getMethod()))platform.auth.checkMutation(ctx);});
         app.exception(Failure.class, (error, ctx) -> ctx.status(error.status).json(map("error", error.getMessage())));
         app.exception(SharedModel.Failure.class, (error, ctx) -> ctx.status(error.status).json(map("error", error.getMessage())));
@@ -94,13 +101,13 @@ public final class Collaboration {
         app.get(BASE + "/projects/{id}", ctx -> {
             Auth.User user = user(ctx); String id = ctx.pathParam("id");
             Long revision = optionalLong(ctx.queryParam("revision")); Long unchanged = optionalLong(ctx.queryParam("ifRevision"));
-            ctx.json(platform.db.read(c -> {
+            ctx.json(encodeState(platform.db.read(c -> {
                 Project p = readable(c, user, id);
                 // canWrite and datasetStatus must still be refreshed when a task is completed.
                 if (revision == null && unchanged != null && unchanged == p.revision && !completed(p.dataset))
                     return map("unchanged", true, "revision", p.revision, "canWrite", canWrite(user,p.dataset), "datasetStatus", platform.dataset(p.dataset).get("status"));
                 return state(c,p,revision,user);
-            }));
+            })));
         });
         app.get(BASE + "/projects/{id}/history", ctx -> {
             Auth.User user = user(ctx);
@@ -172,19 +179,27 @@ public final class Collaboration {
 
     private Map<String,Object> join(Auth.User user,String dataset,String expectedFingerprint) {
         if(expectedFingerprint==null||!expectedFingerprint.matches("[a-f0-9]{64}"))throw new Failure(400,"加入工程时必须提供已下载影像的 SHA-256 指纹。");
-        return write(c->{
-            platform.requireRead(user,dataset);Datasets.Source source=platform.datasets.resolve(dataset);
-            String fingerprint=source.fingerprint();
-            if(!expectedFingerprint.equals(fingerprint)||!fingerprint.equals(sha256(source.bytes())))throw new Failure(409,"服务器影像已变化，请重新下载后再打开工程。");
-            Nifti.Volume volume=Nifti.parse(source.bytes());String id=sha256((dataset+fingerprint).getBytes(StandardCharsets.UTF_8)).substring(0,32);
+        platform.requireRead(user,dataset);
+        // File I/O and CT decompression must never hold the shared database lock.
+        Datasets.Geometry source=platform.datasets.geometry(dataset);
+        String fingerprint=source.fingerprint();
+        if(!expectedFingerprint.equals(fingerprint))throw new Failure(409,"服务器影像已变化，请重新下载后再打开工程。");
+        Nifti.Volume volume=source.volume();String id=sha256((dataset+fingerprint).getBytes(StandardCharsets.UTF_8)).substring(0,32);
+        boolean exists=platform.db.read(c->one(c,"SELECT id FROM collab_projects WHERE id=?",id)!=null);
+        SharedModel.Model initial=exists?null:new SharedModel.Model(volume.dims());
+        PackedSnapshot packed;
+        try{packed=initial==null?null:new PackedSnapshot(Nifti.gzipZeros((long)volume.count()*2),Nifti.gzipZeros((long)volume.count()*4),pack(initial.authors),pack(initial.regions));}
+        catch(Exception error){throw new IllegalStateException("无法创建空白标注。",error);}
+        return encodeState(write(c->{
+            platform.requireRead(user,dataset);
             if(one(c,"SELECT id FROM collab_projects WHERE id=?",id)==null){
                 List<Map<String,Object>> labels=initialLabels(user);String name=String.valueOf(source.metadata().getOrDefault("name","影像.nii"));
                 exec(c,"INSERT INTO collab_projects(id,dataset,fingerprint,count,header,dims,little,name,labels) VALUES(?,?,?,?,?,?,?,?,?)",id,dataset,fingerprint,volume.count(),volume.header(),json(volume.dims()),volume.littleEndian()?1:0,name,json(labels));
-                Project p=project(c,id);SharedModel.Model model=new SharedModel.Model(volume.dims());
-                snapshot(c,p,model);models.put(id,new Cached(0,model));trimModels();
+                Project p=project(c,id);
+                storeSnapshot(c,p,packed);models.put(id,new Cached(0,initial));encodedMasks.put(id,new EncodedMask(0,b64(packed.mask)));trimModels();
             }
             return state(c,project(c,id),null,user);
-        });
+        }));
     }
 
     private Map<String,Object> mutate(String id,Auth.User user,String action,JsonNode body) {
@@ -258,9 +273,22 @@ public final class Collaboration {
         if(ownerCode!=0)for(int i=0;i<model.mask.length;i++)if(model.mask[i]!=0&&model.owners[i]==ownerCode)bits[i>>>3]|=(byte)(1<<(i&7));
         String taskStatus=String.valueOf(platform.dataset(p.dataset).get("status"));boolean locked=taskStatus.equals("completed");
         return map("id",p.id,"datasetId",p.dataset,"fingerprint",p.fingerprint,"name",p.name,"revision",target,"latestRevision",p.revision,
-                "mask",b64(Nifti.gzipU16(model.mask)),"ownershipAuthor",user.id(),"ownedVoxels",b64(Nifti.gzip(bits)),"regions",platform.mapper.valueToTree(model.regions),"labels",state.labels,
+                "mask",cachedMask(p.id,target,model),"ownershipAuthor",user.id(),"ownedVoxels",bits,"regions",platform.mapper.valueToTree(model.regions),"labels",state.labels,
                 "status",state.status,"datasetStatus",taskStatus,"canWrite",!locked&&state.status.equals("editing")&&canWrite(user,p.dataset),
                 "finalizedBy",state.finalizedBy,"finalizedAt",state.finalizedAt,"finalRevision",state.finalRevision);
+    }
+    private Object cachedMask(String id,long revision,SharedModel.Model model){
+        EncodedMask cached=encodedMasks.get(id);return cached!=null&&cached.revision==revision?cached.mask:Nifti.u16Bytes(model.mask);
+    }
+    /** The raw bytes are a consistent revision captured under the lock; gzip happens after releasing it. */
+    private Map<String,Object> encodeState(Map<String,Object> state){
+        if(state.get("mask") instanceof byte[] raw){
+            String mask=b64(Nifti.gzip(raw)),id=(String)state.get("id");long revision=((Number)state.get("revision")).longValue();state.put("mask",mask);
+            encodedMasks.compute(id,(key,old)->old==null||old.revision<=revision?new EncodedMask(revision,mask):old);
+            if(encodedMasks.size()>4)encodedMasks.keySet().stream().filter(key->!key.equals(id)).findFirst().ifPresent(encodedMasks::remove);
+        }
+        if(state.get("ownedVoxels") instanceof byte[] raw)state.put("ownedVoxels",b64(Nifti.gzip(raw)));
+        return state;
     }
     private Map<String,Object> provenance(Connection c,Project p,long index,long revision,boolean historical)throws Exception {
         if(index<0||index>=p.count)throw new Failure(400,"体素索引无效。");if(!historical&&revision!=p.revision)throw new Failure(409,"标注修订已更新，请重新查询作者。");if(revision<0||revision>p.revision)throw new Failure(404,"修订记录不存在。");
@@ -294,17 +322,40 @@ public final class Collaboration {
         for(JsonNode row:event.path("applied"))model.mask[row.get(0).asInt()]=row.get(2).asInt();for(JsonNode row:event.path("ownerUpdates"))model.owners[row.get(0).asInt()]=row.get(1).asInt();
         model.authors=platform.mapper.convertValue(event.get("authors"),AUTHORS);model.regions=platform.mapper.convertValue(event.get("regions"),REGIONS);
     }
-    private void trimModels(){long bytes=0;for(Cached model:models.values())bytes+=(long)model.model.mask.length*8;Iterator<Map.Entry<String,Cached>> iterator=models.entrySet().iterator();while(models.size()>1&&(models.size()>4||bytes>256L*1024*1024)){Cached old=iterator.next().getValue();bytes-=(long)old.model.mask.length*8;iterator.remove();}}
-    private void snapshot(Connection c,Project p,SharedModel.Model model)throws Exception {
-        exec(c,"INSERT OR REPLACE INTO collab_snapshots VALUES(?,?,?,?,?,?,?,?,?,?,?)",p.id,p.revision,Nifti.gzipU16(model.mask),Nifti.gzipU32(model.owners),pack(model.authors),pack(model.regions),json(p.labels),p.status,p.finalizedBy,p.finalizedAt,p.finalRevision);
+    private void trimModels(){long bytes=0;for(Cached model:models.values())bytes+=(long)model.model.mask.length*8;Iterator<Map.Entry<String,Cached>> iterator=models.entrySet().iterator();while(models.size()>1&&(models.size()>4||bytes>modelCacheBudget)){Cached old=iterator.next().getValue();bytes-=(long)old.model.mask.length*8;iterator.remove();}}
+    private PackedSnapshot packSnapshot(SharedModel.Model model){
+        try{return new PackedSnapshot(Nifti.gzipU16(model.mask),Nifti.gzipU32(model.owners),pack(model.authors),pack(model.regions));}
+        catch(Exception error){throw new IllegalStateException("无法生成快照。",error);}
+    }
+    private void storeSnapshot(Connection c,Project p,PackedSnapshot packed)throws Exception {
+        exec(c,"INSERT OR REPLACE INTO collab_snapshots VALUES(?,?,?,?,?,?,?,?,?,?,?)",p.id,p.revision,packed.mask,packed.owners,packed.authors,packed.regions,json(p.labels),p.status,p.finalizedBy,p.finalizedAt,p.finalRevision);
         // Keep revision zero for arbitrary historical replay plus the newest live checkpoint.
         if(p.revision!=0)exec(c,"DELETE FROM collab_snapshots WHERE project=? AND revision<>0 AND revision<>?",p.id,p.revision);
+    }
+    private void checkpoint(String id){
+        if(!checkpointPending.add(id))return;
+        checkpoints.execute(()->{
+            try{
+                // Capture only the compressed base and durable event journal under the lock.
+                // Reconstructing the checkpoint outside it avoids copying two full CT-sized arrays while editors wait.
+                Checkpoint captured=platform.db.read(c->{
+                    Project p=project(c,id);
+                    Map<String,Object> snapshot=one(c,"SELECT * FROM collab_snapshots WHERE project=? AND revision<=? ORDER BY revision DESC LIMIT 1",id,p.revision);
+                    return new Checkpoint(p,snapshot,all(c,"SELECT details FROM collab_events WHERE project=? AND revision>? AND revision<=? ORDER BY revision",id,snapshot.get("revision"),p.revision));
+                });
+                SharedModel.Model restored=fromSnapshot(captured.snapshot,captured.project);
+                for(Map<String,Object> event:captured.events)replay(restored,unpack((byte[])event.get("details")));
+                PackedSnapshot packed=packSnapshot(restored);
+                platform.db.transaction(c->{storeSnapshot(c,captured.project,packed);return null;});
+            }catch(Exception error){System.err.println("Checkpoint deferred: "+error.getClass().getSimpleName());}
+            finally{checkpointPending.remove(id);}
+        });
     }
     private long saveEvent(Connection c,Project p,SharedModel.Author author,String op,String kind,SharedModel.Model model,List<int[]> applied,List<int[]> ownerUpdates,String intent,String canonical,List<Map<String,Object>> labels,String status,Map<String,Object> extra)throws Exception {
         long revision=p.revision+1;Map<String,Object> details=map("shared",true,"applied",applied,"ownerUpdates",ownerUpdates,"regions",model.regions,"authors",model.authors,"labels",labels,"status",status);if(intent!=null)details.put("intent",intent);if(canonical!=null)details.put("canonical",canonical);details.putAll(extra);
         exec(c,"INSERT INTO collab_events VALUES(?,?,?,?,?,?,?,?)",p.id,revision,op,author.id,author.name,kind,Instant.now().toString(),pack(details));
         exec(c,"UPDATE collab_projects SET revision=?,labels=?,status=?,finalized_by=?,finalized_at=?,final_revision=? WHERE id=?",revision,json(labels),status,extra.getOrDefault("finalizedBy",p.finalizedBy),extra.getOrDefault("finalizedAt",p.finalizedAt),extra.getOrDefault("finalRevision",p.finalRevision),p.id);
-        models.put(p.id,new Cached(revision,model));trimModels();if(revision%128==0)snapshot(c,project(c,p.id),model);return revision;
+        models.put(p.id,new Cached(revision,model));trimModels();if(revision%128==0)checkpoint(p.id);return revision;
     }
     private Map<Integer,SharedModel.Author> recentAgreements(Connection c,Project p,SharedModel.Author person,SharedModel.Model model,List<int[]> entries)throws Exception {
         Set<Integer> regionPoints=new HashSet<>();for(SharedModel.Region region:model.regions)regionPoints.addAll(region.indices);Set<Integer> wanted=new HashSet<>();

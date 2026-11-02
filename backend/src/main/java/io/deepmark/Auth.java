@@ -57,6 +57,7 @@ public final class Auth {
     private final Clock clock;
     private final KeyPair keys;
     private final long challengeTtlMs;
+    private final boolean allowHttp;
     private final Map<String, Long> challenges = new HashMap<>();
 
     public Auth(Database database) {
@@ -64,13 +65,22 @@ public final class Auth {
     }
 
     Auth(Database database, Clock clock, KeyPair keys) {
+        this(database, clock, keys, "1".equals(System.getenv("DEEPMARK_ALLOW_HTTP")));
+    }
+
+    Auth(Database database, Clock clock, KeyPair keys, boolean allowHttp) {
         this.database = database;
         this.clock = clock;
         this.keys = keys;
         this.challengeTtlMs = configuredChallengeTtl();
+        this.allowHttp = allowHttp;
     }
 
     public void routes(Javalin app) {
+        app.get("/api/auth/policy", ctx -> {
+            noStore(ctx);
+            ctx.json(Map.of("allowHttp", allowHttp));
+        });
         app.get("/api/auth/challenge", ctx -> {
             requireSecureTransport(ctx);
             noStore(ctx);
@@ -459,7 +469,8 @@ public final class Auth {
         return "http";
     }
 
-    private static void requireSecureTransport(Context context) {
+    void requireSecureTransport(Context context) {
+        if (allowHttp) return;
         if ("https".equals(requestScheme(context))) return;
         String host;
         try {

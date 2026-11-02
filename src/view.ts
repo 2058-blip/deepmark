@@ -10,6 +10,15 @@ export function download(data: BlobPart, name: string, type = 'application/octet
   window.setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 export async function readFile(file: File) {
+  if(typeof Worker!=='undefined'){
+    const result=await new Promise<{volume:Volume;fingerprint:string}>((resolve,reject)=>{
+      const worker=new Worker(new URL('./volume.worker.ts',import.meta.url),{type:'module'});
+      worker.onmessage=event=>{worker.terminate();if(event.data.error)reject(new Error(event.data.error));else resolve(event.data);};
+      worker.onerror=event=>{worker.terminate();reject(new Error(event.message||'影像后台解析失败。'));};
+      worker.postMessage({file});
+    });
+    fileFingerprints.set(file,result.fingerprint);return result.volume;
+  }
   let buffer = await file.arrayBuffer();
   if (new Uint8Array(buffer)[0] === 31 && new Uint8Array(buffer)[1] === 139) {
     if (typeof DecompressionStream === 'undefined') throw new Error('此浏览器不支持 gzip 解压，请使用新版 Chrome/Edge，或先解压为 .nii。');
@@ -17,6 +26,7 @@ export async function readFile(file: File) {
   }
   return parseNifti(buffer, file.name);
 }
+export const fileFingerprints=new WeakMap<File,string>();
 export function direction(volume: Volume, axis: Axis): string {
   if (volume.oblique) return ['I 轴', 'J 轴', 'K 轴'][axis];
   const col = volume.affine.map(row => Math.abs(row[axis]));

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed,onBeforeUnmount,onMounted,ref} from 'vue';
-import {api,downloadAuthenticated} from './api.ts';
+import {api,downloadAuthenticated,uploadDataset} from './api.ts';
 import type {AuthUser,Dataset,Group} from './api.ts';
 import CaseList from './CaseList.vue';
 import './console.css';
@@ -16,6 +16,7 @@ const caseMetadata=ref<CaseInfo[]>([]),metadataRequest=new AbortController();
 const manualRefreshing=ref(false);
 const search=ref(''),filter=ref('all'),groupName=ref(''),joinCode=ref(''),claimGroup=ref('');
 const uploadFile=ref<File|null>(null),uploadName=ref(''),uploadInput=ref<HTMLInputElement|null>(null);
+const uploadStage=ref('正在上传…');
 const selectedId=ref<string|null>(null),detail=ref<StatusDetail|null>(null),detailLoading=ref(false),lastUpdated=ref(0);
 const filters=[{key:'all',label:'全部'},{key:'unassigned',label:'未标注'},{key:'in_progress',label:'进行中'},{key:'completed',label:'已完成'}] as const;
 let poll:ReturnType<typeof setInterval>|null=null;
@@ -68,7 +69,7 @@ async function createGroup(){const name=groupName.value.trim();if(!name)return;a
 async function joinGroup(){const code=joinCode.value.trim();if(!code)return;await act('join-group',async()=>{const result=await api<{group:Group}>('/api/groups/join',{method:'POST',body:JSON.stringify({code})});joinCode.value='';notice.value=`已加入“${result.group.name}”。`;});}
 function chooseUpload(event:Event){const input=event.target as HTMLInputElement;uploadFile.value=input.files?.[0]||null;if(uploadFile.value&&!uploadName.value)uploadName.value=uploadFile.value.name;}
 async function upload(){const file=uploadFile.value;if(!file)return;if(!/\.nii(?:\.gz)?$/i.test(file.name)){error.value='请选择 .nii 或 .nii.gz 影像文件。';return;}if(!file.size){error.value='影像文件为空，请重新选择。';return;}
-  await act('upload',async()=>{const form=new FormData();form.set('file',file);if(uploadName.value.trim())form.set('name',uploadName.value.trim());const result=await api<{dataset:Dataset}>('/api/datasets/upload',{method:'POST',body:form});uploadFile.value=null;uploadName.value='';if(uploadInput.value)uploadInput.value.value='';notice.value=`“${result.dataset.name}”已发布，等待组长认领。`;});
+  await act('upload',async()=>{uploadStage.value='正在上传 0%';const form=new FormData();form.set('file',file);if(uploadName.value.trim())form.set('name',uploadName.value.trim());const result=await uploadDataset(form,percent=>{uploadStage.value=percent===100?'服务器正在校验并发布…':`正在上传 ${percent}%`;});uploadFile.value=null;uploadName.value='';if(uploadInput.value)uploadInput.value.value='';notice.value=`“${result.dataset.name}”已发布，等待组长认领。`;});
 }
 async function claim(dataset:Dataset){if(!claimGroup.value)return;await act(`claim:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/claim`,{method:'POST',body:JSON.stringify({groupId:claimGroup.value})});notice.value=`已认领“${dataset.name}”，小组成员现在可以共同标注。`;});}
 async function complete(dataset:Dataset){if(!canComplete(dataset)||!window.confirm(`将“${dataset.name}”标记为已完成？完成后小组成员将只能查看成果，请确认成员已同步当前工作。`))return;await act(`complete:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/complete`,{method:'POST',body:JSON.stringify({revision:dataset.revision})});notice.value=`“${dataset.name}”已完成，派活方可以下载成果。`;});}
@@ -84,7 +85,7 @@ onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();});
     <main class="console-content">
       <section class="console-heading"><div><span class="eyebrow">{{isDispatcher?'DATASET DELIVERY':'TEAM WORKSPACE'}}</span><h1>{{isDispatcher?'发布影像，跟进标注成果':'组成小组，协同完成标注'}}</h1><p>{{isDispatcher?'上传后的影像会进入待认领列表。你可以查看自己发布的数据集、监看标注并下载已完成成果。':'组长认领待标注影像，小组成员使用同一份实时协作工程。已完成任务保留为只读。'}}</p></div><button :disabled="manualRefreshing||!!busy" :aria-busy="manualRefreshing" @click="error='';refresh()">刷新工作台</button></section>
       <p v-if="error" class="console-error" role="alert">{{error}}</p><p v-if="notice" class="console-notice" role="status">{{notice}}</p>
-      <section v-if="isDispatcher" class="console-card console-upload"><div><h2>发布待标注影像</h2><p>支持三维灰度 NIfTI-1：.nii / .nii.gz。</p></div><form @submit.prevent="upload"><label>影像文件<input ref="uploadInput" type="file" accept=".nii,.nii.gz" required :disabled="!!busy" @change="chooseUpload"/></label><label>显示名称<input v-model="uploadName" maxlength="160" placeholder="选填，默认使用文件名" :disabled="!!busy"/></label><button class="primary" :disabled="!uploadFile||!!busy">{{busy==='upload'?'正在上传并发布…':'上传并发布'}}</button><small v-if="uploadFile">{{uploadFile.name}} · {{formatSize(uploadFile.size)}}</small></form></section>
+      <section v-if="isDispatcher" class="console-card console-upload"><div><h2>发布待标注影像</h2><p>支持三维灰度 NIfTI-1：.nii / .nii.gz。</p></div><form @submit.prevent="upload"><label>影像文件<input ref="uploadInput" type="file" accept=".nii,.nii.gz" required :disabled="!!busy" @change="chooseUpload"/></label><label>显示名称<input v-model="uploadName" maxlength="160" placeholder="选填，默认使用文件名" :disabled="!!busy"/></label><button class="primary" :disabled="!uploadFile||!!busy">{{busy==='upload'?uploadStage:'上传并发布'}}</button><small v-if="uploadFile">{{uploadFile.name}} · {{formatSize(uploadFile.size)}}</small></form></section>
       <section v-else class="console-team-grid">
         <article class="console-card"><h2>我的干活组</h2><p v-if="!groups.length" class="console-muted">创建一个小组成为组长，或使用邀请码加入已有小组。</p><div v-for="group in groups" :key="group.id" class="console-group"><div><strong>{{group.name}}</strong><span class="console-role">{{group.isLeader||group.leaderId===user.id?'组长':'成员'}}</span></div><p>邀请码 <code>{{group.code}}</code> · {{group.members.length}} 位成员</p><p class="console-members">{{group.members.map(member=>member.name||member.username).join('、')}}</p></div></article>
         <article class="console-card console-team-forms"><form @submit.prevent="createGroup"><h2>创建小组</h2><label>小组名称<input v-model="groupName" maxlength="80" required placeholder="例如：骨骼标注一组" :disabled="!!busy"/></label><button :disabled="!groupName.trim()||!!busy">{{busy==='create-group'?'正在创建…':'创建并成为组长'}}</button></form><form @submit.prevent="joinGroup"><h2>加入小组</h2><label>小组邀请码<input v-model="joinCode" maxlength="64" required placeholder="输入组长分享的邀请码" :disabled="!!busy"/></label><button :disabled="!joinCode.trim()||!!busy">{{busy==='join-group'?'正在加入…':'加入小组'}}</button></form></article>

@@ -2,6 +2,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyThreshold, exportNifti, indexOf, makeDemo, paint, parseNifti, planePoint } from '../src/core.ts';
 
+test('native 16-bit CT avoids a full Float32 copy while scaled grayscale stays exact',()=>{
+  const buffer=new ArrayBuffer(368),view=new DataView(buffer);
+  view.setInt32(0,348,true);view.setInt16(40,3,true);
+  [2,2,2].forEach((size,axis)=>{view.setInt16(42+axis*2,size,true);view.setFloat32(80+axis*4,1,true);});
+  view.setInt16(70,4,true);view.setInt16(72,16,true);view.setFloat32(108,352,true);view.setFloat32(112,1,true);
+  new Uint8Array(buffer,344,4).set([110,43,49,0]);view.setInt16(352,-32768,true);view.setInt16(366,32767,true);
+  const original=buffer.slice(0),volume=parseNifti(buffer);
+  assert.equal(volume.data.byteLength,16);assert.equal(volume.min,-32768);assert.equal(volume.max,32767);
+  const labels=new Uint16Array(8);applyThreshold(volume.data,labels,{minimum:-32768,maximum:-32768,label:1});assert.equal(labels[0],1);
+  assert.deepEqual(buffer,original,'Displaying and thresholding must not modify source voxels');
+  view.setFloat32(112,.5,true);view.setFloat32(116,-100,true);const scaled=parseNifti(buffer);
+  assert.ok(scaled.data instanceof Float32Array);assert.equal(scaled.data[0],-16484);assert.equal(scaled.data[7],16283.5);
+});
+
 test('exported labels preserve voxel positions, spatial geometry and intent',()=>{
   const volume=makeDemo(), labels=new Uint16Array(volume.data.length);
   labels[indexOf([13,21,32],volume.dims)]=7;

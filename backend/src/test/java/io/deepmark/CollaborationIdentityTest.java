@@ -37,6 +37,39 @@ class CollaborationIdentityTest {
     @TempDir Path temporary;
     private static final String BASE="/api/collaboration";
 
+    @Test void cachedGeometryRechecksFileIdentityAndMetadataEndpointKeepsAccessChecks() throws Exception {
+        try(Fixture f=fixture()){
+            var first=f.platform.datasets.geometry("dataset");
+            assertSame(first,f.platform.datasets.geometry("dataset"));
+            assertEquals(200,f.request("GET","/api/datasets/dataset","worker-a",null).statusCode());
+            assertEquals(403,f.request("GET","/api/datasets/dataset","outsider",null).statusCode());
+            assertEquals(401,f.request("GET","/api/datasets/dataset",null,null).statusCode());
+            Path file=f.platform.datasets.resolve("dataset").path();
+            byte[] changed=source();changed[352]=1;Files.write(file,changed);
+            Files.setLastModifiedTime(file,java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis()+5000));
+            assertThrows(HttpResponseException.class,()->f.platform.datasets.geometry("dataset"));
+        }
+    }
+
+    @Test void backgroundCheckpointPreservesLiveStateAndHistoricalReplay() throws Exception {
+        try(Fixture f=fixture()){
+            String project=f.join("worker-a").path("id").asText();
+            for(int i=0;i<140;i++){
+                String patch=Collaboration.encodePatch(List.of(new int[]{0,i%2,(i+1)%2}));
+                JsonNode result=f.post(project,"operations","worker-a",Map.of("op","checkpoint-"+i,"baseRevision",i,"patch",patch));
+                assertEquals(i+1,result.path("revision").asLong());
+            }
+            long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);long checkpoint;
+            do{checkpoint=f.platform.db.read(c->{try(var s=c.createStatement();var r=s.executeQuery("SELECT MAX(revision) FROM collab_snapshots WHERE project='"+project+"'")){r.next();return r.getLong(1);}});if(checkpoint<128)Thread.sleep(10);}while(checkpoint<128&&System.nanoTime()<until);
+            assertTrue(checkpoint>=128);
+            for(long revision:List.of(0L,63L,128L,140L)){
+                JsonNode state=f.json(f.request("GET",BASE+"/projects/"+project+"?revision="+revision,"worker-a",null));
+                int[] mask=Nifti.gunzipU16(java.util.Base64.getDecoder().decode(state.path("mask").asText()));
+                assertEquals(revision%2,mask[0],"Historical result must survive an asynchronous checkpoint");
+            }
+        }
+    }
+
     @Test void onlinePresenceDeduplicatesTabsTracksDisconnectsAndRevokesAccess() throws Exception {
         try(Fixture f=fixture()){
             String project=f.join("worker-a").path("id").asText();

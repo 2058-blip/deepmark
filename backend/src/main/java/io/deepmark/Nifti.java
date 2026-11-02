@@ -117,14 +117,35 @@ public final class Nifti {
     }
 
     public static byte[] gzipU16(int[] values) {
-        ByteBuffer raw = ByteBuffer.allocate(Math.multiplyExact(values.length, 2)).order(ByteOrder.LITTLE_ENDIAN);
-        for (int value : values) raw.putShort((short) value);
-        return gzip(raw.array());
+        return gzipIntegers(values,2);
     }
     public static byte[] gzipU32(int[] values) {
-        ByteBuffer raw = ByteBuffer.allocate(Math.multiplyExact(values.length, 4)).order(ByteOrder.LITTLE_ENDIAN);
-        for (int value : values) raw.putInt(value);
-        return gzip(raw.array());
+        return gzipIntegers(values,4);
+    }
+    private static GZIPOutputStream fastGzip(ByteArrayOutputStream out)throws IOException{
+        return new GZIPOutputStream(out,65536){{def.setLevel(java.util.zip.Deflater.BEST_SPEED);}};
+    }
+    private static byte[] gzipIntegers(int[] values,int width){
+        try{
+            ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] block=new byte[65536];
+            try(GZIPOutputStream zip=fastGzip(out)){
+                int offset=0;
+                for(int value:values){for(int b=0;b<width;b++)block[offset++]=(byte)(value>>>(b*8));if(offset==block.length){zip.write(block);offset=0;}}
+                if(offset>0)zip.write(block,0,offset);
+            }
+            return out.toByteArray();
+        }catch(IOException error){throw new IllegalStateException("无法压缩标注。",error);}
+    }
+    public static byte[] u16Bytes(int[] values){
+        byte[] raw=new byte[Math.multiplyExact(values.length,2)];int p=0;
+        for(int value:values){raw[p++]=(byte)value;raw[p++]=(byte)(value>>>8);}return raw;
+    }
+    public static byte[] gzipZeros(long size){
+        try{
+            ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] zeros=new byte[65536];
+            try(GZIPOutputStream zip=fastGzip(out)){while(size>0){int count=(int)Math.min(size,zeros.length);zip.write(zeros,0,count);size-=count;}}
+            return out.toByteArray();
+        }catch(IOException error){throw new IllegalStateException("无法压缩空白标注。",error);}
     }
     public static int[] gunzipU16(byte[] compressed) {
         byte[] bytes = gunzip(compressed, MAX_VOXELS * 2);
@@ -143,13 +164,13 @@ public final class Nifti {
     public static byte[] gzip(byte[] raw) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try (GZIPOutputStream zip = new GZIPOutputStream(out)) { zip.write(raw); }
+            try (GZIPOutputStream zip = fastGzip(out)) { zip.write(raw); }
             return out.toByteArray();
         } catch (IOException error) { throw new IllegalStateException("无法压缩标注。", error); }
     }
     public static byte[] gunzip(byte[] compressed) { return gunzip(compressed, MAX_RAW_BYTES); }
     public static byte[] gunzip(byte[] compressed, int limit) {
-        try (GZIPInputStream input = new GZIPInputStream(new ByteArrayInputStream(compressed))) {
+        try (GZIPInputStream input = new GZIPInputStream(new ByteArrayInputStream(compressed),65536)) {
             ByteArrayOutputStream out = new ByteArrayOutputStream(); byte[] block = new byte[65536]; int n;
             while ((n = input.read(block)) != -1) {
                 if ((long) out.size() + n > limit) throw new IllegalArgumentException("解压后的数据超过上限。");

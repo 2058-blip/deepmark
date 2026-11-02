@@ -1,4 +1,5 @@
 import {shallowRef} from 'vue';
+import {sha256Blob} from './browserCrypto.ts';
 
 export type UserRole='dispatcher'|'worker';
 export type AuthUser={id:string;username:string;name:string;role:UserRole};
@@ -30,7 +31,13 @@ export async function downloadAuthenticated(url:string,filename:string):Promise<
   a.href=objectUrl;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(objectUrl),30000);
 }
 export async function fingerprint(file:Blob):Promise<string>{
-  if(!crypto.subtle)throw new Error('当前浏览器无法验证影像指纹，请通过 HTTPS 使用新版浏览器。');
-  const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
+  return sha256Blob(file);
+}
+export function uploadDataset(form:FormData,onProgress:(percent:number)=>void):Promise<{dataset:Dataset}>{
+  return new Promise((resolve,reject)=>{
+    const request=new XMLHttpRequest();request.open('POST','/api/datasets/upload');request.withCredentials=true;request.setRequestHeader('X-Deepmark-Request','1');
+    request.upload.onprogress=event=>{if(event.lengthComputable)onProgress(Math.min(100,Math.round(event.loaded/event.total*100)));};
+    request.onload=()=>{let result;try{result=JSON.parse(request.responseText);}catch{reject(new Error('服务器返回了无效的上传结果。'));return;}if(request.status>=200&&request.status<300)resolve(result);else reject(Object.assign(new Error(result.error||'影像上传失败。'),{status:request.status}));};
+    request.onerror=()=>reject(new Error('上传连接中断，请检查网络后重试。'));request.onabort=()=>reject(new Error('上传已取消。'));request.send(form);
+  });
 }
