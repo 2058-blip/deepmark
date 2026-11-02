@@ -1,0 +1,91 @@
+.workstation .collaboration-panel.is-compact.is-drawer{
+  --panel:#191e21;--panel-2:#22282c;--text:#edf3f3;--text-2:#c6d1d1;--muted:#96a5a5;--border:#343c40;--border-strong:#465054;
+  --primary:#18bcb5;--primary-soft:#143c3c;--primary-ring:#18bcb544;--success:#18d4aa;--warning:#f0c578;--danger:#ffaaa3;--danger-soft:#3d2828;--danger-line:#784a45;
+  position:relative;display:flex;flex-direction:column;align-self:stretch;flex:0 0 48px;width:48px;min-width:0;min-height:0;
+  margin:0;padding:0;border:0;border-left:1px solid #343c40;border-radius:0;background:#191e21;color:#edf3f3;box-shadow:none;overflow:visible;
+}
+.workstation .collaboration-panel.is-compact.is-drawer.is-drawer-open{flex-basis:288px;width:288px}
+.workstation .collaboration-panel.is-compact.is-drawer>.collaboration-drawer-header{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:8px;min-height:62px;margin:0;padding:14px 16px;border-bottom:1px solid #343c40;flex:0 0 auto;
+}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-drawer-toggle{
+  display:flex;align-items:center;justify-content:flex-start;gap:7px;width:auto;height:auto;margin:0;padding:0;border:0;background:transparent;color:#edf3f3;box-shadow:none;
+}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-drawer-toggle strong{font-size:17px;line-height:1.5;white-space:nowrap;color:#edf3f3;font-weight:650;letter-spacing:.2px}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-drawer-toggle strong::before{display:none}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-drawer-toggle>.dm-icon{color:#9baaaa;flex-shrink:0}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-drawer-toggle:focus-visible,.workstation .collaboration-panel.is-compact.is-drawer button:focus-visible{outline:2px solid #25d6c3;outline-offset:4px}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-online-count{display:flex;align-items:center;gap:4px;margin:0;font-size:11px;line-height:1.5;color:#9caaaa;white-space:nowrap}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-online-count.is-online{color:#d0dedc}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-online-count.is-online::before{content:"";width:7px;height:7px;margin-right:3px;border-radius:50%;background:#18d4aa;flex-shrink:0}
+.workstation .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open)>.collaboration-drawer-header{flex-direction:column;justify-content:flex-start;gap:18px;min-height:0;padding:18px 8px;border-bottom:0}
+.workstation .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open) .collaboration-drawer-toggle{flex-direction:column;gap:14px}
+.workstation .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open) .collaboration-drawer-toggle>.dm-icon{transform:rotate(180deg)}
+.workstation .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open) .collaboration-drawer-toggle strong{writing-mode:vertical-rl;font-size:14px;line-height:1.5;letter-spacing:3px}
+.workstation .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open) .drawer-online-count{justify-content:center;flex-wrap:wrap;gap:3px;font-size:11px;max-width:32px;text-align:center}
+.workstation .collaboration-panel.is-compact.is-drawer:not(.is-drawer-open) .drawer-online-count>span{font-size:9px;white-space:normal}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-closed-status{font-size:10px;color:#6ee4d4;writing-mode:vertical-rl;letter-spacing:1px;line-height:1.5;max-height:160px;overflow:hidden}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-closed-status.is-warning{color:#f0c578}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-drawer-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:16px;scrollbar-width:thin;scrollbar-color:#52615f #191e21}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-people{display:block;margin:0}
+.workstation .collaboration-panel.is-compact.is-drawer .people-caption{display:none}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-members{display:grid;gap:10px;width:100%}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-members li{display:grid;grid-template-columns:42px minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;column-gap:10px;row-gap:5px;width:100%;max-width:none;padding:12px;border:1px solid #323b3e;border-radius:5px;background:#22282c}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-avatar{grid-column:1;grid-row:1/3;width:42px;height:42px;font-size:18px;font-weight:600;color:#b4ece3;background:#31524f;border:1px solid #456862}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-members li:nth-child(even) .presence-avatar{color:#f1d5cf;background:#644b48;border-color:#80625d}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-members strong{grid-column:2;grid-row:1;max-width:none;min-width:0;font-size:13px;line-height:1.45;color:#f0f4f4;white-space:normal;overflow-wrap:anywhere}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-self{grid-column:3;grid-row:1;color:#a5ddd4;background:#294b46;font-size:9px}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-members small{display:block;grid-column:2;grid-row:2;font-size:10px;color:#9ab4ad;white-space:normal}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-dot{grid-column:3;grid-row:2;width:6px;height:6px;background:#18d4aa}
+.workstation .collaboration-panel.is-compact.is-drawer .presence-unavailable{display:block;padding:12px 0;color:#abb9b9;line-height:1.7;font-size:12px}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-recent{margin-top:25px;padding-top:20px;border-top:1px solid #3a4245}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-caption{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;color:#96a5a5}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-caption>strong{font-size:16px;font-weight:600;color:#edf3f3}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-caption>span{display:none}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-caption>button{height:auto;margin:0 0 0 auto;padding:4px 6px;border-color:#3c494a;background:#242d2f;color:#b5cecb;font-size:10px}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-operations{display:grid;gap:18px;margin:0;padding:0}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-operations li{display:grid;grid-template-columns:9px minmax(0,1fr) auto;gap:3px 9px;align-items:center;min-width:0;line-height:1.6}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-operations li::before{content:"";grid-column:1;grid-row:1;width:8px;height:8px;background:#22c7bc;border-radius:50%}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-operations strong{grid-column:2/-1;grid-row:1;max-width:none;min-width:0;font-size:12px;font-weight:500;white-space:normal;overflow-wrap:anywhere;color:#e8efef}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-operations strong small{font-size:10px;color:#92aaa5}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-action{grid-column:2;grid-row:2;font-size:11px;color:#b6c3c1}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-operations time{grid-column:3;grid-row:2;margin:0;font-size:10px;color:#8d9d9b}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-revision{display:none}
+.workstation .collaboration-panel.is-compact.is-drawer p.recent-empty{margin:0;color:#91a3a0;line-height:1.8;font-size:12px}
+.workstation .collaboration-panel.is-compact.is-drawer .recent-warning{display:block;margin-top:8px;color:#f0c578}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-sync-card{display:flex;align-items:center;gap:11px;margin-top:28px;padding:14px 12px;background:#28302e;border:1px solid #44534b;border-radius:5px;color:#d2d9d3}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-sync-card.is-synced{background:#123f39;border-color:#24685b;color:#4ee0bc}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-sync-card>span{display:flex;flex-direction:column;gap:5px;min-width:0}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-sync-card strong{color:#dbede8;font-size:12px;font-weight:600;line-height:1.5}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-sync-card small{font-size:10px;line-height:1.6;color:#9dbdb4}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-details-button{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;width:100%;height:auto;margin:20px 0 0;padding:10px 0;border:0;border-top:1px solid #343c40;border-radius:0;box-shadow:none;background:transparent;color:#b8cac7;font-size:11px;text-align:left}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-details-button>span{font-size:10px;color:#f0c578}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-details-button[aria-expanded=true]>.dm-icon{transform:rotate(90deg)}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-details{margin-top:6px}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-details p{color:#9fb0ac;line-height:1.8;font-size:11px}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-controls{gap:7px;font-size:11px}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-controls>strong{color:#dce8e4}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-controls>span:not(.sync-indicator){font-size:10px;color:#9eb9b1}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-controls>span:not(.sync-indicator)::before{display:none}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-controls button,.workstation .collaboration-panel.is-compact.is-drawer .collaboration-history button,.workstation .collaboration-panel.is-compact.is-drawer .parallel-regions button{height:auto;padding:5px 8px;border-color:#41504b;background:#273530;color:#c3e2d8;font-size:10px;box-shadow:none}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-history{max-height:320px;border-color:#3a4742;color:#b2c9c0;font-size:11px}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-history li{color:#a4b6b0;font-size:10px}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-history strong{color:#d9e6e0}
+.workstation .collaboration-panel.is-compact.is-drawer .collaboration-history li>span{overflow-wrap:anywhere}
+.workstation .collaboration-panel.is-compact.is-drawer .parallel-regions{border-color:#44524b;background:#202c27}
+.workstation .collaboration-panel.is-compact.is-drawer .parallel-regions header strong,.workstation .collaboration-panel.is-compact.is-drawer .region-heading{color:#d1e4da;font-size:11px}
+.workstation .collaboration-panel.is-compact.is-drawer .parallel-region,.workstation .collaboration-panel.is-compact.is-drawer .parallel-annotation{border-color:#44524b;background:#24342c;color:#c8dbd0}
+.workstation .collaboration-panel.is-compact.is-drawer .parallel-choice strong,.workstation .collaboration-panel.is-compact.is-drawer .parallel-choice span{color:inherit}
+.workstation .collaboration-panel.is-compact.is-drawer .history-banner{flex-wrap:wrap;background:#403727;border-color:#6f5c38;color:#e5ce9b;font-size:11px}
+.workstation .collaboration-panel.is-compact.is-drawer .history-banner button{height:auto;background:#57452c;border-color:#7e663e;color:#f0d6a4;font-size:10px}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-collapsed-notice{position:absolute;right:56px;top:12px;z-index:35;width:252px;max-width:calc(100vw - 82px);padding:12px 14px;border:1px solid #ab8250;border-radius:6px;background:#fff6e5;color:#76552b;box-shadow:0 4px 18px #0003}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-collapsed-notice p{margin:0;color:#76552b;font-size:11px;line-height:1.75;overflow-wrap:anywhere}
+.workstation .collaboration-panel.is-compact.is-drawer .drawer-collapsed-notice button{height:auto;margin:8px 0 0;padding:5px 8px;border-color:#c7a474;background:#fff;color:#76552b;font-size:10px;box-shadow:none}
+.workstation .collaboration-panel.is-compact.is-drawer .exit-dialog{color:#e9eeeb;background:#1d2823;border-color:#41554a}
+.workstation .collaboration-panel.is-compact.is-drawer .exit-dialog p{color:#c4d1c9}
+.workstation .collaboration-panel.is-compact.is-drawer .exit-dialog h2{color:#edf4ef}
+@media(max-width:760px){
+  .workstation .collaboration-panel.is-compact.is-drawer.is-drawer-open{flex-basis:260px;width:260px}
+  .workstation .collaboration-panel.is-compact.is-drawer>.collaboration-drawer-header{padding-inline:12px}
+  .workstation .collaboration-panel.is-compact.is-drawer .collaboration-drawer-body{padding:12px}
+}

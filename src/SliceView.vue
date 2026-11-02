@@ -2,7 +2,7 @@
 import {computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue';
 import UiIcon from './UiIcon.vue';
 import type {Axis,ThresholdRange,Volume} from './core.ts';
-import {sliceBox,sliceCoords,dragZoom,dragWindowLevel} from './sliceGeometry.ts';
+import {sliceBox,sliceCoords,dragZoom,dragWindowLevel,slicePageIndex} from './sliceGeometry.ts';
 import type {ExteriorAirCache} from './exteriorAir.ts';
 import {planePoint,indexOf,planeAxes} from './core.ts';
 import {direction,edgeDirection,inputValue} from './view.ts';
@@ -15,6 +15,7 @@ const p=withDefaults(defineProps<{volume:Volume;mask:Uint16Array;axis:Axis;point
 const emit=defineEmits<{zoom:[value:number];point:[value:number[]];activate:[axis:Axis];focus:[axis:Axis];'window-level':[center:number,width:number];start:[];stroke:[axis:Axis,slice:number,u:number,v:number];end:[];region:[axis:Axis,slice:number,pixels:Uint32Array]}>();
 const host=ref<HTMLDivElement|null>(null),canvas=ref<HTMLCanvasElement|null>(null),size=ref([300,300]),outline=shallowRef<RegionOutline|null>(null),grayMessage=ref('');
 const renderedSlice=ref(-1),renderCount=ref(0),grayBuilds=ref(0),renderMs=ref(0);
+const slicePage=ref(String(p.point[p.axis]+1));
 const gesture=ref<'zoom'|'pan'|'window'|null>(null),pan=ref<[number,number]>([0,0]),authorText=ref('');
 const navigating=computed(()=>gesture.value!==null);
 let gestureStart:[number,number]=[0,0],panInitial:[number,number]=[0,0],zoomInitial=1,windowInitial:[number,number]=[0,1],gesturePointer=-1,drawPointer=-1,authorGeneration=0,authorTimer:ReturnType<typeof setTimeout>|null=null,authorIndex=-1;
@@ -41,6 +42,7 @@ function render(){
 }
 function resetRegion(){outline.value=null;grayMessage.value='';preparedKey='';grayClient?.clear();}
 watch([()=>p.volume,()=>p.point[p.axis]],()=>{grayDirty=true;labelDirty=true;resetRegion();schedule();},{flush:'post'});
+watch([()=>p.volume,()=>p.axis,()=>p.point[p.axis]],resetSlicePage);
 watch([()=>p.center,()=>p.width],()=>{grayDirty=true;schedule();},{flush:'post'});
 watch([()=>p.mask,()=>p.revision,()=>p.thresholdPreview,()=>p.airCache,()=>p.parallelMap,()=>p.segments.map(s=>`${s.id}:${s.color}:${s.visible}`).join('|')],()=>{labelDirty=true;schedule();},{flush:'post'});
 watch([()=>p.point[geometry.value.a],()=>p.point[geometry.value.b],()=>p.opacity,()=>size.value,()=>p.zoom,()=>pan.value[0],()=>pan.value[1]],schedule,{flush:'post'});
@@ -105,6 +107,8 @@ function end(event?:PointerEvent){
 function resetView(){end();pan.value=[0,0];emit('zoom',1);emit('activate',p.axis);clearAuthor();brushPoint.value=null;outline.value=null;grayClient?.clear();}
 function leave(){clearAuthor();brushPoint.value=null;inside=false;outline.value=null;grayMessage.value='';grayClient?.clear();}
 function slice(value:number){emit('activate',p.axis);const q=[...p.point];q[p.axis]=Math.max(0,Math.min(p.volume.dims[p.axis]-1,value));emit('point',q);}
+function resetSlicePage(){slicePage.value=String(p.point[p.axis]+1);}
+function commitSlicePage(){const index=slicePageIndex(slicePage.value,p.volume.dims[p.axis]);if(index===null){resetSlicePage();return;}slicePage.value=String(index+1);if(index!==p.point[p.axis])slice(index);}
 function wheel(event:WheelEvent){
   clearAuthor();if(drawing||navigating.value||!event.deltaY)return;emit('activate',p.axis);wheelTarget=Math.max(0,Math.min(p.volume.dims[p.axis]-1,(wheelTarget??p.point[p.axis])+(event.deltaY>0?1:-1)));outline.value=null;grayClient?.clear();
   if(quietTimer)clearTimeout(quietTimer);quietTimer=setTimeout(()=>{quietTimer=null;preview();},100);
@@ -133,6 +137,6 @@ watch([()=>p.volume,()=>p.point[p.axis],()=>p.provenanceKey,()=>p.zoom,()=>pan.v
       <span v-if="authorText&&!drawing&&!navigating" class="annotation-author" :style="annotationStyle" role="tooltip">{{authorText}}</span>
       <span class="edge top">{{edgeDirection(volume,geometry.b,true)}}</span><span class="edge bottom">{{edgeDirection(volume,geometry.b,false)}}</span><span class="edge left">{{edgeDirection(volume,geometry.a,false)}}</span><span class="edge right">{{edgeDirection(volume,geometry.a,true)}}</span>
     </div>
-    <footer><button class="zoom-reset" title="重置当前视图的缩放与平移" :aria-label="`重置${direction(volume,axis)}缩放`" @click="resetView">{{Math.round(zoom*100)}}%</button><span>切片</span><input :aria-label="`${direction(volume,axis)}切片`" type="range" min="0" :max="volume.dims[axis]-1" :value="point[axis]" @input="slice(+inputValue($event))"/><span>{{point[axis]+1}}</span></footer>
+    <footer><button class="zoom-reset" title="重置当前视图的缩放与平移" :aria-label="`重置${direction(volume,axis)}缩放`" @click="resetView">{{Math.round(zoom*100)}}%</button><span>切片</span><input :aria-label="`${direction(volume,axis)}切片`" type="range" min="0" :max="volume.dims[axis]-1" :value="point[axis]" @input="slice(+inputValue($event))"/><span class="slice-page-control"><input :value="slicePage" class="slice-page-input" type="number" inputmode="numeric" min="1" :max="volume.dims[axis]" step="1" :aria-label="`${direction(volume,axis)}切片页码`" title="输入切片页码，按 Enter 或离开输入框跳转" @input="slicePage=inputValue($event)" @keydown.enter.prevent.stop="commitSlicePage" @keydown.esc.prevent.stop="resetSlicePage" @blur="commitSlicePage"/><span class="slice-page-total">/ {{volume.dims[axis]}}</span></span></footer>
   </section>
 </template>

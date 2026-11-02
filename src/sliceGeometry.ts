@@ -3,3 +3,5 @@ export function sliceCoords(box:ReturnType<typeof sliceBox>,x:number,y:number):[
 export function dragZoom(initial:number,startY:number,currentY:number){return Math.max(.25,Math.min(8,initial*Math.exp((startY-currentY)/180)));}
 /** Right-drag changes display only: horizontal width, vertical center. */
 export function dragWindowLevel(initialCenter:number,initialWidth:number,dx:number,dy:number){const width=Math.max(1,initialWidth),step=width/240;return {center:initialCenter+dy*step,width:Math.max(1,width+dx*step)};}
+/** Convert an editable one-based page to a bounded voxel index; invalid drafts do not navigate. */
+export function slicePageIndex(value:string,total:number):number|null{const page=Number(value);if(!value.trim()||!Number.isInteger(page)||!Number.isInteger(total)||total<1)return null;return Math.max(1,Math.min(total,page))-1;}

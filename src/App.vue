@@ -10,8 +10,9 @@ import { useEditor } from './useEditor.ts';
 import { useCollaboration } from './useCollaboration.ts';
 import { indexOf } from './core.ts';
 import type { Axis } from './core.ts';
+import {slicePageIndex} from './sliceGeometry.ts';
 import type { Tool } from './view.ts';
-import { download,inputValue,fileFingerprints } from './view.ts';
+import { download,inputValue,fileFingerprints,direction } from './view.ts';
 import {cacheDataset,readDataset} from './localCache.ts';
 import {api,authUser,authenticatedFetch,loadCurrentUser,responseError} from './api.ts';
 import type {AuthUser,Dataset} from './api.ts';
@@ -28,18 +29,38 @@ watch(authUser,(user,previous)=>{if(previous&&previous.id!==user?.id){inEditor.v
 const segInput=ref<HTMLInputElement|null>(null);
 const tools:{id:Tool;icon:string;label:string}[]=[{id:'paint',icon:'✎',label:'画笔'},{id:'erase',icon:'▱',label:'橡皮擦'},{id:'threshold',icon:'◒',label:'阈值'},{id:'region',icon:'◌',label:'灰度分区'}];
 const axes:Axis[]=[2,1,0];
-const activeAxis=ref<Axis>(2),primaryAxis=ref<Axis>(2),viewLayout=ref<'focus'|'columns'>('focus');
+const activeAxis=ref<Axis>(2),primaryAxis=ref<Axis>(2),viewLayout=ref<'single'|'focus'|'columns'>('single');
 const maximizedAxis=ref<Axis|null>(null);
+const labelsMedia=window.matchMedia('(min-width: 1000px)');
+const labelsExpanded=ref(labelsMedia.matches),navigationOpen=ref(false);
+function updateLabelsForViewport(event:MediaQueryListEvent){labelsExpanded.value=event.matches;}
+const navigationItems=ref<Dataset[]>([]),navigationLoading=ref(false),navigationError=ref('');
+const navigationCases=computed(()=>navigationItems.value.filter(item=>item.id===datasetId.value||item.status!=='unassigned'));
+const navigationIndex=computed(()=>navigationCases.value.findIndex(item=>item.id===datasetId.value));
+const axisOptions=[{axis:2 as Axis,name:'轴位'},{axis:1 as Axis,name:'冠状位'},{axis:0 as Axis,name:'矢状位'}];
+const currentPlane=computed(()=>volume.value?direction(volume.value,activeAxis.value):'轴位');
+const activeSlicePage=ref('1');
+function resetActiveSlicePage(){activeSlicePage.value=String(point.value[activeAxis.value]+1);}
+function commitActiveSlicePage(){const index=slicePageIndex(activeSlicePage.value,volume.value?.dims[activeAxis.value]||0);if(index!==null){const next=[...point.value];next[activeAxis.value]=index;point.value=next;}resetActiveSlicePage();}
+watch([()=>point.value[activeAxis.value],activeAxis,volume],resetActiveSlicePage,{flush:'sync'});
+const helpOpen=ref(false);
 const renamingLabel=ref<number|null>(null),renameValue=ref(''),labelNameInput=ref<HTMLTextAreaElement|null>(null);
 const toolIcons:Record<Tool,string>={paint:'brush',erase:'eraser',threshold:'threshold',region:'region'};
 const toolShortcuts:Record<Tool,string>={paint:'B',erase:'E',threshold:'',region:'G'};
 const liveReady=computed(()=>collaborating.value&&collaboration.connected.value&&!unsaved.value);
 const liveLabel=computed(()=>queueCount.value?`待同步 ${queueCount.value} 笔`:unsaved.value?'同步异常':collaboration.connected.value?'已同步':'连接中');
-function selectLayout(layout:'focus'|'columns'){maximizedAxis.value=null;viewLayout.value=layout;if(layout==='focus')primaryAxis.value=activeAxis.value;}
+function selectLayout(layout:'single'|'focus'|'columns'){maximizedAxis.value=null;viewLayout.value=layout;if(layout!=='columns')primaryAxis.value=activeAxis.value;}
+function selectPlane(axis:Axis){activeAxis.value=axis;primaryAxis.value=axis;maximizedAxis.value=null;viewLayout.value='single';}
+function stepSlice(delta:number){if(!volume.value)return;const next=[...point.value];next[activeAxis.value]=Math.max(0,Math.min(volume.value.dims[activeAxis.value]-1,next[activeAxis.value]+delta));point.value=next;}
+async function loadNavigation(){if(navigationLoading.value)return;navigationLoading.value=true;navigationError.value='';try{navigationItems.value=(await api<{datasets:Dataset[]}>('/api/datasets')).datasets;}catch(reason){navigationError.value=(reason as Error).message;}finally{navigationLoading.value=false;}}
+async function selectCase(id:string){const dataset=navigationCases.value.find(item=>item.id===id);if(dataset&&id!==datasetId.value)await openConsoleDataset(dataset);}
+function stepCase(delta:number){const dataset=navigationCases.value[navigationIndex.value+delta];if(dataset)void selectCase(dataset.id);}
+watch(navigationOpen,value=>{if(value)void loadNavigation();});
+watch(inEditor,value=>{if(value){navigationOpen.value=false;helpOpen.value=false;}});
 function focusViewport(axis:Axis){activeAxis.value=axis;maximizedAxis.value=maximizedAxis.value===axis?null:axis;}
 function viewportKey(event:KeyboardEvent){
   if(!inEditor.value||!volume.value||event.defaultPrevented||event.isComposing||event.keyCode===229||event.ctrlKey||event.metaKey||event.altKey||document.querySelector('dialog[open]'))return;
-  if(event.key==='Escape'&&maximizedAxis.value!==null){maximizedAxis.value=null;return;}
+  if(event.key==='Escape'){if(helpOpen.value){helpOpen.value=false;return;}if(maximizedAxis.value!==null){maximizedAxis.value=null;return;}}
   const target=event.target as HTMLElement|null;
   if(event.code==='Space'&&!event.repeat&&!target?.closest('input,textarea,select,button,summary,[contenteditable="true"],[role="textbox"]')){event.preventDefault();focusViewport(activeAxis.value);}
 }
@@ -71,11 +92,13 @@ function exportMask(){if(collaborating.value)collaboration.exportServer();else e
 function authenticated(user:AuthUser){authUser.value=user;inEditor.value=false;shellError.value='';}
 async function openConsoleDataset(dataset:Dataset){
   if(datasetOpening.value||!authUser.value)return;shellError.value='';datasetOpening.value=true;
+  const previous=inEditor.value&&volume.value&&datasetId.value?{id:datasetId.value,dataset:currentDataset.value,volume:volume.value,mask:mask.value,segments:segments.value,fingerprint:loadedFingerprint,point:[...point.value],zooms:[...zooms.value],center:center.value,width:width.value,selected:selected.value,axis:activeAxis.value,primary:primaryAxis.value,layout:viewLayout.value,maximized:maximizedAxis.value}:null;
+  let openingImage=false;
   try{
-    if(collaborating.value&&!await collaboration.switchDataset())throw new Error('请先同步或保留当前工作副本。');
     // Recheck current access and the immutable image fingerprint before using a cached image.
-    const {dataset:latest}=await api<{dataset:Dataset}>(`/api/datasets/${encodeURIComponent(dataset.id)}`);
-    dataset=latest;
+    const datasetPath=`/api/datasets/${encodeURIComponent(dataset.id)}`;
+    try{dataset=(await api<{dataset:Dataset}>(datasetPath)).dataset;}
+    catch(reason){if((reason as {status?:number}).status!==404)throw reason;dataset=(await api<{dataset:Dataset}>(`${datasetPath}/status`)).dataset;}
     const cached=await readDataset(dataset.id);
     let file:File;
     if(cached?.fingerprint&&cached.fingerprint===dataset.fingerprint&&cached.file.size===dataset.size){file=cached.file;fileFingerprints.set(file,cached.fingerprint);}
@@ -83,9 +106,19 @@ async function openConsoleDataset(dataset:Dataset){
       const response=await authenticatedFetch(dataset.downloadUrl||`/api/datasets/${encodeURIComponent(dataset.id)}/download`);if(!response.ok)throw await responseError(response);
       file=new File([await response.blob()],dataset.name,{type:'application/octet-stream'});
     }
+    openingImage=true;
     if(!await openDataset(file,dataset.id))throw new Error(collaboration.error.value||status.value||'影像未能打开。');
     currentDataset.value=dataset;inEditor.value=true;
-  }catch(reason){shellError.value=(reason as Error).message;}finally{datasetOpening.value=false;}
+  }catch(reason){
+    shellError.value=(reason as Error).message;
+    if(openingImage&&previous&&(!collaborating.value||datasetId.value!==previous.id||volume.value!==previous.volume)){
+      datasetOpening.value=true;volume.value=previous.volume;mask.value=previous.mask;segments.value=previous.segments;datasetId.value=previous.id;currentDataset.value=previous.dataset;loadedFingerprint=previous.fingerprint;revision.value++;
+      // Keep the previous image visible if reconnecting fails; openProject rechecks access before enabling edits.
+      let restored=false;try{restored=await collaboration.openProject(previous.id);}catch{}
+      if(!restored){mask.value=previous.mask;segments.value=previous.segments;shellError.value+=' 原病例已保留为只读，请在实时协作中重新加载任务标注。';}
+      await nextTick();point.value=previous.point;zooms.value=previous.zooms;center.value=previous.center;width.value=previous.width;selected.value=segments.value.some(label=>label.id===previous.selected)?previous.selected:segments.value[0]?.id||1;activeAxis.value=previous.axis;primaryAxis.value=previous.primary;viewLayout.value=previous.layout;maximizedAxis.value=previous.maximized;
+    }
+  }finally{datasetOpening.value=false;}
 }
 async function backToConsole(){if(closing.value)return;closing.value=true;try{if(collaborating.value&&!await collaboration.switchDataset())return;inEditor.value=false;shellError.value='';}finally{closing.value=false;}}
 async function logout(){
@@ -93,8 +126,8 @@ async function logout(){
   try{if(collaborating.value&&!await collaboration.switchDataset())return;await api('/api/auth/logout',{method:'POST',body:'{}'});authUser.value=null;inEditor.value=false;currentDataset.value=null;datasetId.value=null;editor.volume.value=null;editor.mask.value=new Uint16Array();showDrafts.value=false;}
   catch(reason){shellError.value=(reason as Error).message;}finally{closing.value=false;}
 }
-onMounted(async()=>{window.addEventListener('keydown',viewportKey);try{await loadCurrentUser();}catch(reason){shellError.value=(reason as Error).message;}finally{checkingAuth.value=false;}});
-onBeforeUnmount(()=>window.removeEventListener('keydown',viewportKey));
+onMounted(async()=>{window.addEventListener('keydown',viewportKey);labelsMedia.addEventListener('change',updateLabelsForViewport);try{await loadCurrentUser();}catch(reason){shellError.value=(reason as Error).message;}finally{checkingAuth.value=false;}});
+onBeforeUnmount(()=>{window.removeEventListener('keydown',viewportKey);labelsMedia.removeEventListener('change',updateLabelsForViewport);});
 function setWindow(event:Event,which:'center'|'width'){const value=Number(inputValue(event));if(!Number.isFinite(value)||(which==='width'&&value<1))return;if(which==='width')width.value=value;else center.value=value;}
 function fullWindow(){if(volume.value){center.value=(volume.value.min+volume.value.max)/2;width.value=Math.max(1,volume.value.max-volume.value.min);}}
 function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number.isFinite(n)&&n>=.1)regionWidth.value=n;}
@@ -103,15 +136,17 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
   <div v-if="checkingAuth" class="console-loading" role="status">正在验证登录状态…</div>
   <AuthView v-else-if="!authUser" @authenticated="authenticated"/>
   <template v-else>
-  <p v-if="shellError" class="console-error shell-error" role="alert">{{shellError}}</p>
+  <p v-if="shellError" class="console-error shell-error" :class="{'is-editor-error':inEditor}" role="alert"><span>{{shellError}}</span><button v-if="inEditor" aria-label="关闭错误提示" @click="shellError=''">关闭</button></p>
   <ConsoleView v-if="!inEditor" :user="authUser" @open="openConsoleDataset" @logout="logout"/>
-  <div v-else class="app workstation" :class="{'is-viewport-maximized':maximizedAxis!==null}" data-testid="annotation-editor" :data-readonly="editingBlocked">
-    <header class="topbar"><div class="workstation-brand"><div class="brand"><div class="brand-icon"><UiIcon name="plus" :size="23"/></div><span>Deepmark</span></div><nav class="workstation-breadcrumb" aria-label="当前位置"><button data-testid="editor-back" :disabled="closing" @click="backToConsole"><UiIcon name="back" :size="14"/>返回工作台</button><UiIcon name="chevron" :size="13"/><span :title="volume?.name">{{volume?.name||'标注任务'}}</span></nav></div>
-      <div class="top-actions"><span data-testid="editor-mode" class="workstation-mode">{{authUser.role==='dispatcher'?'派活只读监看':editingBlocked?'只读查看':'干活协同标注'}}</span><span class="workstation-person" :title="authUser.username"><span>{{authUser.name.slice(0,1)}}</span>{{authUser.name}}</span><span :class="['workstation-sync',{ready:liveReady,pending:unsaved}]" aria-live="polite"><UiIcon v-if="liveReady" name="check" :size="13"/><i v-else/>{{liveLabel}}</span><button v-if="authUser.role==='worker'" class="local-cache-button" @click="showLocal"><UiIcon name="cache" :size="14"/>本地工作缓存</button><button class="primary workstation-export" :disabled="!volume||(authUser.role==='dispatcher'&&project?.datasetStatus!=='completed')||(busy&&!editor.readOnly.value)||(collaborating&&(!!queueCount||unsaved))" @click="exportMask"><UiIcon name="export" :size="15"/>{{collaborating&&project?.regions.length?'导出审阅 ZIP':'导出标注 ZIP ↗'}}</button><button class="workstation-logout" :disabled="closing" @click="logout"><UiIcon name="logout" :size="14"/>退出登录</button></div>
+  <div v-else class="app workstation" :class="{'is-viewport-maximized':maximizedAxis!==null,'are-labels-open':labelsExpanded}" data-testid="annotation-editor" :data-readonly="editingBlocked">
+    <header class="topbar"><div class="workstation-brand"><div class="brand">DeepMark<span>影像协作</span></div><div class="workstation-title"><h1>医学影像多人协作标注</h1><span class="workstation-case-name" :title="volume?.name">{{volume?.name||'标注任务'}}</span></div></div>
+      <div class="top-actions"><span data-testid="editor-mode" class="workstation-mode">{{authUser.role==='dispatcher'?'派活只读监看':editingBlocked?'只读查看':'干活协同标注'}}</span><span class="workstation-person" :title="authUser.username"><span>{{authUser.name.slice(0,1)}}</span>{{authUser.name}}</span><span class="header-presence"><UiIcon name="users" :size="18"/>{{collaboration.connected.value&&collaboration.presenceKnown.value?`${collaboration.onlineMembers.value.length} 人在线`:'连接中'}}</span><span :class="['workstation-sync',{ready:liveReady,pending:unsaved}]" aria-live="polite"><UiIcon :name="liveReady?'check':'cache'" :size="17"/>{{liveLabel}}</span><button class="workstation-export" :disabled="!volume||(authUser.role==='dispatcher'&&project?.datasetStatus!=='completed')||(busy&&!editor.readOnly.value)||(collaborating&&(!!queueCount||unsaved))" @click="exportMask"><UiIcon name="export" :size="17"/>{{collaborating&&project?.regions.length?'导出审阅 ZIP':'导出标注 ZIP ↗'}}</button><button class="workstation-logout" :disabled="closing" aria-label="退出登录" title="退出登录" @click="logout"><UiIcon name="logout" :size="18"/></button></div>
     </header>
     <input ref="segInput" hidden type="file" accept=".nii,.nii.gz" @change="chooseSegmentation"/>
-    <div class="workspace"><aside class="sidebar">
-      <div class="section-heading">分割标签<em class="en">LABELS</em><button aria-label="新增标签" :disabled="!volume||editingBlocked||segments.length>=64" @click="addSegment">＋</button></div>
+    <div class="workspace">
+    <nav class="workstation-rail" aria-label="标注工作区导航"><button data-testid="editor-back" :disabled="closing" title="返回工作台" @click="backToConsole"><UiIcon name="home" :size="25"/><span>工作台</span></button><button :class="{active:labelsExpanded}" :aria-expanded="labelsExpanded" aria-controls="editor-labels" title="标注标签" @click="labelsExpanded=!labelsExpanded"><UiIcon name="tag" :size="24"/><span>标签</span></button><button :class="{active:navigationOpen}" :aria-expanded="navigationOpen" aria-controls="case-navigation-content" title="病例导航" @click="navigationOpen=!navigationOpen"><UiIcon name="folder" :size="25"/><span>病例</span></button><span class="rail-spacer"/><button v-if="authUser.role==='worker'" class="local-cache-button" title="本地工作缓存" @click="showLocal"><UiIcon name="cache" :size="24"/><span>缓存</span></button><button :class="{active:helpOpen}" :aria-expanded="helpOpen" aria-controls="editor-help" title="操作说明" @click="helpOpen=!helpOpen"><UiIcon name="help" :size="25"/><span>帮助</span></button></nav>
+    <aside id="editor-labels" class="sidebar" v-show="labelsExpanded">
+      <div class="section-heading labels-heading">标注标签<small>{{segments.length}} 个标签</small></div><button class="add-label-button" aria-label="新增标签" :disabled="!volume||editingBlocked||segments.length>=64" @click="addSegment"><UiIcon name="plus" :size="19"/>新建标签</button>
       <div class="segment-list">
         <div v-for="s in segments" :key="s.id" :class="['segment',{selected:selected===s.id}]" :style="{'--segment-color':s.color}" @click="selected=s.id">
           <input v-model="s.color" :disabled="editingBlocked" :aria-label="`${s.name}颜色`" type="color" @change="updateLabel(s)"/>
@@ -121,13 +156,12 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
           </span>
           <span v-else class="segment-name-text" :title="s.name" @click.stop="selected=s.id" @dblclick.stop>{{s.name}}</span>
           <button class="segment-rename" :disabled="editingBlocked" :title="`重命名${s.name}`" :aria-label="`重命名标签 ${s.id}`" @click.stop="beginRename(s)"><UiIcon name="brush" :size="13"/></button>
-          <button :title="s.visible?'隐藏标注':'显示标注'" :aria-label="s.visible?'隐藏标注':'显示标注'" @click.stop="s.visible=!s.visible">{{s.visible?'◉':'○'}}</button>
+          <button class="segment-visibility" :title="s.visible?'隐藏标注':'显示标注'" :aria-label="s.visible?'隐藏标注':'显示标注'" @click.stop="s.visible=!s.visible"><UiIcon :name="s.visible?'eye':'eye-off'" :size="23"/></button>
           <small class="segment-creator" :title="s.createdBy?`创建者：${s.createdBy.name}${s.createdAt?` · ${new Date(s.createdAt).toLocaleString()}`:''}`:'此标签的历史创建信息未记录'">创建者：{{s.createdBy?.name||'未记录'}}</small>
         </div>
       </div>
       <label class="range-label">标注透明度<span>{{Math.round(opacity*100)}}%</span><input v-model.number="opacity" type="range" min="0" max="1" step=".05"/></label>
-      <div class="section-heading">标注工具<em class="en">TOOLS</em><small>B / E / G</small></div>
-      <div class="tools"><button v-for="t in tools" :key="t.id" :aria-label="t.label" :title="`${t.label}${toolShortcuts[t.id]?` · ${toolShortcuts[t.id]}`:''}`" :aria-pressed="tool===t.id" :disabled="!volume||editingBlocked" :class="{active:tool===t.id}" @click="tool=t.id"><UiIcon :name="toolIcons[t.id]" :size="21"/><span>{{t.label}}</span></button></div>
+      <div class="section-heading">工具选项<small>{{tools.find(t=>t.id===tool)?.label}}</small></div>
       <div v-if="tool==='threshold'&&volume" class="threshold-panel">
         <div class="section-heading">灰度阈值<small>整套三维影像</small></div><p class="hint">影像灰度范围：{{volume.min.toLocaleString()}} ～ {{volume.max.toLocaleString()}}。使用原始灰度，与窗宽窗位无关。</p>
         <label for="threshold-min">最小灰度</label><input id="threshold-min" type="number" step="any" :value="thresholdMin" @input="thresholdMin=inputValue($event)"/><input aria-label="最小灰度滑块" type="range" :min="volume.min" :max="volume.max" step="any" :disabled="volume.min===volume.max" :value="Number.isFinite(minimum)?Math.max(volume.min,Math.min(volume.max,minimum)):volume.min" @input="thresholdMin=inputValue($event)"/>
@@ -137,22 +171,23 @@ function setRegionWidth(event:Event){const n=Number(inputValue(event));if(Number
       </div>
       <label v-else class="range-label">画笔直径<span>{{diameter}} {{volume?.unit||'mm'}}</span><input v-model.number="diameter" type="range" min="1" max="50"/></label>
       <div v-if="tool==='region'" class="gray-settings"><label class="preview-toggle"><input v-model="hoverPreview" type="checkbox" :disabled="!volume"/>悬停显示灰度区域轮廓</label><label>分区方式<select v-model="regionMode" aria-label="灰度分区方式" :disabled="!volume"><option value="bands">灰度区间分区</option><option value="level">悬停灰度等值区域</option></select></label><label v-if="regionMode==='bands'">灰度区间宽度<input aria-label="灰度区间宽度" type="number" min=".1" step="1" :value="regionWidth" :disabled="!volume" @input="setRegionWidth"/></label><p class="hint">黄色轮廓仅为预览。选择“灰度分区”，点击轮廓内区域可加入当前标签，仅作用于当前切片。</p></div>
-      <div class="history"><button title="撤销 · Ctrl+Z" :disabled="!history.length||editingBlocked" @click="undo()"><UiIcon name="undo" :size="14"/>↶ 撤销</button><button title="重做 · Ctrl+Shift+Z / Ctrl+Y" :disabled="!future.length||editingBlocked" @click="undo(true)"><UiIcon name="redo" :size="14"/>↷ 重做</button></div>
       <div class="section-heading">影像显示<em class="en">DISPLAY</em></div><div class="window-inputs"><label>窗位<input type="number" :disabled="!volume" :value="center" @input="setWindow($event,'center')"/></label><label>窗宽<input type="number" min="1" :disabled="!volume" :value="width" @input="setWindow($event,'width')"/></label></div>
       <div class="presets"><button :disabled="!volume" @click="center=-600;width=1500">肺窗</button><button :disabled="!volume" @click="center=40;width=400">软组织</button><button :disabled="!volume" @click="center=400;width=1800">骨窗</button><button :disabled="!volume" @click="fullWindow">全范围</button></div>
-      <div class="sidebar-bottom"><button :disabled="!volume||editingBlocked||collaborating" @click="segInput?.click()">导入已有分割</button><button :disabled="!volume" @click="download(JSON.stringify({version:1,segments},null,2),'标签说明.json','application/json')">导出标签说明</button></div>
-    </aside><main>
-      <div class="main-heading"><div class="workstation-heading"><h1>{{volume?'标注工作台':'从一份影像开始'}}</h1><span :class="['state',{'is-dirty':dirty,'is-ready':!!volume&&!dirty}]">{{dirty?'● 有未导出的修改':volume?'● 就绪':'等待导入'}}</span></div><div class="workstation-view-actions"><details class="viewer-help"><summary><UiIcon name="help" :size="15"/>操作说明</summary><div><strong>影像浏览</strong><p>滚轮：逐层浏览切片</p><p>右键拖动：调整窗宽、窗位</p><p>中键拖动：平移影像</p><p>Ctrl＋右键上下拖动：缩放</p><p>点击百分比：重置缩放和平移</p><p>双击切面标题或空格：最大化 / 恢复；Esc 恢复多视图</p><strong>分割标注</strong><p>先选标签，再用左键执行当前工具</p><p>B 画笔 · E 橡皮擦 · G 灰度分区</p><p>Ctrl＋Z 撤销 · Ctrl＋Y 重做</p><p>普通画笔修改当前切片；阈值应用于整套影像。橡皮只删除自己的标注。</p></div></details><div class="workstation-layout" role="group" aria-label="切面布局"><button :class="{active:viewLayout==='focus'}" :aria-pressed="viewLayout==='focus'" title="主视图布局" aria-label="主视图布局" @click="selectLayout('focus')"><UiIcon name="focus" :size="16"/></button><button :class="{active:viewLayout==='columns'}" :aria-pressed="viewLayout==='columns'" title="三列布局" aria-label="三列布局" @click="selectLayout('columns')"><UiIcon name="columns" :size="16"/></button></div></div></div>
-      <CollaborationPanel :dataset-id="datasetId" :collaboration="collaboration" compact @reload="loadServerResult"/>
+      <div class="sidebar-bottom"><button :disabled="!volume||editingBlocked||collaborating" @click="segInput?.click()">导入已有分割</button><button :disabled="!volume" @click="download(JSON.stringify({version:1,segments},null,2),'标签说明.json','application/json')">导出标签说明</button><div class="shared-state" :class="{'is-warning':!liveReady}"><UiIcon :name="liveReady?'check':'cache'" :size="20"/><span>共享标注 · {{liveReady?'已同步':'正在同步'}}</span></div></div>
+    </aside>
+    <aside class="case-navigation" :class="{'is-expanded':navigationOpen}" :data-expanded="navigationOpen" data-testid="case-navigation"><header><button :aria-label="`${navigationOpen?'收起':'展开'}病例导航`" :aria-expanded="navigationOpen" aria-controls="case-navigation-content" @click="navigationOpen=!navigationOpen"><strong>病例导航</strong><UiIcon :name="navigationOpen?'down':'chevron'" :size="16"/></button></header><div v-show="navigationOpen" id="case-navigation-content" class="case-navigation-content"><label>当前病例<select aria-label="选择病例" :value="datasetId||''" :disabled="navigationLoading||datasetOpening" @change="selectCase(inputValue($event))"><option v-if="!navigationCases.length" :value="datasetId||''">{{volume?.name||'暂无可切换病例'}}</option><option v-for="item in navigationCases" :key="item.id" :value="item.id">{{item.name}}</option></select></label><div class="case-stepper"><button aria-label="上一病例" :disabled="navigationIndex<=0||datasetOpening" @click="stepCase(-1)"><UiIcon name="back" :size="16"/></button><span>{{Math.max(0,navigationIndex+1)}} / {{navigationCases.length}}</span><button aria-label="下一病例" :disabled="navigationIndex<0||navigationIndex>=navigationCases.length-1||datasetOpening" @click="stepCase(1)"><UiIcon name="chevron" :size="16"/></button></div><p v-if="navigationLoading" class="navigation-hint" role="status">正在加载病例…</p><p v-if="navigationError" class="navigation-error" role="alert">{{navigationError}}<button @click="loadNavigation">重试</button></p><div class="navigation-plane"><span>切面</span><button v-for="option in axisOptions" :key="option.axis" :class="{active:activeAxis===option.axis}" :aria-pressed="activeAxis===option.axis" @click="selectPlane(option.axis)">{{volume?direction(volume,option.axis):option.name}}</button></div><div v-if="volume" class="navigation-slice"><span>切片</span><div class="case-stepper"><button aria-label="上一切片" :disabled="point[activeAxis]<=0" @click="stepSlice(-1)"><UiIcon name="back" :size="16"/></button><span>{{point[activeAxis]+1}} / {{volume.dims[activeAxis]}}</span><button aria-label="下一切片" :disabled="point[activeAxis]>=volume.dims[activeAxis]-1" @click="stepSlice(1)"><UiIcon name="chevron" :size="16"/></button></div></div><dl v-if="volume" class="navigation-metadata"><div><dt>体素尺寸</dt><dd>{{volume.dims.join(' × ')}}</dd></div><div><dt>体素间距</dt><dd>{{volume.spacing.map(n=>+n.toFixed(2)).join(' / ')}} {{volume.unit}}</dd></div></dl></div></aside>
+    <div class="viewer-workspace"><main class="viewer-column">
+      <div class="editor-toolbar"><div class="tools" role="group" aria-label="标注工具"><button v-for="t in tools" :key="t.id" :aria-label="t.label" :title="`${t.label}${toolShortcuts[t.id]?` · ${toolShortcuts[t.id]}`:''}`" :aria-pressed="tool===t.id" :disabled="!volume||editingBlocked" :class="{active:tool===t.id}" @click="tool=t.id"><UiIcon :name="toolIcons[t.id]" :size="22"/><span>{{t.label}}</span></button></div><div class="toolbar-history"><button aria-label="撤销" title="撤销 · Ctrl+Z" :disabled="!history.length||editingBlocked" @click="undo()"><UiIcon name="undo" :size="22"/></button><button aria-label="重做" title="重做 · Ctrl+Shift+Z / Ctrl+Y" :disabled="!future.length||editingBlocked" @click="undo(true)"><UiIcon name="redo" :size="22"/></button></div><span class="toolbar-browse-hint" title="中键拖动平移；右键拖动调窗；Ctrl＋右键拖动缩放"><UiIcon name="hand" :size="22"/><UiIcon name="sun" :size="24"/><span>窗宽窗位</span></span><div class="workstation-layout" role="group" aria-label="切面布局"><button :class="{active:viewLayout==='single'}" :aria-pressed="viewLayout==='single'" title="单幅视图" aria-label="单幅视图" @click="selectLayout('single')"><UiIcon name="single" :size="21"/></button><button :class="{active:viewLayout==='focus'}" :aria-pressed="viewLayout==='focus'" title="主视图布局" aria-label="主视图布局" @click="selectLayout('focus')"><UiIcon name="focus" :size="21"/></button><button :class="{active:viewLayout==='columns'}" :aria-pressed="viewLayout==='columns'" title="三列布局" aria-label="三列布局" @click="selectLayout('columns')"><UiIcon name="columns" :size="21"/></button></div></div>
+      <div v-if="helpOpen" id="editor-help" class="editor-help" role="region" aria-label="操作说明"><header><strong>操作说明</strong><button @click="helpOpen=false">关闭</button></header><p>滚轮翻片 · 中键平移 · 右键调整窗宽窗位 · Ctrl＋右键缩放</p><p>B 画笔 · E 橡皮擦 · G 灰度分区 · Ctrl＋Z 撤销 · Ctrl＋Y 重做</p><p>底部页码可直接输入，Enter 或失焦跳转，Esc 取消。</p><p>双击切面标题或空格切换最大化，Esc 恢复。普通画笔修改当前切片，阈值应用于整套影像。</p></div>
       <p v-if="editingBlocked" data-testid="readonly-notice" class="notice">{{authUser.role==='dispatcher'?'派活账号仅查看实时标注，不能修改标签、画刷、阈值或历史成果。':'当前任务只读，仍可切换切片、调整显示并查看标注来源。'}}</p>
       <template v-if="volume">
         <div v-if="volume.oblique" class="notice">此影像为斜切或方向信息未定义：按原始 I/J/K 体素平面显示，未重采样为标准解剖切面。</div>
         <div v-if="thresholdPreview" class="threshold-notice">正在预览阈值 {{minimum.toLocaleString()}} ～ {{maximum.toLocaleString()}} · 点击“应用阈值分割”才会写入标注。导出不包含未应用的预览。</div>
-        <div class="views" :data-layout="maximizedAxis===null?viewLayout:'single'" :data-primary-axis="primaryAxis" :data-maximized-axis="maximizedAxis"><SliceView v-for="axis in axes" :key="axis" v-show="maximizedAxis===null||maximizedAxis===axis" :maximized="maximizedAxis===axis" :volume="volume" :mask="mask" :axis="axis" :point="point" :revision="revision" :segments="segments" :opacity="opacity" :center="center" :width="width" :tool="tool" :diameter="diameter" :threshold-preview="thresholdPreview" :parallel-map="collaborating?parallelMap:undefined" :hover-preview="hoverPreview" :region-width="regionWidth" :region-mode="regionMode" :allow-edit="!editingBlocked" :active="activeAxis===axis" :air-cache="airCache" :zoom="zooms[axis]" :provenance="collaborating?collaboration.provenance:undefined" :provenance-key="`${project?.id}:${project?.revision}:${revision}`" @activate="activeAxis=$event" @focus="focusViewport" @window-level="applyWindowLevel" @zoom="zooms[axis]=$event" @point="point=$event" @start="startStroke" @end="endStroke" @stroke="stroke" @region="selectRegion"/></div>
-        <div class="info-bar"><span>当前标签<i :style="{background:active.color}"/>{{active.name}} · 值 {{selected}}</span><span>体素 I {{point[0]+1}} / J {{point[1]+1}} / K {{point[2]+1}}</span><span>灰度 {{volume.data[indexOf(point,volume.dims)].toFixed(1)}}</span></div>
+        <div class="views" :data-layout="maximizedAxis===null?viewLayout:'single'" :data-primary-axis="primaryAxis" :data-maximized-axis="maximizedAxis"><SliceView v-for="axis in axes" :key="axis" v-show="maximizedAxis!==null?maximizedAxis===axis:viewLayout!=='single'||primaryAxis===axis" :maximized="maximizedAxis===axis" :volume="volume" :mask="mask" :axis="axis" :point="point" :revision="revision" :segments="segments" :opacity="opacity" :center="center" :width="width" :tool="tool" :diameter="diameter" :threshold-preview="thresholdPreview" :parallel-map="collaborating?parallelMap:undefined" :hover-preview="hoverPreview" :region-width="regionWidth" :region-mode="regionMode" :allow-edit="!editingBlocked" :active="activeAxis===axis" :air-cache="airCache" :zoom="zooms[axis]" :provenance="collaborating?collaboration.provenance:undefined" :provenance-key="`${project?.id}:${project?.revision}:${revision}`" @activate="activeAxis=$event" @focus="focusViewport" @window-level="applyWindowLevel" @zoom="zooms[axis]=$event" @point="point=$event" @start="startStroke" @end="endStroke" @stroke="stroke" @region="selectRegion"/><div v-if="viewLayout==='single'&&maximizedAxis===null" class="image-identification"><strong :title="volume.name">{{volume.name}}</strong><span>{{currentPlane}} · 间距 {{+volume.spacing[activeAxis].toFixed(3)}} {{volume.unit}}</span></div></div>
+        <div class="info-bar"><span class="info-case" :title="volume.name">当前病例：{{volume.name}}</span><label class="info-page">切片<input class="slice-page-input" type="number" inputmode="numeric" min="1" :max="volume.dims[activeAxis]" step="1" aria-label="当前切片页码" title="输入切片页码，Enter 或失焦跳转，Esc 取消" :value="activeSlicePage" @input="activeSlicePage=inputValue($event)" @keydown.enter.prevent.stop="commitActiveSlicePage" @keydown.esc.prevent.stop="resetActiveSlicePage" @blur="commitActiveSlicePage"/><span>/ {{volume.dims[activeAxis]}}</span></label><span class="info-sync" :class="{ready:liveReady}"><UiIcon :name="liveReady?'check':'cache'" :size="18"/>{{liveReady?'所有更改已同步':liveLabel}}</span><span class="info-voxel">灰度 {{volume.data[indexOf(point,volume.dims)].toFixed(1)}}</span></div>
       </template>
       <div v-else class="empty"><h2>影像尚未加载</h2><p>返回工作台，选择有权限访问的数据集。</p><button @click="backToConsole">返回工作台</button></div>
-    </main></div>
+    </main><CollaborationPanel :dataset-id="datasetId" :collaboration="collaboration" sidebar compact :maximized="maximizedAxis!==null" @reload="loadServerResult" @reveal="maximizedAxis=null"/></div></div>
     <footer class="statusbar"><span role="status" :class="{'is-busy':editor.busy.value}">{{editor.busy.value?'◌ ':''}}{{status}}</span><span>标注原型 · 请核对导出结果</span></footer><div v-if="editor.busy.value||datasetOpening" class="busy-overlay" aria-live="polite"><span class="busy-card">{{editor.busy.value?status:'正在加载团队最新标注…'}}</span></div>
     <LocalDrafts v-if="showDrafts" :drafts="drafts" :restore="restoreLocal" @close="showDrafts=false"/>
   </div>
