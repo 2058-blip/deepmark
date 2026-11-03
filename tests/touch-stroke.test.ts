@@ -17,7 +17,7 @@ test('cancelled collaborative paint restores the combined display, not the perso
   editor.cancelStroke();assert.equal(editor.mask.value[12],2);assert.equal(editor.pendingChange(),null);assert.equal(editor.strokeActive.value,false);assert.equal(changes.length,0);assert.equal(editor.history.value.length,0);assert.equal(editor.dirty.value,false);
 });
 test('cancelled deferred erasure preserves another displayed opinion even when the personal opinion differs',async()=>{
-  const editor=await editorFixture();editor.setChangeHandler(()=>assert.fail('cancel must not broadcast'));editor.setPersonalValueHandler(()=>1);editor.mask.value.fill(2);editor.tool.value='erase';
+  const editor=await editorFixture();editor.setChangeHandler(()=>assert.fail('cancel must not broadcast'));editor.setPersonalValueHandler(()=>1);editor.setDisplayValueHandler(()=>2);editor.mask.value.fill(2);editor.tool.value='erase';
   editor.startStroke('touch');editor.stroke(2,0,2,2);assert.equal(editor.pendingChange()!.before[0],1);assert.equal(editor.mask.value[12],2);editor.cancelStroke();assert.equal(editor.mask.value[12],2);
 });
 test('cancelling after a remote refresh keeps the latest combined baseline and does not change original transaction ownership',async()=>{

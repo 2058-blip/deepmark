@@ -12,6 +12,8 @@ import {allOperations,cacheDataset,listDrafts,readDataset,readDraft,writeLocal,w
 import type {DraftDelta} from './localCache.ts';
 import {api as platformApi,authUser,downloadAuthenticated,fingerprint,loadCurrentUser} from './api.ts';
 import type {TransferOptions} from './api.ts';
+import {opinionIndex,projectOpinion,projectRegions} from './optimisticOpinions.ts';
+import type {VoxelOpinion} from './optimisticOpinions.ts';
 type History={revision:number;op:string;author:string;name:string;kind:string;time:string};
 const base='/api/collaboration',sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function api<T>(path:string,data?:unknown):Promise<T>{
@@ -23,7 +25,7 @@ function encode(change:Change){
   const order=Array.from(change.indices.keys()).sort((a,b)=>change.indices[a]-change.indices[b]),bytes=new Uint8Array(order.length*8),view=new DataView(bytes.buffer);
   order.forEach((k,n)=>{view.setUint32(n*8,change.indices[k],true);view.setUint16(n*8+4,change.before[k],true);view.setUint16(n*8+6,change.after[k],true);});return base64(bytes);
 }
-function applyLocal(mask:Uint16Array,patch:string,preserveErase=false){const bytes=Uint8Array.from(atob(patch),c=>c.charCodeAt(0)),view=new DataView(bytes.buffer);for(let n=0;n<bytes.length;n+=8){const value=view.getUint16(n+6,true);if(!preserveErase||value!==0)mask[view.getUint32(n,true)]=value;}}
+function applyLocal(mask:Uint16Array,patch:string){const bytes=Uint8Array.from(atob(patch),c=>c.charCodeAt(0)),view=new DataView(bytes.buffer);for(let n=0;n<bytes.length;n+=8){const value=view.getUint16(n+6,true);mask[view.getUint32(n,true)]=value;}}
 async function inflateBytes(value:string):Promise<Uint8Array<ArrayBuffer>>{
   if(typeof Worker!=='undefined')return new Promise((resolve,reject)=>{
     const worker=new Worker(new URL('./maskCodec.worker.ts',import.meta.url),{type:'module'});
@@ -44,12 +46,48 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   const active=computed(()=>!!project.value),unsaved=computed(()=>queueCount.value>0||!!error.value||!!cacheError.value);
   const canWrite=computed(()=>!accessRevoked.value&&authUser.value?.role==='worker'&&project.value?.canWrite===true&&project.value.status!=='finalized'&&project.value.datasetStatus!=='completed');
   const isReadOnly=()=>!canWrite.value||historical.value!==null||exiting.value;
-  const parallelMap=computed(()=>{const map=new Map<number,number[]>();for(const region of project.value?.regions||[])for(const row of region.annotations)for(const [i,label]of row.values){if(highlightAnnotation.value&&row.id===highlightAnnotation.value)map.set(i,[label]);else if(!highlightAnnotation.value){const values=map.get(i)||[];if(!values.includes(label))values.push(label);map.set(i,values);}}return map;});
+  const canProject=()=>historical.value===null&&!accessRevoked.value&&authUser.value?.role==='worker'&&project.value?.status!=='finalized'&&project.value?.datasetStatus!=='completed'&&(canWrite.value||offlineSource.value);
+  const projectionVersion=ref(0);
+  const parallelMap=computed(()=>{
+    editor.revision.value;projectionVersion.value;
+    const map=new Map<number,number[]>(),highlight=highlightAnnotation.value;
+    for(const region of project.value?.regions||[])for(const row of region.annotations)for(const [i,label]of row.values){if(highlight&&row.id===highlight)map.set(i,[label]);else if(!highlight){const values=map.get(i)||[];if(!values.includes(label))values.push(label);map.set(i,values);}}
+    for(const [index,after]of localIntents()){
+      const result=projected(index,after),choices=highlight&&map.has(index)?[...new Set(result.opinions.filter(row=>row.annotationId===highlight).map(row=>row.label))]:result.choices;
+      if(map.has(index)||choices.length>1)map.set(index,choices.length?choices:[0]);
+    }
+    return map;
+  });
   let queue:Operation[]=[],socket:WebSocket|null=null,reconnect:ReturnType<typeof setTimeout>|null=null,retry:ReturnType<typeof setTimeout>|null=null,fetching=false,sending=false,epoch=0,stopped=true,persist=Promise.resolve(),partialId:string|null=null,cacheGeneration=0,lastFetchedRevision=-1;
   type Reply={revision:number;parallelCount?:number;protectedCount?:number;duplicate?:boolean;delta?:LiveDelta;serverMs?:number};
-  let ownershipBits=new Uint8Array(),ownershipKnown=false,regionSource:Project['regions']|null=null,ownOpinions=new Map<number,number>();
+  let ownershipBits=new Uint8Array(),ownershipKnown=false;
+  // Store only overwritten voxels, rather than a second full-volume authoritative mask.
+  const displayBase=new Map<number,number>();
+  let regionSource:Project['regions']|null=null,claimSource:Project['claims']|null=null,indexedOpinions=new Map<number,VoxelOpinion[]>();
+  const authority=(index:number)=>displayBase.get(index)??editor.mask.value[index];
+  const owned=(index:number)=>ownershipKnown&&!!(ownershipBits[index>>>3]&(1<<(index&7)));
+  function opinions(){const regions=project.value?.regions||[],claims=project.value?.claims;if(regions!==regionSource||claims!==claimSource){regionSource=regions;claimSource=claims;indexedOpinions=opinionIndex(regions,claims||[],authority);}return indexedOpinions;}
+  function projected(index:number,after:number){return projectOpinion(person.value?.id||'',after,authority(index),owned(index),opinions().get(index));}
+  function displayValue(index:number,after:number,before?:number){if(!displayBase.has(index))displayBase.set(index,before??editor.mask.value[index]);return projected(index,after).value;}
+  function restoreAuthority(target=editor.mask.value){for(const [index,value]of displayBase)target[index]=value;}
+  function patchView(op:Operation){let view=patchViews.get(op);if(!view){const bytes=Uint8Array.from(atob(op.patch),c=>c.charCodeAt(0));view=new DataView(bytes.buffer);patchViews.set(op,view);}return view;}
+  function localIntents(includeStroke=true){
+    const intents=new Map<number,number>();if(!canProject())return intents;
+    for(const op of queue)if(!op.label&&!acknowledged.has(op.op)){const view=patchView(op);for(let n=0;n<view.byteLength;n+=8)intents.set(view.getUint32(n,true),view.getUint16(n+6,true));}
+    if(includeStroke&&canWrite.value){const stroke=editor.pendingChange();if(stroke)stroke.indices.forEach((index,k)=>intents.set(index,stroke.after[k]));}
+    return intents;
+  }
+  function projectLocal(){
+    restoreAuthority();displayBase.clear();
+    for(const [index,after]of localIntents(false))editor.mask.value[index]=displayValue(index,after);
+    editor.rebasePending(editor.mask.value);
+    if(canWrite.value&&historical.value===null)editor.renderPending();
+    projectionVersion.value++;
+  }
   const patchViews=new WeakMap<Operation,DataView>();
-  const acknowledged=new Set<string>(),incoming=new Map<number,LiveDelta>();
+  let needsClaimRefresh=false;
+  const acknowledged=new Set<string>(),confirmed=new Map<string,number>(),incoming=new Map<number,LiveDelta>();
+  function acknowledgeCovered(revision:number){for(const [id,committed]of confirmed)if(committed<=revision)acknowledged.add(id);}
   const waiting=new Map<string,{resolve:(reply:Reply)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
   let catchingUp=false,cacheTimer:ReturnType<typeof setTimeout>|null=null,cacheWriting=false,presenceVersion=0;
   const request=<T>(path:string,data?:unknown)=>api<T>(path,data);
@@ -73,9 +111,8 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   function pendingValue(index:number):number|undefined{for(let n=queue.length-1;n>=0;n--){const op=queue[n];if(op.label||acknowledged.has(op.op))continue;let patch=patchViews.get(op);if(!patch){const bytes=Uint8Array.from(atob(op.patch),c=>c.charCodeAt(0));patch=new DataView(bytes.buffer);patchViews.set(op,patch);}let lo=0,hi=patch.byteLength/8;while(lo<hi){const mid=(lo+hi)>>>1;if(patch.getUint32(mid*8,true)<index)lo=mid+1;else hi=mid;}if(lo*8<patch.byteLength&&patch.getUint32(lo*8,true)===index)return patch.getUint16(lo*8+6,true);}return undefined;}
   function personalValue(index:number,fallback:number):number|null{
     const pending=pendingValue(index);if(pending!==undefined)return pending||null;
-    const regions=project.value?.regions;if(regions!==regionSource){regionSource=regions||null;ownOpinions=new Map();for(const region of regions||[])for(const row of region.annotations)if(row.author===person.value?.id)for(const [i,value]of row.values)ownOpinions.set(i,value);}
-    if(ownOpinions.has(index))return ownOpinions.get(index)||null;
-    return ownershipKnown&&(ownershipBits[index>>>3]&(1<<(index&7)))?fallback:null;
+    const rows=opinions().get(index),own=rows?.find(row=>row.author===person.value?.id&&(!row.sourceKey||row.sourceKey===person.value?.id))||rows?.find(row=>row.author===person.value?.id);if(own)return own.label||null;
+    return owned(index)?authority(index)||fallback:null;
   }
   const draftKey=()=>person.value&&project.value?`${person.value.id}:${project.value.id}`:'';
   const captureSignatures=new WeakMap<Draft,string>();let lastFullSignature='',lastFullAt=0;
@@ -97,8 +134,8 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     // Touch previews can still be cancelled by a second finger. Persist their
     // baseline, never a recoverable edit that could reappear after cancellation.
     const interruptible=editor.isInterruptibleStroke(),partial=interruptible?null:editor.pendingChange();if(!partial)partialId=null;else partialId??=operationId();
-    const display=editor.mask.value.slice();if(interruptible)editor.restorePendingBase(display);
-    const draft:Draft={key:draftKey(),author:{...person.value},project:{...structuredClone(project.value),mask:''},name:editor.volume.value.name,mask:display.buffer,ownedMask:ownershipKnown?ownershipBits.slice().buffer:undefined,segments:snapshotSegments(editor.segments.value),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
+    const display=editor.mask.value.slice();if(!blockedLocal.value)restoreAuthority(display);else if(interruptible)editor.restorePendingBase(display);
+    const draft:Draft={key:draftKey(),author:{...person.value},project:{...structuredClone(project.value),mask:''},name:editor.volume.value.name,mask:display.buffer,maskState:blockedLocal.value?undefined:'authoritative',ownedMask:ownershipKnown?ownershipBits.slice().buffer:undefined,segments:snapshotSegments(editor.segments.value),view:view(),updated:Date.now(),generation:cacheGeneration,pending:partial?operation(partial,'edit',partialId!):null,needsCheckpoint:queue.length>0||!!partial||!!blockedLocal.value,blocked:blockedLocal.value};captureSignatures.set(draft,fullSignature());return draft;
   }
   function persistWrite(draft:Draft|null,op?:Operation,removeOp?:string,delta?:DraftDelta){
     const operations=queue.map(item=>({...item}));
@@ -111,8 +148,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   function scheduleCache(){if(cacheTimer||cacheWriting||!active.value||!canWrite.value)return;const token=epoch;cacheTimer=setTimeout(()=>{cacheTimer=null;if(token!==epoch)return;cacheWriting=true;void cacheNow().catch(()=>{}).finally(()=>{cacheWriting=false;});},Math.max(1000,15000-(Date.now()-lastFullAt)));}
   async function reloadDrafts(){drafts.value=(await listDrafts()).filter(draft=>draft.author.id===authUser.value?.id).sort((a,b)=>b.updated-a.updated);}
   function rejectWaiting(){for(const item of waiting.values()){clearTimeout(item.timer);item.reject(new Error('实时连接已断开，正在重试。'));}waiting.clear();}
-  function detach(){epoch++;lastFetchedRevision=-1;stopped=true;socket?.close();socket=null;rejectWaiting();incoming.clear();acknowledged.clear();if(cacheTimer)clearTimeout(cacheTimer);cacheTimer=null;if(reconnect)clearTimeout(reconnect);if(retry)clearTimeout(retry);editor.setChangeHandler(null);editor.setPersonalValueHandler(null);ownershipBits=new Uint8Array();ownershipKnown=false;regionSource=null;ownOpinions.clear();editor.readOnly.value=true;project.value=null;queue=[];queueCount.value=0;connected.value=false;onlineMembers.value=[];presenceKnown.value=false;presenceError.value='';presenceVersion++;history.value=[];historyReady.value=false;historyError.value='';historical.value=null;highlightAnnotation.value=null;error.value='';syncText.value='';partialId=null;}
-  function overlayLocal(){if(canWrite.value)for(const op of queue)if(!acknowledged.has(op.op))applyLocal(editor.mask.value,op.patch,true);}
+  function detach(){epoch++;lastFetchedRevision=-1;stopped=true;socket?.close();socket=null;rejectWaiting();incoming.clear();acknowledged.clear();confirmed.clear();needsClaimRefresh=false;if(cacheTimer)clearTimeout(cacheTimer);cacheTimer=null;if(reconnect)clearTimeout(reconnect);if(retry)clearTimeout(retry);editor.setChangeHandler(null);editor.setPersonalValueHandler(null);editor.setDisplayValueHandler(null);editor.setCancelHandler(null);displayBase.clear();ownershipBits=new Uint8Array();ownershipKnown=false;regionSource=null;claimSource=null;indexedOpinions.clear();editor.readOnly.value=true;project.value=null;queue=[];queueCount.value=0;connected.value=false;onlineMembers.value=[];presenceKnown.value=false;presenceError.value='';presenceVersion++;history.value=[];historyReady.value=false;historyError.value='';historical.value=null;highlightAnnotation.value=null;error.value='';syncText.value='';partialId=null;}
   function updateLabels(labels:Project['labels']){
     editor.segments.value=labels.map(label=>({...label,visible:editor.segments.value.find(s=>s.id===label.id)?.visible??true}));
     for(const op of queue)if(op.label&&!acknowledged.has(op.op)){const label=editor.segments.value.find(s=>s.id===op.label!.id);if(label){label.name=op.label.name;label.color=op.label.color;}}
@@ -120,15 +156,15 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   }
   function receiveDelta(event:LiveDelta){
     if(!project.value||event.projectId!==project.value.id)return;
-    if(event.author===person.value?.id&&queue.some(op=>op.op===event.op))acknowledged.add(event.op);
     if(historical.value!==null){project.value={...project.value,latestRevision:Math.max(project.value.latestRevision,event.revision)};return;}
     if(event.revision<=lastFetchedRevision)return;incoming.set(event.revision,event);
     while(incoming.has(lastFetchedRevision+1)){
-      const next=incoming.get(lastFetchedRevision+1)!,stroke=canWrite.value?editor.pendingDisplayChange():null;incoming.delete(next.revision);
-      editor.restorePendingBase();applyLocal(editor.mask.value,next.patch);overlayLocal();editor.rebasePending(editor.mask.value);if(stroke)stroke.indices.forEach((i,k)=>{editor.mask.value[i]=stroke.after[k];});
+      const next=incoming.get(lastFetchedRevision+1)!;incoming.delete(next.revision);
+      if(next.author===person.value?.id&&queue.some(op=>op.op===next.op))acknowledged.add(next.op);acknowledgeCovered(next.revision);
+      restoreAuthority();displayBase.clear();applyLocal(editor.mask.value,next.patch);if(next.claims===undefined)needsClaimRefresh=true;
       for(const [i,author]of next.owners||[])if(ownershipKnown){if(author===person.value?.id)ownershipBits[i>>>3]|=1<<(i&7);else ownershipBits[i>>>3]&=~(1<<(i&7));}
-      project.value={...project.value,mask:'',revision:next.revision,latestRevision:next.revision,regions:next.regions,labels:next.labels,status:next.status,finalizedBy:next.finalizedBy??project.value.finalizedBy,finalizedAt:next.finalizedAt??project.value.finalizedAt,finalRevision:next.finalRevision??project.value.finalRevision};lastFetchedRevision=next.revision;
-      updateLabels(next.labels);editor.revision.value++;editor.readOnly.value=isReadOnly();editor.dirty.value=queue.some(op=>!acknowledged.has(op.op));offlineSource.value=false;
+      project.value={...project.value,mask:'',revision:next.revision,latestRevision:next.revision,regions:next.regions,claims:next.claims??project.value.claims,labels:next.labels,status:next.status,finalizedBy:next.finalizedBy??project.value.finalizedBy,finalizedAt:next.finalizedAt??project.value.finalizedAt,finalRevision:next.finalRevision??project.value.finalRevision};lastFetchedRevision=next.revision;
+      projectLocal();updateLabels(next.labels);editor.revision.value++;editor.readOnly.value=isReadOnly();editor.dirty.value=queue.some(op=>!acknowledged.has(op.op));offlineSource.value=false;
       history.value=[{revision:next.revision,op:next.op,author:next.author,name:next.name,kind:next.kind,time:next.time},...history.value.filter(item=>item.revision!==next.revision)].slice(0,100);
       historyReady.value=true;historyError.value='';
       error.value='';
@@ -139,7 +175,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
       }
       scheduleCache();
     }
-    mark();if(incoming.size&&!fetching)void catchUp();
+    mark();if(needsClaimRefresh&&!fetching)void refresh(true);else if(incoming.size&&!fetching)void catchUp();
   }
   async function refresh(force=false){
     const id=project.value?.id;if(!id||fetching||exiting.value||blockedLocal.value)return;
@@ -153,9 +189,9 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
       if(mask.length!==editor.mask.value.length)throw new Error('服务器工程与当前影像尺寸不一致。');
       const writable=!accessRevoked.value&&authUser.value?.role==='worker'&&state.canWrite===true&&state.status!=='finalized'&&state.datasetStatus!=='completed';
       if(!writable&&queue.length){exitNotice.value='任务已转为只读；尚未提交的工作保留在本地缓存，当前显示服务器成果。';queue=[];queueCount.value=0;}
-      const stroke=writable?editor.pendingDisplayChange():null;if(writable)for(const op of queue)if(!acknowledged.has(op.op))applyLocal(mask,op.patch,true);editor.rebasePending(mask);if(stroke)stroke.indices.forEach((i,k)=>{mask[i]=stroke.after[k];});
-      ownershipBits=owned||new Uint8Array(Math.ceil(mask.length/8));ownershipKnown=!!owned;
-      editor.mask.value=mask;editor.revision.value++;project.value=state;offlineSource.value=false;if(expectedHistory===null)lastFetchedRevision=state.revision;
+      displayBase.clear();ownershipBits=owned||new Uint8Array(Math.ceil(mask.length/8));ownershipKnown=!!owned;
+      editor.mask.value=mask;project.value=state;needsClaimRefresh=false;acknowledgeCovered(state.revision);offlineSource.value=false;if(expectedHistory===null)lastFetchedRevision=state.revision;
+      projectLocal();editor.revision.value++;
       updateLabels(state.labels);for(const revision of incoming.keys())if(revision<=state.revision)incoming.delete(revision);
       editor.readOnly.value=isReadOnly();editor.setChangeHandler(canWrite.value?enqueue:null);editor.dirty.value=queue.length>0;
       scheduleCache();await loadHistory(id);
@@ -175,21 +211,25 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     try{
       while(queue.length&&token===epoch){
         const op=queue[0],result=socket?.readyState===WebSocket.OPEN&&connected.value?await sendLive(op):await request<Reply>(`/projects/${op.project}/${op.label?'labels':'operations'}`,op.label?{...op.label,op:op.op}:op);if(token!==epoch)return;
-        if(result.delta)receiveDelta(result.delta);
+        confirmed.set(op.op,result.revision);if(result.delta)receiveDelta(result.delta);
+        // Keep the local display until the canonical revision is actually present.
+        // An acknowledgement may arrive before a delayed delta or after reconnect.
+        if(lastFetchedRevision<result.revision){await catchUp();if(lastFetchedRevision<result.revision)await refresh(true);}
+        if(token!==epoch)return;if(lastFetchedRevision<result.revision)throw new Error('操作已发送，正在等待共享成果确认。');
         if(result.parallelCount)editor.status.value='存在不同标注意见，已在对应区域保留并列标注。';
         if(result.protectedCount)editor.status.value=`已保留 ${result.protectedCount} 个他人标注体素；只能删除自己的标注。`;
-        queue=queue.filter(item=>item.key!==op.key);acknowledged.delete(op.op);
+        queue=queue.filter(item=>item.key!==op.key);acknowledged.delete(op.op);confirmed.delete(op.op);projectLocal();
         // Local persistence never delays the next network operation. Delete its retry record
         // only after the authoritative journal write succeeds; a failed write retains it for recovery.
         const journal=persist;void journal.then(()=>persistWrite(null,undefined,op.key)).catch(()=>{});
         scheduleCache();error.value='';mark();
         if(result.duplicate&&result.revision<=lastFetchedRevision)await refresh(true);
       }
-    }catch(reason){if(token===epoch){error.value=(reason as Error).message;const status=(reason as {status?:number}).status;if(status===403||status===423){accessRevoked.value=true;project.value={...project.value!,canWrite:false};editor.readOnly.value=true;}mark();if(status===401)void ensureSession().catch(()=>{});}}finally{sending=false;if(token===epoch){mark();if(queue.length&&canWrite.value)retry=setTimeout(()=>void pump(),500);}}
+    }catch(reason){if(token===epoch){error.value=(reason as Error).message;const status=(reason as {status?:number}).status;if(status===403||status===423){accessRevoked.value=true;project.value={...project.value!,canWrite:false};editor.cancelStroke();projectLocal();editor.revision.value++;editor.readOnly.value=true;void refresh(true);}mark();if(status===401)void ensureSession().catch(()=>{});}}finally{sending=false;if(token===epoch){mark();if(queue.length&&canWrite.value)retry=setTimeout(()=>void pump(),500);}}
   }
   function enqueue(change:Change,kind='edit'){
     if(!project.value||!person.value||!canWrite.value)return;cacheGeneration++;
-    try{change.before=Uint16Array.from(change.indices,(i,k)=>personalValue(i,change.before[k])??0);const op=operation(change,kind,partialId||operationId());partialId=null;queue.push(op);mark();void pump();void persistWrite(null,op).catch(()=>{});scheduleCache();}
+    try{change.before=Uint16Array.from(change.indices,(i,k)=>personalValue(i,change.before[k])??0);const op=operation(change,kind,partialId||operationId());partialId=null;queue.push(op);projectLocal();mark();void pump();void persistWrite(null,op).catch(()=>{});scheduleCache();}
     catch(reason){blockedLocal.value=error.value=(reason as Error).message;editor.dirty.value=true;mark();void cacheNow().catch(()=>{});}
   }
   function connect(){
@@ -197,9 +237,9 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
     const current=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}${base}/socket?project=${project.value.id}`);socket=current;
     current.onmessage=event=>{
       if(socket!==current)return;const message=JSON.parse(event.data);
-      if(message.type==='ready'){connected.value=true;mark();void loadPresence(current);void pump();if(!ownershipKnown)void refresh(true);else if(message.revision!==lastFetchedRevision)void catchUp();}
+      if(message.type==='ready'){connected.value=true;mark();void loadPresence(current);void pump();if(!ownershipKnown||offlineSource.value)void refresh(true);else if(message.revision!==lastFetchedRevision)void catchUp();}
       else if(message.type==='presence')receivePresence(message);
-      else if(message.type==='access'){if(project.value&&message.datasetId===project.value.datasetId){if(message.canWrite!==true)accessRevoked.value=true;project.value={...project.value,canWrite:message.canWrite===true,datasetStatus:message.status};editor.readOnly.value=isReadOnly();if(!canWrite.value){editor.setChangeHandler(null);if(queue.length)exitNotice.value='任务已转为只读，待上传工作保留在本地缓存。';queue=[];queueCount.value=0;void refresh(true);}mark();}}
+      else if(message.type==='access'){if(project.value&&message.datasetId===project.value.datasetId){if(message.canWrite!==true)accessRevoked.value=true;project.value={...project.value,canWrite:message.canWrite===true,datasetStatus:message.status};editor.readOnly.value=isReadOnly();if(!canWrite.value){editor.setChangeHandler(null);if(queue.length)exitNotice.value='任务已转为只读，待上传工作保留在本地缓存。';queue=[];queueCount.value=0;editor.cancelStroke();projectLocal();editor.revision.value++;void refresh(true);}mark();}}
       else if(message.type==='delta')receiveDelta(message);
       else if(message.type==='ack'||message.type==='error'){const item=waiting.get(message.requestId);if(!item)return;waiting.delete(message.requestId);clearTimeout(item.timer);if(message.type==='ack')item.resolve(message);else item.reject(Object.assign(new Error(message.message),{status:message.status}));}
       else void catchUp();
@@ -209,14 +249,15 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   function restoreView(saved:ViewState){const v=editor.volume.value;if(!v)return;editor.point.value=saved.point.map((n,a)=>Math.max(0,Math.min(v.dims[a]-1,n)));editor.selected.value=editor.segments.value.some(s=>s.id===saved.selected)?saved.selected:editor.segments.value[0].id;editor.center.value=saved.center;editor.width.value=saved.width;editor.diameter.value=saved.diameter;editor.opacity.value=saved.opacity;editor.tool.value=['paint','erase','threshold','region'].includes(saved.tool)?saved.tool as Tool:'paint';if(saved.zooms?.length===3)editor.zooms.value=saved.zooms.map(n=>Number.isFinite(n)?Math.max(.25,Math.min(8,n)):1);if(Number.isFinite(saved.airThreshold))editor.airThreshold.value=saved.airThreshold!;if(saved.regionWidth&&saved.regionWidth>=.1)editor.regionWidth.value=saved.regionWidth;if(saved.regionMode)editor.regionMode.value=saved.regionMode;editor.hoverPreview.value=editor.tool.value==='region';}
   async function attach(state:Project,draft?:Draft,offline=false){
     detach();accessRevoked.value=false;stopped=false;project.value=state;lastFetchedRevision=offline?-1:state.revision;blockedLocal.value=canWrite.value?draft?.blocked||'':'';error.value=blockedLocal.value;offlineSource.value=offline;
-    queue=canWrite.value?(await allOperations()).filter(op=>op.project===state.id&&op.key.startsWith(person.value!.id+':')).sort((a,b)=>a.created-b.created):[];
-    if(canWrite.value&&draft?.pending&&!queue.some(op=>op.op===draft.pending!.op)){queue.push(draft.pending);await writeLocal({operation:draft.pending});}
+    queue=(canWrite.value||offline&&draft?.author.id===person.value?.id)?(await allOperations()).filter(op=>op.project===state.id&&op.key.startsWith(person.value!.id+':')).sort((a,b)=>a.created-b.created):[];
+    if((canWrite.value||offline)&&draft?.pending&&!queue.some(op=>op.op===draft.pending!.op)){queue.push(draft.pending);await writeLocal({operation:draft.pending});}
     editor.history.value=[];editor.future.value=[];editor.setChangeHandler(canWrite.value?enqueue:null);historical.value=null;
-    const [mask,owned]=await Promise.all([canWrite.value&&draft&&(offline||blockedLocal.value)?new Uint16Array(draft.mask.slice(0)):inflate(state.mask),offline&&draft?.ownedMask?new Uint8Array(draft.ownedMask.slice(0)):readOwnership(state)]);
+    const [mask,owned]=await Promise.all([draft&&(offline||canWrite.value&&blockedLocal.value)?new Uint16Array(draft.mask.slice(0)):inflate(state.mask),offline&&draft?.ownedMask?new Uint8Array(draft.ownedMask.slice(0)):readOwnership(state)]);
     editor.mask.value=mask;
-    ownershipBits=owned||new Uint8Array(Math.ceil(editor.mask.value.length/8));ownershipKnown=!!owned;editor.setPersonalValueHandler(personalValue);
+    ownershipBits=owned||new Uint8Array(Math.ceil(editor.mask.value.length/8));ownershipKnown=!!owned;editor.setPersonalValueHandler(personalValue);editor.setDisplayValueHandler(displayValue);editor.setCancelHandler(projectLocal);
     editor.segments.value=(offline&&draft?draft.segments:state.labels).map(s=>({...s,visible:('visible' in s)&&typeof s.visible==='boolean'?s.visible:true}));
-    for(const op of queue){applyLocal(editor.mask.value,op.patch,true);if(op.label){const row=editor.segments.value.find(s=>s.id===op.label!.id);if(row){row.name=op.label.name;row.color=op.label.color;}}}
+    if(!blockedLocal.value)projectLocal();
+    for(const op of queue){if(op.label){const row=editor.segments.value.find(s=>s.id===op.label!.id);if(row){row.name=op.label.name;row.color=op.label.color;}}}
     if(draft)restoreView(draft.view);if(!canWrite.value&&draft?.needsCheckpoint)exitNotice.value='此任务只读；未提交工作保留在原本地副本，当前展示服务器成果。';editor.revision.value++;editor.readOnly.value=isReadOnly();
     cacheGeneration=Math.max(cacheGeneration,draft?.generation||0)+1;
     editor.dirty.value=queue.length>0;mark();connect();if(canWrite.value)await cacheNow();
@@ -264,9 +305,14 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   async function addLabel(){if(!project.value||!canWrite.value||historical.value!==null)return;try{const result=await request<{label:Omit<Segment,'visible'>;delta?:LiveDelta}>(`/projects/${project.value.id}/labels`,{});if(result.delta)receiveDelta(result.delta);if(!editor.segments.value.some(s=>s.id===result.label.id))editor.segments.value.push({...result.label,visible:true});editor.selected.value=result.label.id;cacheGeneration++;scheduleCache();}catch(reason){error.value=(reason as Error).message;}}
   async function updateLabel(label:Segment){if(!project.value||!person.value||!canWrite.value||historical.value!==null)return;if(!label.name.trim()||label.name.length>60){label.name=project.value.labels.find(s=>s.id===label.id)?.name||`标注 ${label.id}`;error.value='标签名称不能为空，已恢复原名称。';return;}cacheGeneration++;const op:Operation={...operation({indices:new Uint32Array(),before:new Uint16Array(),after:new Uint16Array()},'label'),label:{id:label.id,name:label.name,color:label.color}};queue.push(op);editor.dirty.value=true;mark();void pump();void persistWrite(null,op).catch(()=>{});scheduleCache();}
   async function exportServer(options:TransferOptions={}):Promise<boolean>{if(!project.value||queue.length||unsaved.value||authUser.value?.role==='dispatcher'&&project.value.datasetStatus!=='completed')return false;const params=new URLSearchParams();if(historical.value!==null)params.set('revision',String(historical.value));try{await downloadAuthenticated(`${base}/projects/${project.value.id}/export?${params}`,`${editor.volume.value?.name.replace(/\.nii(\.gz)?$/i,'')||'标注成果'}-seg.zip`,options);return true;}catch(reason){if((reason as Error).name!=='AbortError')error.value=(reason as Error).message;return false;}}
+  function effectiveRegions(){
+    const names=new Map<string,string>(onlineMembers.value.map(member=>[member.id,member.name]));
+    for(const region of project.value?.regions||[])for(const row of region.annotations)names.set(row.author,row.name);
+    return projectRegions(project.value?.regions||[],localIntents(),projected,editor.volume.value!.dims,person.value!,names);
+  }
   async function exportLocal(){
     if(!editor.volume.value||editor.busy.value||authUser.value?.role==='dispatcher'&&project.value?.datasetStatus!=='completed')return;editor.endStroke();editor.busy.value=true;editor.status.value='正在压缩本地副本 ZIP…';
-    try{const v=editor.volume.value,archive=await annotationArchive(exportNifti(v,editor.mask.value),editor.segments.value,{source:v.name,local:true,projectId:project.value?.id,revision:historical.value??project.value?.revision,parallelRegions:project.value?.regions});download(archive,`本地工作副本-${person.value?.name||'标注'}.zip`,'application/zip');editor.status.value='已请求下载本地副本 ZIP。';}
+    try{const v=editor.volume.value,archive=await annotationArchive(exportNifti(v,editor.mask.value),editor.segments.value,{source:v.name,local:true,projectId:project.value?.id,revision:historical.value??project.value?.revision,parallelRegions:effectiveRegions()});download(archive,`本地工作副本-${person.value?.name||'标注'}.zip`,'application/zip');editor.status.value='已请求下载本地副本 ZIP。';}
     catch(reason){editor.status.value=`导出失败：${(reason as Error).message}`;}finally{editor.busy.value=false;}
   }
   watch(()=>editor.strokeActive.value,value=>{if(!value)scheduleCache();});
@@ -281,10 +327,11 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   async function provenance(index:number):Promise<string>{
     const current=project.value;if(!current)return '';const revision=current.revision,id=current.id,token=epoch;
     const label=(value:number)=>value===0?'擦除（0）':`${editor.segments.value.find(s=>s.id===value)?.name||'标签'}（${value}）`;
+    const local=localIntents();if(local.has(index)){const after=local.get(index)!,result=projected(index,after),others=result.opinions.filter(row=>row.author!==person.value?.id).map(row=>label(row.label));return `标注内容：${label(editor.mask.value[index])}\n${after===0?'已在本地移除自己的标注，等待同步':'自己的标注待同步'}${others.length?`\n保留他人意见：${[...new Set(others)].join('；')}`:''}`;}
     for(const op of queue)if(!op.label&&!acknowledged.has(op.op)){
       let patch=patchViews.get(op);if(!patch){const bytes=Uint8Array.from(atob(op.patch),c=>c.charCodeAt(0));patch=new DataView(bytes.buffer);patchViews.set(op,patch);}
       let lo=0,hi=patch.byteLength/8;while(lo<hi){const mid=(lo+hi)>>>1;if(patch.getUint32(mid*8,true)<index)lo=mid+1;else hi=mid;}
-      if(lo*8<patch.byteLength&&patch.getUint32(lo*8,true)===index)return `标注内容：${label(editor.mask.value[index])}\n${patch.getUint16(lo*8+6,true)===0?'正在确认自己的删除操作；他人标注保留':`来自：${person.value?.name||'本机'}（待同步）`}`;
+      if(lo*8<patch.byteLength&&patch.getUint32(lo*8,true)===index)return `标注内容：${label(editor.mask.value[index])}\n${patch.getUint16(lo*8+6,true)===0?'已在本地移除自己的标注；他人意见保留，等待同步':`来自：${person.value?.name||'本机'}（待同步）`}`;
     }
     if(offlineSource.value)return `标注内容：${label(editor.mask.value[index])}\n来源：离线缓存，作者暂无法查询`;
     const key=`${id}:${revision}:${index}`,old=provenanceCache.get(key);if(old)return old;

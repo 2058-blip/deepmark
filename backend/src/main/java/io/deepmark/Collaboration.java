@@ -18,11 +18,13 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +48,9 @@ public final class Collaboration {
     private final Platform platform;
     /** Accessed only while holding the shared Database lock. */
     private final LinkedHashMap<String, Cached> models = new LinkedHashMap<>(8, .75f, true);
+    /** Sparse same-label opinions omitted by the canonical mask/parallel-region representation. */
+    private final LinkedHashMap<String,ClaimState> claimStates=new LinkedHashMap<>(8,.75f,true);
+    private record ClaimState(long revision,Map<Integer,LinkedHashSet<String>> values,Set<Integer> regionPoints) {}
     private final long modelCacheBudget=Math.max(256L*1024*1024,Math.min(2L*1024*1024*1024,Runtime.getRuntime().maxMemory()/3));
     private final Map<String, Peer> peers = new ConcurrentHashMap<>();
     private record EncodedMask(long revision,String mask) {}
@@ -212,7 +217,7 @@ public final class Collaboration {
             if(!validId(op))throw new Failure(400,"操作编号无效。");
             Map<String,Object> old=one(c,"SELECT revision,author,details FROM collab_events WHERE project=? AND op=?",id,op);
             if(old!=null){if(!user.id().equals(old.get("author")))throw new Failure(409,"此操作编号属于另一作者。");Map<String,Object> duplicate=map("revision",((Number)old.get("revision")).longValue(),"duplicate",true);JsonNode details=unpack((byte[])old.get("details"));if(action.equals("labels")&&details.has("labelId"))duplicate.put("label",platform.mapper.convertValue(findLabel(details.get("labels"),details.get("labelId").asInt()),Map.class));return duplicate;}
-            SharedModel.Model model=readModel(c,p);SharedModel.Author author=new SharedModel.Author(user.id(),user.name());
+            SharedModel.Model model=readModel(c,p);claims(c,p,p.revision,model);SharedModel.Author author=new SharedModel.Author(user.id(),user.name());
             if(action.equals("labels")){
                 List<Map<String,Object>> labels=copyLabels(p.labels);Map<String,Object> label=null;
                 if(body.has("id")){long labelId=number(body,"id");for(Map<String,Object> row:labels)if(((Number)row.get("id")).longValue()==labelId)label=row;if(label==null)throw new Failure(400,"标签不存在。");}
@@ -258,7 +263,7 @@ public final class Collaboration {
     public void datasetCompleted(String dataset) {
         List<Map<String,Object>> deltas=write(c->{List<Map<String,Object>> result=new ArrayList<>();for(Map<String,Object> row:all(c,"SELECT id FROM collab_projects WHERE dataset=?",dataset)){
             Project p=project(c,(String)row.get("id"));if(p.status.equals("finalized"))continue;
-            SharedModel.Model model=readModel(c,p);String now=Instant.now().toString();long revision=saveEvent(c,p,new SharedModel.Author("system","任务完成"),"completed-"+dataset,"任务完成",model,List.of(),List.of(),null,null,p.labels,"finalized",map("finalizedBy","任务完成","finalizedAt",now,"finalRevision",p.revision+1));result.add(delta(c,p.id,revision));
+            SharedModel.Model model=readModel(c,p);claims(c,p,p.revision,model);String now=Instant.now().toString();long revision=saveEvent(c,p,new SharedModel.Author("system","任务完成"),"completed-"+dataset,"任务完成",model,List.of(),List.of(),null,null,p.labels,"finalized",map("finalizedBy","任务完成","finalizedAt",now,"finalRevision",p.revision+1));result.add(delta(c,p.id,revision));
         }return result;});
         for(Map<String,Object> event:deltas)broadcast((String)event.get("projectId"),event);
         for(Peer peer:peers.values())if(peer.dataset.equals(dataset))send(peer,map("type","access","datasetId",dataset,"canWrite",false,"status","completed"));
@@ -273,7 +278,7 @@ public final class Collaboration {
         if(ownerCode!=0)for(int i=0;i<model.mask.length;i++)if(model.mask[i]!=0&&model.owners[i]==ownerCode)bits[i>>>3]|=(byte)(1<<(i&7));
         String taskStatus=String.valueOf(platform.dataset(p.dataset).get("status"));boolean locked=taskStatus.equals("completed");
         return map("id",p.id,"datasetId",p.dataset,"fingerprint",p.fingerprint,"name",p.name,"revision",target,"latestRevision",p.revision,
-                "mask",cachedMask(p.id,target,model),"ownershipAuthor",user.id(),"ownedVoxels",bits,"regions",platform.mapper.valueToTree(model.regions),"labels",state.labels,
+                "mask",cachedMask(p.id,target,model),"ownershipAuthor",user.id(),"ownedVoxels",bits,"regions",platform.mapper.valueToTree(model.regions),"claims",claims(c,p,target,model),"labels",state.labels,
                 "status",state.status,"datasetStatus",taskStatus,"canWrite",!locked&&state.status.equals("editing")&&canWrite(user,p.dataset),
                 "finalizedBy",state.finalizedBy,"finalizedAt",state.finalizedAt,"finalRevision",state.finalRevision);
     }
@@ -351,8 +356,51 @@ public final class Collaboration {
             finally{checkpointPending.remove(id);}
         });
     }
+    private static Set<Integer> regionPoints(SharedModel.Model model){Set<Integer> points=new HashSet<>();for(SharedModel.Region region:model.regions)points.addAll(region.indices);return points;}
+    private static String primaryAuthor(SharedModel.Model model,int index){int code=model.owners[index];return code>0&&code<=model.authors.size()?model.authors.get(code-1).id:null;}
+    private static List<Object> claimRows(Map<Integer,LinkedHashSet<String>> values){
+        List<Object> result=new ArrayList<>(values.size());for(var entry:values.entrySet())if(entry.getValue().size()>1)result.add(List.of(entry.getKey(),List.copyOf(entry.getValue())));return result;
+    }
+    private Map<Integer,LinkedHashSet<String>> readClaims(JsonNode rows){
+        Map<Integer,LinkedHashSet<String>> result=new LinkedHashMap<>();for(JsonNode row:rows){LinkedHashSet<String> authors=new LinkedHashSet<>();for(JsonNode author:row.path(1))authors.add(author.asText());if(authors.size()>1)result.put(row.path(0).asInt(),authors);}return result;
+    }
+    /** Match recentAgreements' latest-intent/primary-write boundary without copying a volume per author. */
+    private Map<Integer,LinkedHashSet<String>> scanClaims(Connection c,Project p,long target,SharedModel.Model model,Set<Integer> wanted,JsonNode newest,String newestAuthor)throws Exception {
+        Set<Integer> regions=regionPoints(model);BitSet closed=new BitSet();Map<String,Set<Integer>> seen=new HashMap<>();Map<Integer,LinkedHashSet<String>> found=new LinkedHashMap<>();
+        class Scan {
+            boolean relevant(int index){return index>=0&&index<model.mask.length&&model.mask[index]!=0&&!regions.contains(index)&&(wanted==null||wanted.contains(index))&&!closed.get(index);}
+            void event(String author,JsonNode event){
+                if(event.has("intent")){ByteBuffer patch=ByteBuffer.wrap(Base64.getDecoder().decode(event.get("intent").asText())).order(ByteOrder.LITTLE_ENDIAN);while(patch.remaining()>=8){int index=patch.getInt();patch.getShort();int after=Short.toUnsignedInt(patch.getShort());if(!relevant(index)||Objects.equals(author,primaryAuthor(model,index))||!seen.computeIfAbsent(author,ignored->new HashSet<>()).add(index))continue;if(after==model.mask[index])found.computeIfAbsent(index,ignored->new LinkedHashSet<>()).add(author);}}
+                for(JsonNode row:event.path("applied")){int index=row.path(0).asInt();if(relevant(index)&&Objects.equals(author,primaryAuthor(model,index))&&row.path(2).asInt()==model.mask[index])closed.set(index);}
+            }
+        }
+        Scan scan=new Scan();if(newest!=null)scan.event(newestAuthor,newest);
+        try(PreparedStatement query=c.prepareStatement("SELECT author,details FROM collab_events WHERE project=? AND revision<=? ORDER BY revision DESC")){query.setString(1,p.id);query.setLong(2,Math.min(target,p.revision));try(ResultSet rows=query.executeQuery()){while(rows.next()){scan.event(rows.getString("author"),unpack(rows.getBytes("details")));if(wanted!=null&&wanted.stream().allMatch(closed::get))break;}}}
+        Map<Integer,LinkedHashSet<String>> result=new LinkedHashMap<>();for(var entry:found.entrySet()){String owner=primaryAuthor(model,entry.getKey());if(owner==null)continue;LinkedHashSet<String> authors=new LinkedHashSet<>();authors.add(owner);authors.addAll(entry.getValue());if(authors.size()>1)result.put(entry.getKey(),authors);}return result;
+    }
+    private List<Object> claims(Connection c,Project p,long target,SharedModel.Model model)throws Exception {
+        ClaimState cached=claimStates.get(p.id);if(cached!=null&&cached.revision==target)return claimRows(cached.values);
+        Map<String,Object> latest=target==0?null:one(c,"SELECT details FROM collab_events WHERE project=? AND revision=?",p.id,target);JsonNode details=latest==null?null:unpack((byte[])latest.get("details"));
+        Map<Integer,LinkedHashSet<String>> values=details!=null&&details.has("claims")?readClaims(details.get("claims")):scanClaims(c,p,target,model,null,null,null);
+        if(target==p.revision){claimStates.put(p.id,new ClaimState(target,values,regionPoints(model)));while(claimStates.size()>4)claimStates.remove(claimStates.keySet().iterator().next());}
+        return claimRows(values);
+    }
+    /** Common paint/erase updates avoid journal scans; only a region collapse/review needs legacy lookup. */
+    private List<Object> advanceClaims(Connection c,Project p,long revision,SharedModel.Model model,SharedModel.Author author,JsonNode details)throws Exception {
+        ClaimState previous=claimStates.get(p.id);if(previous==null||previous.revision!=p.revision){Map<Integer,LinkedHashSet<String>> rebuilt=scanClaims(c,p,revision,model,null,details,author.id);claimStates.put(p.id,new ClaimState(revision,rebuilt,regionPoints(model)));return claimRows(rebuilt);}
+        Map<Integer,LinkedHashSet<String>> values=new LinkedHashMap<>();for(var entry:previous.values.entrySet())values.put(entry.getKey(),new LinkedHashSet<>(entry.getValue()));
+        Set<Integer> regions=regionPoints(model),recheck=new HashSet<>(previous.regionPoints);recheck.removeAll(regions);
+        Set<Integer> changed=new HashSet<>();for(JsonNode row:details.path("applied"))changed.add(row.path(0).asInt());
+        if(details.has("intent")){ByteBuffer patch=ByteBuffer.wrap(Base64.getDecoder().decode(details.get("intent").asText())).order(ByteOrder.LITTLE_ENDIAN);while(patch.remaining()>=8){int index=patch.getInt();patch.getShort();int after=Short.toUnsignedInt(patch.getShort());if(regions.contains(index)||model.mask[index]==0){values.remove(index);continue;}String owner=primaryAuthor(model,index);if(after==0){LinkedHashSet<String> authors=values.get(index);if(authors!=null){authors.remove(author.id);if(owner!=null)authors.add(owner);if(authors.size()<2)values.remove(index);}}else if(changed.contains(index)){values.remove(index);}else if(after==model.mask[index]&&!Objects.equals(owner,author.id)&&owner!=null){LinkedHashSet<String> authors=values.computeIfAbsent(index,ignored->{LinkedHashSet<String> result=new LinkedHashSet<>();result.add(owner);return result;});authors.add(author.id);}}}
+        else if(!changed.isEmpty())recheck.addAll(changed);
+        for(int index:regions)values.remove(index);
+        if(!recheck.isEmpty()){for(int index:recheck)values.remove(index);values.putAll(scanClaims(c,p,revision,model,recheck,details,author.id));}
+        for(var entry:values.entrySet()){String owner=primaryAuthor(model,entry.getKey());if(owner!=null){LinkedHashSet<String> ordered=new LinkedHashSet<>();ordered.add(owner);ordered.addAll(entry.getValue());entry.setValue(ordered);}}
+        claimStates.put(p.id,new ClaimState(revision,values,regions));while(claimStates.size()>4)claimStates.remove(claimStates.keySet().iterator().next());return claimRows(values);
+    }
     private long saveEvent(Connection c,Project p,SharedModel.Author author,String op,String kind,SharedModel.Model model,List<int[]> applied,List<int[]> ownerUpdates,String intent,String canonical,List<Map<String,Object>> labels,String status,Map<String,Object> extra)throws Exception {
         long revision=p.revision+1;Map<String,Object> details=map("shared",true,"applied",applied,"ownerUpdates",ownerUpdates,"regions",model.regions,"authors",model.authors,"labels",labels,"status",status);if(intent!=null)details.put("intent",intent);if(canonical!=null)details.put("canonical",canonical);details.putAll(extra);
+        details.put("claims",advanceClaims(c,p,revision,model,author,platform.mapper.valueToTree(details)));
         exec(c,"INSERT INTO collab_events VALUES(?,?,?,?,?,?,?,?)",p.id,revision,op,author.id,author.name,kind,Instant.now().toString(),pack(details));
         exec(c,"UPDATE collab_projects SET revision=?,labels=?,status=?,finalized_by=?,finalized_at=?,final_revision=? WHERE id=?",revision,json(labels),status,extra.getOrDefault("finalizedBy",p.finalizedBy),extra.getOrDefault("finalizedAt",p.finalizedAt),extra.getOrDefault("finalRevision",p.finalRevision),p.id);
         models.put(p.id,new Cached(revision,model));trimModels();if(revision%128==0)checkpoint(p.id);return revision;
@@ -373,6 +421,7 @@ public final class Collaboration {
         for(JsonNode update:details.path("ownerUpdates")){int code=update.get(1).asInt();JsonNode author=code>0&&code<=details.path("authors").size()?details.get("authors").get(code-1):null;List<Object> entry=new ArrayList<>();entry.add(update.get(0).asInt());entry.add(author==null?null:author.path("id").asText());owners.add(entry);}
         String patch=details.has("canonical")?details.get("canonical").asText():encodePatch(platform.mapper.convertValue(details.path("applied"),new TypeReference<List<int[]>>(){}));
         Map<String,Object> result=map("type","delta","projectId",id,"revision",revision,"op",row.get("op"),"author",row.get("author"),"name",row.get("name"),"kind",row.get("kind"),"time",row.get("time"),"patch",patch,"owners",owners,"regions",details.get("regions"),"labels",details.get("labels"),"status",details.path("status").asText());
+        if(details.has("claims"))result.put("claims",details.get("claims"));
         for(String key:List.of("finalizedBy","finalizedAt","finalRevision"))if(details.has(key))result.put(key,platform.mapper.convertValue(details.get(key),Object.class));return result;
     }
     private Map<String,Object> updates(Connection c,Project p,long after)throws Exception {if(after<0||after>p.revision)return map("reset",true,"revision",p.revision);List<Map<String,Object>> rows=all(c,"SELECT revision FROM collab_events WHERE project=? AND revision>? ORDER BY revision LIMIT 128",p.id,after);List<Map<String,Object>> events=new ArrayList<>();for(Map<String,Object> row:rows)events.add(delta(c,p.id,((Number)row.get("revision")).longValue()));long last=rows.isEmpty()?after:((Number)rows.get(rows.size()-1).get("revision")).longValue();return map("revision",p.revision,"events",events,"more",last<p.revision);}
@@ -402,7 +451,7 @@ public final class Collaboration {
     private void peerLeft(String session){Peer peer=peers.remove(session);if(peer!=null)broadcastPresence(peer.project);}
     private void refreshPresence(){try{Set<String> projects=new HashSet<>();for(Peer peer:peers.values())projects.add(peer.project);for(String project:projects)broadcastPresence(project);}catch(RuntimeException ignored){/* A transient database error must not terminate future access checks. */}}
     private void send(Peer peer,Object value){synchronized(peer){try{peer.context.send(platform.mapper.writeValueAsString(value));}catch(Exception error){peers.remove(peer.context.sessionId());peer.context.closeSession(1011,"Connection failed");}}}
-    private <T>T write(Database.SqlFunction<T> action){try{return platform.db.transaction(action);}catch(RuntimeException error){platform.db.read(c->{models.clear();return null;});throw error;}}
+    private <T>T write(Database.SqlFunction<T> action){try{return platform.db.transaction(action);}catch(RuntimeException error){platform.db.read(c->{models.clear();claimStates.clear();return null;});throw error;}}
     private Project project(Connection c,String id)throws Exception {
         if(id==null||!id.matches("[a-f0-9]{32}"))throw new Failure(404,"共享工程不存在。");Map<String,Object> p=one(c,"SELECT * FROM collab_projects WHERE id=?",id);if(p==null)throw new Failure(404,"共享工程不存在。");
         return new Project(id,(String)p.get("dataset"),(String)p.get("fingerprint"),((Number)p.get("count")).intValue(),(byte[])p.get("header"),platform.mapper.readValue((String)p.get("dims"),int[].class),((Number)p.get("little")).intValue()!=0,(String)p.get("name"),parseLabels((String)p.get("labels")),((Number)p.get("revision")).longValue(),(String)p.get("status"),(String)p.get("finalized_by"),(String)p.get("finalized_at"),nullableLong(p.get("final_revision")));

@@ -12,7 +12,7 @@ export type ThresholdRange = { minimum: number; maximum: number; label: number }
 export function thresholdLabel(gray: number, current: number, range: ThresholdRange): number {
   return gray >= range.minimum && gray <= range.maximum ? range.label : current === range.label ? 0 : current;
 }
-export function applyThreshold(data: ArrayLike<number>, labels: Uint16Array, range: ThresholdRange, excluded?: (index:number)=>boolean,personalValue?:(index:number)=>number|null,deferErase=false): { change: Change | null; matched: number } {
+export function applyThreshold(data: ArrayLike<number>, labels: Uint16Array, range: ThresholdRange, excluded?: (index:number)=>boolean,personalValue?:(index:number)=>number|null,deferErase=false,displayValue?:(index:number,after:number,before:number)=>number): { change: Change | null; matched: number } {
   if (data.length !== labels.length) throw new Error('分割尺寸与影像不一致。');
   if (!Number.isFinite(range.minimum) || !Number.isFinite(range.maximum) || range.minimum > range.maximum)
     throw new Error('请输入有效灰度范围，最小值不能大于最大值。');
@@ -33,7 +33,7 @@ export function applyThreshold(data: ArrayLike<number>, labels: Uint16Array, ran
     if (value === current) continue;
     if (excluded?.(i)) continue;
     change.indices[j] = i; change.before[j] = current; change.after[j] = value;
-    if(!deferErase||value!==0)labels[i] = value;j++;
+    if(displayValue)labels[i]=displayValue(i,value,labels[i]);else if(!deferErase||value!==0)labels[i] = value;j++;
   }
   return { change, matched };
 }
@@ -139,7 +139,7 @@ export function planePoint(axis: Axis, slice: number, u: number, v: number): [nu
   p[axis] = slice; p[a] = u; p[b] = v; return p;
 }
 export function paint(labels: Uint16Array, volume: Pick<Volume, 'dims' | 'spacing'>, axis: Axis, slice: number,
-  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number, recordTouches = false, excluded?: (x:number,y:number)=>boolean,ownership?:{personalValue:(index:number,fallback:number)=>number|null;deferErase?:boolean},displayBefore?:Map<number,number>) {
+  u: number, v: number, diameter: number, value: number, before: Map<number, number>, eraseOnly?: number, recordTouches = false, excluded?: (x:number,y:number)=>boolean,ownership?:{personalValue:(index:number,fallback:number)=>number|null;deferErase?:boolean;displayValue?:(index:number,after:number)=>number},displayBefore?:Map<number,number>,personalAfter?:Map<number,number>) {
   const [a, b] = planeAxes(axis), radius = diameter / 2;
   const du = radius / volume.spacing[a], dv = radius / volume.spacing[b];
   for (let y = Math.max(0, Math.ceil(v - dv)); y <= Math.min(volume.dims[b] - 1, Math.floor(v + dv)); y++) {
@@ -151,7 +151,9 @@ export function paint(labels: Uint16Array, volume: Pick<Volume, 'dims' | 'spacin
       if(current===null||(!recordTouches&&current===value)||(eraseOnly!==undefined&&current!==eraseOnly))continue;
       if (!before.has(i)) before.set(i,own??0);
       if(displayBefore&&!displayBefore.has(i))displayBefore.set(i,labels[i]);
-      if(!ownership?.deferErase||value!==0)labels[i] = value;
+      personalAfter?.set(i,value);
+      if(ownership?.displayValue)labels[i]=ownership.displayValue(i,value);
+      else if(!ownership?.deferErase||value!==0)labels[i] = value;
     }
   }
 }

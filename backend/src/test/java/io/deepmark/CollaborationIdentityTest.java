@@ -37,6 +37,43 @@ class CollaborationIdentityTest {
     @TempDir Path temporary;
     private static final String BASE="/api/collaboration";
 
+    @Test void sameLabelClaimsSupportImmediatePersonalWithdrawalAndRemainRevisionAccurate() throws Exception {
+        try(Fixture f=fixture()){
+            String project=f.join("worker-a").path("id").asText();
+            JsonNode a=f.post(project,"operations","worker-a",Map.of("op","claim-a","baseRevision",0,"patch",Collaboration.encodePatch(List.of(new int[]{0,0,1}))));
+            assertTrue(a.path("delta").path("claims").isEmpty());
+            JsonNode b=f.post(project,"operations","worker-b",Map.of("op","claim-b","baseRevision",1,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,1}))));
+            assertEquals(List.of("worker-a","worker-b"),Platform.JSON.convertValue(b.path("delta").path("claims").get(0).get(1),List.class));
+            JsonNode shared=f.json(f.request("GET",BASE+"/projects/"+project,"worker-b",null));
+            assertEquals(b.path("delta").path("claims"),shared.path("claims"));assertTrue(shared.path("regions").isEmpty());
+            JsonNode third=f.post(project,"operations","offline-member",Map.of("op","claim-third","baseRevision",2,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,1}))));
+            assertEquals(3,third.path("delta").path("claims").get(0).get(1).size());
+            JsonNode withdraw=f.post(project,"operations","worker-a",Map.of("op","withdraw-a","baseRevision",3,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,0}))));
+            assertEquals("offline-member",withdraw.path("delta").path("claims").get(0).get(1).get(0).asText(),"The first claim author is the canonical primary after transfer");
+            JsonNode remaining=f.json(f.request("GET",BASE+"/projects/"+project,"worker-b",null));assertEquals(1,Nifti.gunzipU16(java.util.Base64.getDecoder().decode(remaining.path("mask").asText()))[0]);
+            JsonNode old=f.json(f.request("GET",BASE+"/projects/"+project+"?revision=2","worker-b",null));assertEquals(shared.path("claims"),old.path("claims"));
+            f.post(project,"operations","worker-b",Map.of("op","withdraw-b","baseRevision",4,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,0}))));
+            f.post(project,"operations","offline-member",Map.of("op","withdraw-third","baseRevision",5,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,0}))));
+            JsonNode empty=f.json(f.request("GET",BASE+"/projects/"+project,"worker-b",null));assertTrue(empty.path("claims").isEmpty());assertEquals(0,Nifti.gunzipU16(java.util.Base64.getDecoder().decode(empty.path("mask").asText()))[0]);
+        }
+    }
+
+    @Test void withdrawingHiddenAgreementDoesNotResurrectItAndParallelRegionsDoNotDuplicateClaims() throws Exception {
+        try(Fixture f=fixture()){
+            String project=f.join("worker-a").path("id").asText();
+            f.post(project,"operations","worker-a",Map.of("op","hidden-a","baseRevision",0,"patch",Collaboration.encodePatch(List.of(new int[]{0,0,1},new int[]{1,0,1}))));
+            f.post(project,"operations","worker-b",Map.of("op","hidden-b","baseRevision",1,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,1},new int[]{1,1,1}))));
+            JsonNode withdrawn=f.post(project,"operations","worker-b",Map.of("op","hidden-withdraw-b","baseRevision",2,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,0}))));
+            assertEquals(1,withdrawn.path("delta").path("claims").size());assertEquals(1,withdrawn.path("delta").path("claims").get(0).get(0).asInt());
+            f.post(project,"operations","worker-a",Map.of("op","hidden-withdraw-a","baseRevision",3,"patch",Collaboration.encodePatch(List.of(new int[]{0,1,0}))));
+            JsonNode state=f.json(f.request("GET",BASE+"/projects/"+project,"worker-a",null));assertEquals(0,Nifti.gunzipU16(java.util.Base64.getDecoder().decode(state.path("mask").asText()))[0]);
+            JsonNode label=f.post(project,"labels","worker-a",Map.of("name","other","color","#123456"));
+            int id=label.path("label").path("id").asInt();
+            JsonNode parallel=f.post(project,"operations","worker-a",Map.of("op","hidden-parallel-a","baseRevision",5,"patch",Collaboration.encodePatch(List.of(new int[]{1,1,id}))));
+            assertEquals(1,parallel.path("delta").path("regions").size());assertTrue(parallel.path("delta").path("claims").isEmpty());
+        }
+    }
+
     @Test void cachedGeometryRechecksFileIdentityAndMetadataEndpointKeepsAccessChecks() throws Exception {
         try(Fixture f=fixture()){
             var first=f.platform.datasets.geometry("dataset");
