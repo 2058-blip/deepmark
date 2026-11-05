@@ -21,19 +21,23 @@ public final class Platform implements AutoCloseable {
     public final Auth auth;
     public final Datasets datasets;
     public final Groups groups;
-    private volatile Consumer<String> completionListener = id -> {};
+    public final WorkbenchCollaboration workbenches;
+    public Collaboration legacyCollaboration;
+    private final java.util.concurrent.CopyOnWriteArrayList<Consumer<String>> completionListeners=new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public Platform(Path stateDir, Path datasetDir) {
         db = new Database(stateDir.resolve("deepmark.sqlite"));
         auth = new Auth(db);
         groups = new Groups(this);
         datasets = new Datasets(this, datasetDir);
+        workbenches = new WorkbenchCollaboration(this);
     }
 
     public void install(Javalin app) {
         auth.routes(app);
         groups.register(app);
         datasets.register(app);
+        workbenches.install(app);
     }
 
     public Map<String, Object> dataset(String id) { return datasets.metadata(id); }
@@ -64,8 +68,8 @@ public final class Platform implements AutoCloseable {
         groups.requireLeader(user, group.toString());
     }
 
-    public void onDatasetCompleted(Consumer<String> listener) { completionListener = listener; }
-    void completed(String id) { completionListener.accept(id); }
+    public void onDatasetCompleted(Consumer<String> listener) { completionListeners.add(listener); }
+    void completed(String id) { for(Consumer<String> listener:completionListeners)try{listener.accept(id);}catch(RuntimeException error){System.err.println("Completion listener failed: "+error.getClass().getSimpleName());} }
 
     public boolean tableExists(String name) {
         return db.read(connection -> {

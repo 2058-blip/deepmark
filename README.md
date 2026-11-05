@@ -1,5 +1,7 @@
 # DeepMark 医学影像协同标注平台
 
+`标注工作台` 分支默认以已优化的 Mimics 风格编辑器作为协同工作区，沿用主分支的账户、角色、小组、认领和完工流程。独立离线编辑器仍保留在 `mimics-workbench/`。新的协同协议、旧成果迁移及本地启动方法见 [工作台协同接入说明](docs/workbench-collaboration.md)。
+
 DeepMark 提供数据发布人员与标注人员两套工作台，以及共享的三切面标注编辑器。前端使用 Vue 3、TypeScript、Canvas 和 Web Worker；Java 17+、Javalin 6、WebSocket 与 SQLite 提供生产账户、任务、影像和协同服务。
 
 Node.js 24+ 用于前端构建、测试和开发编排。生产 API、WebSocket 和 `dist` 网页均由 Java 进程提供。当前编辑器没有使用 Cornerstone3D，也没有在浏览器或 Node.js 中运行 3D Slicer 的 Qt/VTK 代码。

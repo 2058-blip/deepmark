@@ -2,6 +2,7 @@ package io.deepmark;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.HttpResponseException;
@@ -74,6 +75,7 @@ public final class Collaboration {
 
     public Collaboration(Platform platform) {
         this.platform = platform;
+        platform.legacyCollaboration=this;
         platform.db.read(c -> {try(Statement sql=c.createStatement()){sql.execute("PRAGMA synchronous=FULL");}return null;});
         platform.db.transaction(c -> {
             try (Statement sql = c.createStatement()) {
@@ -185,6 +187,7 @@ public final class Collaboration {
     private Map<String,Object> join(Auth.User user,String dataset,String expectedFingerprint) {
         if(expectedFingerprint==null||!expectedFingerprint.matches("[a-f0-9]{64}"))throw new Failure(400,"加入工程时必须提供已下载影像的 SHA-256 指纹。");
         platform.requireRead(user,dataset);
+        if(nativeOnly(dataset))throw new Failure(409,"该数据集已接入标注工作台，请使用新版工作台。");
         // File I/O and CT decompression must never hold the shared database lock.
         Datasets.Geometry source=platform.datasets.geometry(dataset);
         String fingerprint=source.fingerprint();
@@ -207,9 +210,27 @@ public final class Collaboration {
         }));
     }
 
+    public record NativeExport(WorkbenchModel model,String project,long revision,int parallelRegions){}
+    public NativeExport nativeExport(Auth.User user,String dataset,String fingerprint,Long requested){
+        platform.requireRead(user,dataset);
+        return platform.db.read(c->{
+            Map<String,Object> found=one(c,"SELECT id FROM collab_projects WHERE dataset=? AND fingerprint=?",dataset,fingerprint);if(found==null)return null;
+            Project p=readable(c,user,(String)found.get("id"));long target=requested==null?p.revision:requested;if(target<0||target>p.revision)throw new Failure(404,"旧版修订不存在。");
+            State source=readState(c,p,target);SharedModel.Model old=source.model;WorkbenchModel result=WorkbenchModel.empty(p.count,p.name);result.layers.clear();result.manifest.withArray("masks").removeAll();
+            Map<Integer,String> ids=new LinkedHashMap<>();
+            for(Map<String,Object> label:source.labels){int number=((Number)label.get("id")).intValue();if(number==0)continue;String id="legacy-"+number;ids.put(number,id);ObjectNode def=result.manifest.withArray("masks").addObject();def.put("id",id);def.put("name",String.valueOf(label.get("name")));def.put("color",String.valueOf(label.get("color")));def.putNull("threshold");def.put("revision",target);result.layers.put(id,new WorkbenchModel.Layer());result.created.put("version:masks/"+id,target);}
+            java.util.function.BiConsumer<Integer,String> add=(index,author)->{int value=old.mask[index];String mask=ids.get(value);if(mask==null||value==0)return;WorkbenchModel.Layer layer=result.layers.get(mask);layer.authors.computeIfAbsent(author,key->new java.util.BitSet()).set(index);layer.union.set(index);};
+            for(int i=0;i<old.mask.length;i++)if(old.mask[i]!=0){String owner=primaryAuthor(old,i);add.accept(i,owner==null?"legacy-import":owner);}
+            JsonNode agreed=platform.mapper.valueToTree(claims(c,p,target,old));for(JsonNode row:agreed){int index=row.get(0).asInt();for(JsonNode author:row.get(1))add.accept(index,author.asText());}
+            for(SharedModel.Region region:old.regions)for(SharedModel.Annotation annotation:region.annotations)for(int[] value:annotation.values){String mask=ids.get(value[1]);if(mask==null||value[1]==0)continue;WorkbenchModel.Layer layer=result.layers.get(mask);layer.authors.computeIfAbsent(annotation.author,key->new java.util.BitSet()).set(value[0]);layer.union.set(value[0]);}
+            ObjectNode legacy=result.manifest.putObject("legacySource");legacy.put("project",p.id);legacy.put("revision",target);legacy.put("parallelRegions",old.regions.size());
+            return new NativeExport(result,p.id,target,old.regions.size());
+        });
+    }
+    private boolean nativeOnly(String dataset){return platform.tableExists("wb_projects")&&platform.db.read(c->one(c,"SELECT p.id FROM wb_projects p JOIN datasets d ON d.id=p.dataset AND d.fingerprint=p.fingerprint WHERE d.id=?",dataset)!=null);}
     private Map<String,Object> mutate(String id,Auth.User user,String action,JsonNode body) {
         Map<String,Object> result=write(c->{
-            Project p=project(c,id);platform.requireWrite(user,p.dataset);
+            Project p=project(c,id);platform.requireWrite(user,p.dataset);if(nativeOnly(p.dataset))throw new Failure(423,"该数据集已接入标注工作台，旧编辑入口只读。");
             if(p.status.equals("finalized")&&!action.equals("reopen"))throw new Failure(423,"该工程已定稿，标注已锁定。");
             if(!List.of("operations","labels").contains(action))platform.requireLeader(user,p.dataset);
             if(List.of("resolve","finalize","reopen").contains(action)&&number(body,"revision")!=p.revision)throw new Failure(409,"共享成果已有新操作，请刷新后再审定。");
@@ -271,7 +292,7 @@ public final class Collaboration {
 
     private Project readable(Connection c,Auth.User user,String id)throws Exception {Project p=project(c,id);platform.requireRead(user,p.dataset);return p;}
     private boolean completed(String dataset){return "completed".equals(platform.dataset(dataset).get("status"));}
-    private boolean canWrite(Auth.User user,String dataset){try{platform.requireWrite(user,dataset);return true;}catch(HttpResponseException error){return false;}}
+    private boolean canWrite(Auth.User user,String dataset){if(nativeOnly(dataset))return false;try{platform.requireWrite(user,dataset);return true;}catch(HttpResponseException error){return false;}}
     private Map<String,Object> state(Connection c,Project p,Long revision,Auth.User user)throws Exception {
         long target=revision==null?p.revision:revision;if(target<0||target>p.revision)throw new Failure(404,"修订记录不存在。");State state=readState(c,p,target);SharedModel.Model model=state.model;
         byte[] bits=new byte[(model.mask.length+7)/8];int ownerCode=0;for(int n=0;n<model.authors.size();n++)if(model.authors.get(n).id.equals(user.id()))ownerCode=n+1;

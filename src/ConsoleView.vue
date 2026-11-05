@@ -86,7 +86,7 @@ async function upload(){const file=uploadFile.value;if(!file)return;if(!/\.nii(?
 }
 async function claim(dataset:Dataset){if(!claimGroup.value)return;await act(`claim:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/claim`,{method:'POST',body:JSON.stringify({groupId:claimGroup.value})});notice.value=`已认领“${dataset.name}”，小组成员现在可以共同标注。`;});}
 async function complete(dataset:Dataset){if(!canComplete(dataset)||!window.confirm(`将“${dataset.name}”标记为已完成？完成后小组成员将只能查看成果，请确认成员已同步当前工作。`))return;await act(`complete:${dataset.id}`,async()=>{await api(`/api/datasets/${encodeURIComponent(dataset.id)}/complete`,{method:'POST',body:JSON.stringify({revision:dataset.revision})});notice.value=`“${dataset.name}”已完成，派活方可以下载成果。`;});}
-async function downloadResult(dataset:Dataset){if(dataset.status!=='completed'||!dataset.projectId)return;await act(`download:${dataset.id}`,async()=>{
+async function downloadResult(dataset:Dataset){if(dataset.status!=='completed'||!dataset.projectId)return;if(dataset.editor==='workbench'){emit('open',{...dataset,workbenchExport:true});return;}await act(`download:${dataset.id}`,async()=>{
   transferRequest=new AbortController();transfer.value={loaded:0,total:null,percent:null};transferTitle.value=`下载成果：${dataset.name}`;transferStage.value='正在生成并下载成果 ZIP…';
   try{await downloadAuthenticated(`/api/collaboration/projects/${encodeURIComponent(dataset.projectId!)}/export`,`${dataset.name.replace(/\.nii(?:\.gz)?$/i,'')}-seg.zip`,{signal:transferRequest.signal,onProgress:progress=>{transfer.value=progress;transferStage.value=progress.complete?'下载完成，正在交给浏览器保存…':progress.loaded?'正在下载成果 ZIP…':'正在生成并下载成果 ZIP…';}});notice.value='成果 ZIP 下载完成，已交给浏览器保存。';}
   finally{transferRequest=null;transfer.value=null;}

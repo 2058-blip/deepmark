@@ -132,6 +132,11 @@ public final class Datasets {
                 }
             }
         }
+        if(platform.tableExists("wb_projects")){
+            try(PreparedStatement project=connection.prepareStatement("SELECT id,revision FROM wb_projects WHERE dataset=? AND fingerprint=? LIMIT 1")){
+                project.setString(1,id);project.setString(2,row.getString("fingerprint"));try(ResultSet found=project.executeQuery()){if(found.next()){data.put("projectId",found.getString("id"));data.put("revision",found.getLong("revision"));data.put("editor","workbench");}}
+            }
+        }
         return data;
     }
 
@@ -197,9 +202,9 @@ public final class Datasets {
                 }
             }
             if (size == 0) throw new BadRequestResponse("影像文件为空。");
-            byte[] sourceBytes = Files.readAllBytes(temporary);
-            Nifti.Volume volume=Nifti.parse(sourceBytes);
-            boolean compressed = sourceBytes.length > 1 && (sourceBytes[0] & 255) == 31 && (sourceBytes[1] & 255) == 139;
+            Nifti.Volume volume=Nifti.inspect(temporary);
+            boolean compressed;
+            try(InputStream signature=Files.newInputStream(temporary)){compressed=signature.read()==31&&signature.read()==139;}
             String id = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(UUID.randomUUID().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             String filename = id + (compressed ? ".nii.gz" : ".nii");
             String fingerprint = HexFormat.of().formatHex(digest.digest());
@@ -244,12 +249,15 @@ public final class Datasets {
                     &&cached.attributes.lastModifiedTime().equals(attrs.lastModifiedTime())
                     &&cached.attributes.creationTime().equals(attrs.creationTime())
                     &&java.util.Objects.equals(cached.attributes.fileKey(),attrs.fileKey()))return cached.geometry;
-            Source source=resolve(id);
-            Geometry geometry=new Geometry(source.fingerprint(),Nifti.parse(source.bytes()),source.metadata());
+            Map<String,Object> info=metadata(id);java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
+            try(InputStream input=Files.newInputStream(file)){byte[] block=new byte[65536];for(int n;(n=input.read(block))!=-1;)digest.update(block,0,n);}
+            String fingerprint=java.util.HexFormat.of().formatHex(digest.digest());
+            if(!fingerprint.equals(info.get("fingerprint")))throw new io.javalin.http.HttpResponseException(410,"原始影像被替换，请联系发布者。");
+            Geometry geometry=new Geometry(fingerprint,Nifti.inspect(file),info);
             var after=Files.readAttributes(file,java.nio.file.attribute.BasicFileAttributes.class);
             if(attrs.size()!=after.size()||!attrs.lastModifiedTime().equals(after.lastModifiedTime()))throw new ConflictResponse("影像正在变化，请重试。");
             geometries.put(id,new CheckedFile(file,after,geometry));return geometry;
-        }catch(IOException error){throw new HttpResponseException(410,"原始影像已移除。");}
+        }catch(java.security.NoSuchAlgorithmException error){throw new IllegalStateException(error);}catch(IOException error){throw new HttpResponseException(410,"原始影像已移除。");}
     }
 
     private Path sourcePath(String id) {
@@ -309,6 +317,7 @@ public final class Datasets {
     private static void rangeError(Context ctx, long size) { ctx.status(416).header("Content-Range", "bytes */" + size); }
 
     private List<Map<String, Object>> history(String datasetId) {
+        if(workbenchDataset(datasetId))return workbenchHistory(datasetId);
         if (!platform.tableExists("collab_events") || !platform.tableExists("collab_projects")) return List.of();
         return platform.db.read(connection -> {
             List<Map<String, Object>> history = new ArrayList<>();
@@ -323,6 +332,7 @@ public final class Datasets {
     }
 
     private Map<String, Object> progress(String datasetId, long revision) {
+        if(workbenchDataset(datasetId))return workbenchProgress(datasetId,revision);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("revision", revision); result.put("operations", 0L); result.put("activeMembers", 0L);
         if (!platform.tableExists("collab_events") || !platform.tableExists("collab_projects")) return result;
@@ -340,6 +350,9 @@ public final class Datasets {
         });
     }
 
+    private boolean workbenchDataset(String id){return platform.tableExists("wb_projects")&&platform.db.read(c->{try(PreparedStatement q=c.prepareStatement("SELECT 1 FROM wb_projects p JOIN datasets d ON d.id=p.dataset AND d.fingerprint=p.fingerprint WHERE d.id=?")){q.setString(1,id);try(ResultSet r=q.executeQuery()){return r.next();}}});}
+    private List<Map<String,Object>> workbenchHistory(String id){return platform.db.read(c->{List<Map<String,Object>> values=new ArrayList<>();try(PreparedStatement q=c.prepareStatement("SELECT e.revision,e.author,e.name,e.kind,e.time FROM wb_events e JOIN wb_projects p ON p.id=e.project JOIN datasets d ON d.id=p.dataset AND d.fingerprint=p.fingerprint WHERE d.id=? ORDER BY e.revision DESC LIMIT 100")){q.setString(1,id);try(ResultSet r=q.executeQuery()){while(r.next())values.add(Map.of("revision",r.getLong(1),"author",r.getString(2),"name",r.getString(3),"kind",r.getString(4),"time",r.getString(5)));}}return values;});}
+    private Map<String,Object> workbenchProgress(String id,long revision){return platform.db.read(c->{Map<String,Object> result=new LinkedHashMap<>();result.put("revision",revision);try(PreparedStatement q=c.prepareStatement("SELECT COUNT(*),COUNT(DISTINCT e.author),MAX(e.time) FROM wb_events e JOIN wb_projects p ON p.id=e.project JOIN datasets d ON d.id=p.dataset AND d.fingerprint=p.fingerprint WHERE d.id=?")){q.setString(1,id);try(ResultSet r=q.executeQuery()){if(r.next()){result.put("operations",r.getLong(1));result.put("activeMembers",r.getLong(2));result.put("lastActivity",r.getString(3));}}}return result;});}
     @SuppressWarnings("unchecked") private static Map<String, Object> json(Context ctx) {
         try {
             if (ctx.bodyAsBytes().length > 8192) throw new BadRequestResponse("请求过大。");

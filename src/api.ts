@@ -7,7 +7,7 @@ export type {TransferOptions,TransferProgress} from './transfer.ts';
 export type UserRole='dispatcher'|'worker';
 export type AuthUser={id:string;username:string;name:string;role:UserRole};
 export type Group={id:string;name:string;code:string;leaderId:string;members:{id:string;name:string;username:string}[];isLeader:boolean};
-export type Dataset={id:string;name:string;folder?:string;size:number;modified:string;format:string;downloadUrl:string;status:'unassigned'|'in_progress'|'completed';groupId?:string|null;groupName?:string|null;ownerId?:string;projectId?:string|null;fingerprint?:string;revision?:number;progress?:unknown};
+export type Dataset={id:string;name:string;folder?:string;size:number;modified:string;format:string;downloadUrl:string;status:'unassigned'|'in_progress'|'completed';groupId?:string|null;groupName?:string|null;ownerId?:string;projectId?:string|null;fingerprint?:string;revision?:number;progress?:unknown;editor?:'workbench';workbenchExport?:boolean};
 export const authUser=shallowRef<AuthUser|null>(null);
 
 export async function authenticatedFetch(path:string,options:RequestInit={}):Promise<Response>{

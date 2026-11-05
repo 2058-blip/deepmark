@@ -3,6 +3,11 @@ package io.deepmark;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.BufferedInputStream;
+import java.io.PushbackInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -15,6 +20,52 @@ public final class Nifti {
     private static final int MAX_RAW_BYTES = 1024 * 1024 * 1024;
     public record Volume(byte[] header, int[] dims, int count, boolean littleEndian) {}
     private Nifti() {}
+
+    /** Validate server datasets without retaining compressed or decompressed CT
+     * bytes. The native workbench uses binary Mask layers, not the legacy U16 map. */
+    public static Volume inspect(Path file) throws IOException {
+        try (PushbackInputStream source=new PushbackInputStream(new BufferedInputStream(Files.newInputStream(file)),2)) {
+            byte[] signature=source.readNBytes(2);source.unread(signature);
+            InputStream input=signature.length==2&&(signature[0]&255)==31&&(signature[1]&255)==139
+                ?new GZIPInputStream(source,65536):source;
+            try(input) {
+                byte[] header=input.readNBytes(352);
+                if(header.length!=352)throw new IllegalArgumentException("文件过短，不是完整的 NIfTI-1 影像。");
+                ByteBuffer h=ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN);
+                boolean little=h.getInt(0)==348;if(!little)h.order(ByteOrder.BIG_ENDIAN);
+                if(h.getInt(0)!=348||header[344]!='n'||header[345]!='+'||header[346]!='1'||header[347]!=0)
+                    throw new IllegalArgumentException("目前只支持 NIfTI-1 单文件影像。");
+                int rank=h.getShort(40);if(rank<3||rank>7)throw new IllegalArgumentException("需要三维 NIfTI 影像。");
+                for(int a=4;a<=rank;a++)if(h.getShort(40+a*2)!=1)throw new IllegalArgumentException("请先拆分时间序列或多通道影像。");
+                int[] dims={h.getShort(42),h.getShort(44),h.getShort(46)};long count=1;
+                for(int d:dims){if(d<1)throw new IllegalArgumentException("影像尺寸无效。");count*=d;}
+                if(count>Integer.MAX_VALUE-8)throw new IllegalArgumentException("影像超过服务器32位体素地址范围。");
+                int kind=h.getShort(70),width=switch(kind){case 2,256->1;case 4,512->2;case 8,16,768->4;case 64->8;default->throw new IllegalArgumentException("不支持此 NIfTI 数据类型。");};
+                double offset=h.getFloat(108);
+                if(h.getShort(72)!=width*8||!Double.isFinite(offset)||offset<352||offset!=Math.floor(offset)||offset>Long.MAX_VALUE)
+                    throw new IllegalArgumentException("影像位深或数据偏移无效。");
+                double[] spacing=new double[3];for(int a=0;a<3;a++){spacing[a]=Math.abs(h.getFloat(80+a*4));if(!Double.isFinite(spacing[a])||spacing[a]==0)throw new IllegalArgumentException("体素间距无效。");}
+                double slope=h.getFloat(112),intercept=h.getFloat(116);if(slope==0){slope=1;intercept=0;}
+                if(!Double.isFinite(slope)||!Double.isFinite(intercept))throw new IllegalArgumentException("影像灰度缩放参数无效。");
+                validateGeometry(h,spacing);input.skipNBytes((long)offset-352);
+                byte[] block=new byte[65536];long remaining=count*width;
+                while(remaining>0){
+                    int length=(int)Math.min(block.length,remaining),read=input.readNBytes(block,0,length);
+                    if(read!=length)throw new IllegalArgumentException("影像数据不完整。");
+                    ByteBuffer values=ByteBuffer.wrap(block,0,length).order(little?ByteOrder.LITTLE_ENDIAN:ByteOrder.BIG_ENDIAN);
+                    for(int p=0;p<length;p+=width){
+                        double raw=switch(kind){case 2->Byte.toUnsignedInt(values.get(p));case 256->values.get(p);case 4->values.getShort(p);case 512->Short.toUnsignedInt(values.getShort(p));case 8->values.getInt(p);case 768->Integer.toUnsignedLong(values.getInt(p));case 16->values.getFloat(p);case 64->values.getDouble(p);default->0;};
+                        double value=raw*slope+intercept;if(!Double.isFinite(value)||Math.abs(value)>3.402823466e38)throw new IllegalArgumentException("影像包含无法显示的非有限灰度值。");
+                    }
+                    remaining-=length;
+                }
+                while(input.read(block)!=-1){} // Consume gzip trailer/CRC and any legal trailing bytes.
+                return new Volume(Arrays.copyOf(header,348),dims,(int)count,little);
+            }
+        } catch(java.io.EOFException|java.util.zip.ZipException error) {
+            throw new IllegalArgumentException("影像文件截断或压缩数据损坏。",error);
+        }
+    }
 
     public static Volume parse(byte[] downloadedBytes) {
         byte[] bytes = downloadedBytes.length > 1 && (downloadedBytes[0] & 255) == 31 &&
