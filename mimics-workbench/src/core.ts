@@ -1,3 +1,4 @@
+import {checkedVoxelCount,allocateVolumeData} from './volumeCapacity.ts';
 import type {NiftiReference} from './mimics/niftiReference.ts';
 export type Volume = {
   name: string; dims: [number, number, number]; spacing: [number, number, number];
@@ -41,7 +42,26 @@ const readers: Record<number, [number, string]> = {
   16: [4, 'getFloat32'], 64: [8, 'getFloat64'], 256: [1, 'getInt8'],
   512: [2, 'getUint16'], 768: [4, 'getUint32'],
 };
-export function parseNifti(buffer: ArrayBuffer, name = 'volume.nii'): Volume {
+export interface NiftiLayout {
+  count:number; bytes:number; method:string; offset:number; slope:number; intercept:number; little:boolean;
+  volume:Omit<Volume,'data'|'min'|'max'>;
+}
+export function readNiftiValues(view:DataView, layout:NiftiLayout, data:Float32Array, start:number, count:number):{min:number;max:number} {
+  const read=(view[layout.method as keyof DataView] as (offset:number,little:boolean)=>number).bind(view);
+  let min=Infinity,max=-Infinity;
+  for(let i=0;i<count;i++){
+    const value=read(i*layout.bytes,layout.little)*layout.slope+layout.intercept;
+    if(!Number.isFinite(value)||Math.abs(value)>3.402823466e38)throw new Error('影像包含无法显示的非有限灰度值。');
+    data[start+i]=value;min=Math.min(min,value);max=Math.max(max,value);
+  }
+  return {min,max};
+}
+export function parseNifti(buffer:ArrayBuffer,name='volume.nii'):Volume {
+  const layout=parseNiftiHeader(buffer,name,buffer.byteLength),data=allocateVolumeData(layout.count);
+  const range=readNiftiValues(new DataView(buffer,layout.offset,layout.count*layout.bytes),layout,data,0,layout.count);
+  return {...layout.volume,data,...range};
+}
+export function parseNiftiHeader(buffer: ArrayBuffer, name = 'volume.nii', totalBytes?: number): NiftiLayout {
   if (buffer.byteLength < 352) throw new Error('文件过短，不是完整的 NIfTI-1 文件。');
   const view = new DataView(buffer);
   const little = view.getInt32(0, true) === 348;
@@ -54,28 +74,19 @@ export function parseNifti(buffer: ArrayBuffer, name = 'volume.nii'): Volume {
     throw new Error('目前只支持单个三维体积，请先将时间序列或多通道影像拆分。');
   const dims = [0, 1, 2].map(a => view.getInt16(42 + a * 2, little)) as Volume['dims'];
   if (dims.some(n => n < 1)) throw new Error('影像尺寸无效。');
-  const count = dims[0] * dims[1] * dims[2];
-  if (count > 128 * 1024 * 1024) throw new Error('影像超过此版本的 1.28 亿体素上限。');
+  const count = checkedVoxelCount(dims);
   const kind = view.getInt16(70, little);
   const entry = readers[kind];
   if (!entry) throw new Error(`暂不支持 NIfTI 数据类型 ${kind}，请使用整数或浮点灰度影像。`);
   const [bytes, method] = entry;
   if (view.getInt16(72, little) !== bytes * 8) throw new Error('影像数据类型与位深不一致。');
   const offset = view.getFloat32(108, little);
-  if (!Number.isInteger(offset) || offset < 352 || offset + count * bytes > buffer.byteLength)
+  if (!Number.isInteger(offset) || offset < 352 || !Number.isSafeInteger(offset + count * bytes) || totalBytes !== undefined && offset + count * bytes > totalBytes)
     throw new Error('影像数据不完整或数据偏移无效。');
   let slope = view.getFloat32(112, little);
   let intercept = view.getFloat32(116, little);
   if (slope === 0) { slope = 1; intercept = 0; }
   if (!Number.isFinite(slope) || !Number.isFinite(intercept)) throw new Error('影像灰度缩放参数无效。');
-  const data = new Float32Array(count);
-  let min = Infinity, max = -Infinity;
-  const read = (view[method as keyof DataView] as (offset: number, little: boolean) => number).bind(view);
-  for (let i = 0; i < count; i++) {
-    const value = read(offset + i * bytes, little) * slope + intercept;
-    if (!Number.isFinite(value) || Math.abs(value) > 3.402823466e38) throw new Error('影像包含无法显示的非有限灰度值。');
-    data[i] = value; min = Math.min(min, value); max = Math.max(max, value);
-  }
   const spacing = [0, 1, 2].map(a => Math.abs(view.getFloat32(80 + a * 4, little))) as Volume['spacing'];
   if (spacing.some(n => !Number.isFinite(n) || n <= 0)) throw new Error('体素间距无效。');
   let affine: number[][] = [[spacing[0], 0, 0, 0], [0, spacing[1], 0, 0], [0, 0, spacing[2], 0]];
@@ -104,7 +115,7 @@ export function parseNifti(buffer: ArrayBuffer, name = 'volume.nii'): Volume {
   const units = view.getUint8(123) & 7;
   const factor = units === 1 ? 1000 : units === 3 ? .001 : 1;
   const displaySpacing = [0,1,2].map(col => Math.hypot(...affine.map(row=>row[col])) * factor) as Volume['spacing'];
-  return { name, dims, spacing: displaySpacing, data, header: new Uint8Array(buffer.slice(0, 348)), little, min, max, affine, oblique, unit: [1,2,3].includes(units) ? 'mm' : '影像单位' };
+  return {count,bytes,method,offset,slope,intercept,little,volume:{ name,dims,spacing:displaySpacing,header:new Uint8Array(buffer.slice(0,348)),little,affine,oblique,unit:[1,2,3].includes(units)?'mm':'影像单位'}};
 }
 export function exportNifti(volume: Volume, labels: Uint16Array): ArrayBuffer {
   if (labels.length !== volume.data.length) throw new Error('分割尺寸与影像不一致。');

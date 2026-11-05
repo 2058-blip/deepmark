@@ -1,4 +1,5 @@
-import { parseNifti } from './core.ts';
+import {readNiftiFile} from './niftiIO.ts';
+import type {NiftiReadOptions} from './niftiIO.ts';
 import type { Axis, Volume } from './core.ts';
 import {referenceAffineMm,validateReferenceHeader,affineIsOblique} from './mimics/niftiReference.ts';
 import {isAxisAlignedGrid} from './mimics/viewportGeometry.ts';
@@ -12,14 +13,7 @@ export function download(data: BlobPart, name: string, type = 'application/octet
   const a = document.createElement('a'); a.href = url; a.download = name; a.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
-export async function readFile(file: File) {
-  let buffer = await file.arrayBuffer();
-  if (new Uint8Array(buffer)[0] === 31 && new Uint8Array(buffer)[1] === 139) {
-    if (typeof DecompressionStream === 'undefined') throw new Error('此浏览器不支持 gzip 解压，请使用新版 Chrome/Edge，或先解压为 .nii。');
-    buffer = await new Response(new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
-  }
-  return parseNifti(buffer, file.name);
-}
+export function readFile(file:File,options:NiftiReadOptions={}){return readNiftiFile(file,options);}
 /** A Ref volume's patient labels belong to its verified file/reference frame,
  * while rendering and editing continue in the separate application frame. */
 export function displayedDirectionGrid(volume:Volume):Pick<VolumeGrid,'dims'|'spacing'|'affine'>|null{

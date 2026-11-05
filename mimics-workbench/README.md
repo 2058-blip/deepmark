@@ -86,4 +86,4 @@ npm start
 
 从旧版升级时先备份数据库到 `STATE_DIR/migrations/before-single-result.sqlite`，把旧工程分支差异转换为区域并列标注，再移除活动数据库的 `personal` 与 `branches` 表；旧个人空间 API 返回 410。原始影像、数据库、管理员预留密钥和备份均不提交到 GitHub。
 
-当前不包含 DICOM、NIfTI-2、4D、多通道、AI 分割、种子生长或三维重建。体素上限 128×1024×1024；单笔上传编码上限 32 MB。大文件读取、分割应用与缓存仍受浏览器内存和磁盘容量影响，尚未进行大并发压测。当前没有使用 Cornerstone3D，也没有直接运行 Slicer Qt/VTK 代码。
+当前不包含 DICOM、NIfTI-2、4D、多通道、AI 分割、种子生长或三维重建。离线工作台已移除原有固定体素数量上限，采用分块导入和本地缓存，详见 [大体积影像导入](docs/large-volume-import.md)。单笔上传编码上限仍为 32 MB。大文件读取、分割应用与缓存仍受浏览器内存和磁盘容量影响，尚未进行大并发压测。当前没有使用 Cornerstone3D，也没有直接运行 Slicer Qt/VTK 代码。

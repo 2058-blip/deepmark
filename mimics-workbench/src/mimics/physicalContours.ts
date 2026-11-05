@@ -1,3 +1,4 @@
+import {MAX_VOXEL_ADDRESS_COUNT} from '../volumeCapacity.ts';
 import {CONTOUR_PROVENANCE,extractSliceContours,type ContourRing,type ContourSet,type Point2} from './contours.ts';
 import {affinePlaneNormal,affinePlaneViewingPlane,transformAffinePlane,validateAffinePlane,validateRigidTransform} from './affinePlane.ts';
 import {rasterizeMprContour,MAX_MPR_CONTOUR_SCAN_VISITS,MAX_MPR_CONTOUR_EDGE_VISITS} from './mprContour.ts';
@@ -63,7 +64,7 @@ function validated(input:unknown,c:Control):PhysicalContourSet{
 export function validatePhysicalContourSet(input:unknown,options:PhysicalContourOptions={}):PhysicalContourSet{const c=control(options);c.check(0);const result=validated(input,c);c.check(1);return result;}
 
 function sourceFrame(grid:VolumeGrid){
-  for(const p of [grid.dims,grid.spacing])if(!Array.isArray(p)||p.length!==3||![p[0],p[1],p[2]].every(Number.isFinite))throw new Error('物理轮廓源几何无效。');const count=requireGrid(grid);if(!(grid.data instanceof Float32Array)||!Number.isSafeInteger(count)||count>128*1024*1024)throw new Error('物理轮廓源体积超过类型或容量范围。');
+  for(const p of [grid.dims,grid.spacing])if(!Array.isArray(p)||p.length!==3||![p[0],p[1],p[2]].every(Number.isFinite))throw new Error('物理轮廓源几何无效。');const count=requireGrid(grid);if(!(grid.data instanceof Float32Array)||!Number.isSafeInteger(count)||count>MAX_VOXEL_ADDRESS_COUNT)throw new Error('物理轮廓源体积超过类型或容量范围。');
   if(grid.affine!==undefined&&(!Array.isArray(grid.affine)||![3,4].includes(grid.affine.length)||Array.from(grid.affine).some(row=>!Array.isArray(row)||row.length!==4||![row[0],row[1],row[2],row[3]].every(Number.isFinite))||grid.affine.length===4&&grid.affine[3]!.some((n,k)=>n!==(k===3?1:0))))throw new Error('物理轮廓源仿射矩阵无效。');
   const columns:[Vec3,Vec3,Vec3]=grid.affine?[0,1,2].map(k=>[grid.affine![0]![k]!,grid.affine![1]![k]!,grid.affine![2]![k]!]) as [Vec3,Vec3,Vec3]:[[grid.spacing[0],0,0],[0,grid.spacing[1],0],[0,0,grid.spacing[2]]],translation:Vec3=grid.affine?[grid.affine[0]![3]!,grid.affine[1]![3]!,grid.affine[2]![3]!]:[0,0,0],linear={spacing:grid.spacing,affine:[0,1,2].map(r=>[columns[0][r]!,columns[1][r]!,columns[2][r]!,0])},inverse=[worldToVoxel([1,0,0],linear),worldToVoxel([0,1,0],linear),worldToVoxel([0,0,1],linear)];
   const toVoxelVector=(d:Vec3):Vec3=>{const p=[0,1,2].map(k=>inverse[0]![k]!*d[0]+inverse[1]![k]!*d[1]+inverse[2]![k]!*d[2]) as Vec3;if(p.some(n=>!Number.isFinite(n)))throw new Error('物理轮廓源坐标逆变换超出有限范围。');return p;},toVoxel=(world:Vec3)=>toVoxelVector(sub(world,translation));toVoxel(translation);return{count,columns,toVoxel,toVoxelVector};

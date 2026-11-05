@@ -1,3 +1,4 @@
+import {checkedVoxelCount,allocateVolumeData} from '../volumeCapacity.ts';
 import type { Volume } from '../core.ts';
 import type { AlgorithmControl, Vec3 } from './types.ts';
 
@@ -127,7 +128,7 @@ export function parseDicom(input: ArrayBuffer | Uint8Array, nameOrOptions?: stri
   const photometricInterpretation = text('0028,0004');
   if (photometricInterpretation !== 'MONOCHROME1' && photometricInterpretation !== 'MONOCHROME2') return fail('UNSUPPORTED_PHOTOMETRIC', '当前只支持 MONOCHROME1/MONOCHROME2。');
   const rows = us('0028,0010'), columns = us('0028,0011'), bitsAllocated = us('0028,0100'), bitsStored = us('0028,0101'), highBit = us('0028,0102'), representation = us('0028,0103');
-  if (!Number.isInteger(rows) || rows < 1 || !Number.isInteger(columns) || columns < 1 || rows * columns > 128 * 1024 * 1024) return fail('INVALID_DIMENSIONS', 'DICOM Rows/Columns 无效或超过体素上限。');
+  if (!Number.isInteger(rows) || rows < 1 || !Number.isInteger(columns) || columns < 1) return fail('INVALID_DIMENSIONS', 'DICOM Rows/Columns 无效。');
   if (![8, 16, 32].includes(bitsAllocated) || !Number.isInteger(bitsStored) || bitsStored < 1 || bitsStored > bitsAllocated || !Number.isInteger(highBit) || highBit < bitsStored - 1 || highBit >= bitsAllocated || ![0, 1].includes(representation)) return fail('UNSUPPORTED_PIXEL_FORMAT', 'DICOM BitsAllocated/BitsStored/HighBit/PixelRepresentation 无效或不受支持。');
   const imagePosition = numbers('0020,0032'), imageOrientation = numbers('0020,0037'), pixelSpacing = numbers('0028,0030');
   if (imagePosition.length !== 3 || imageOrientation.length !== 6 || pixelSpacing.length !== 2 || [...imagePosition, ...imageOrientation, ...pixelSpacing].some(n => !Number.isFinite(n)) || pixelSpacing.some(n => n <= 0)) return fail('MISSING_GEOMETRY', 'DICOM 缺少有效 ImagePositionPatient/ImageOrientationPatient/PixelSpacing；不能以实例序号猜测空间位置。');
@@ -139,7 +140,7 @@ export function parseDicom(input: ArrayBuffer | Uint8Array, nameOrOptions?: stri
   if (!Number.isFinite(rescaleSlope) || rescaleSlope === 0 || !Number.isFinite(rescaleIntercept)) return fail('INVALID_RESCALE', 'DICOM RescaleSlope/Intercept 无效。');
   const pixel = retained.get('7fe0,0010'), count = rows * columns, byteCount = count * bitsAllocated / 8;
   if (!pixel || pixel.length < byteCount || pixel.length > byteCount + (byteCount % 2)) return fail('INVALID_PIXEL_LENGTH', 'DICOM Pixel Data 长度与图像尺寸/位深不一致。');
-  const data = new Float32Array(count), shift = highBit + 1 - bitsStored, modulus = 2 ** bitsStored;
+  const data = allocateVolumeData(count), shift = highBit + 1 - bitsStored, modulus = 2 ** bitsStored;
   for (let i = 0; i < count; i++) {
     const offset = pixel.offset + i * bitsAllocated / 8;
     const raw = bitsAllocated === 8 ? view.getUint8(offset) : bitsAllocated === 16 ? view.getUint16(offset, little) : view.getUint32(offset, little);
@@ -175,7 +176,8 @@ export function convertSeriesToVolume(input: DicomSeries | readonly DicomSlice[]
   const slices = Array.isArray(input) ? [...input] as DicomSlice[] : [...(input as DicomSeries).slices];
   if (!slices.length) return fail('EMPTY_SERIES', 'DICOM 系列为空。');
   const first = slices[0]!, orient = first.imageOrientation;
-  if (slices.length * first.rows * first.columns > 128 * 1024 * 1024 || [first.rows, first.columns, slices.length].some(n => n > 32767)) return fail('VOLUME_TOO_LARGE', 'DICOM 系列超过体素上限或 NIfTI-1 维数上限。');
+  try { checkedVoxelCount([first.columns,first.rows,slices.length],'DICOM 系列'); }
+  catch(error){return fail('VOLUME_TOO_LARGE',error instanceof Error?error.message:String(error));}
   const normal: Vec3 = [orient[1] * orient[5] - orient[2] * orient[4], orient[2] * orient[3] - orient[0] * orient[5], orient[0] * orient[4] - orient[1] * orient[3]];
   const project = (p: Vec3): number => p.reduce((s, n, a) => s + n * normal[a]!, 0);
   const close = (a: number, b: number, tolerance = 1e-4): boolean => Math.abs(a - b) <= tolerance * Math.max(1, Math.abs(a), Math.abs(b));
@@ -207,7 +209,7 @@ export function convertSeriesToVolume(input: DicomSeries | readonly DicomSlice[]
   const dims: Vec3 = [first.columns, first.rows, slices.length], spacing: Vec3 = [first.pixelSpacing[1], first.pixelSpacing[0], Math.hypot(...zStep)];
   // DICOM patient LPS → NIfTI RAS. Preserve gantry-tilt shear in the sform.
   const affine = [0, 1, 2].map(r => { const sign = r === 2 ? 1 : -1; return [orient[r]! * spacing[0] * sign, orient[r + 3]! * spacing[1] * sign, zStep[r]! * sign, origin[r]! * sign]; });
-  const data = new Float32Array(dims[0] * dims[1] * dims[2]); let min = Infinity, max = -Infinity;
+  const data = allocateVolumeData(checkedVoxelCount(dims)); let min = Infinity, max = -Infinity;
   for (let z = 0; z < slices.length; z++) {
     if (control.cancelled?.()) return fail('CANCELLED', 'DICOM 转换已取消。');
     const pixels = slices[z]!.data; data.set(pixels, z * first.rows * first.columns);

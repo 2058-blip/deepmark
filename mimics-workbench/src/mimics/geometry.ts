@@ -1,4 +1,7 @@
 import { physicalPoint, requireGrid, voxelIndex, type AlgorithmControl, type BinaryMask, type TriangleMesh, type Vec3, type VolumeGrid } from './types.ts';
+import {compactMeshStats} from './meshStatistics.ts';
+import {manifoldFaceNeighbours} from './compactTopology.ts';
+import {MeshNumberBuffer} from './meshBuffer.ts';
 import { MC_CORNERS, MC_EDGES, MC_FACES, MC_TRIANGLES } from './marchingTables.ts';
 
 export interface SurfaceOptions extends AlgorithmControl {
@@ -224,21 +227,27 @@ export function calculateSurface(grid: VolumeGrid, mask: BinaryMask, options: Su
   const [xs, ys, zs] = axes;
   const sample = (x: number, y: number, z: number) => {
     if (x < 0 || y < 0 || z < 0 || x >= grid.dims[0] || y >= grid.dims[1] || z >= grid.dims[2]) return exterior;
-    const i = voxelIndex([x, y, z], grid.dims);
+    const i = x + grid.dims[0] * (y + grid.dims[1] * z);
     return scalar ? scalar[i]! : mask[i] ? 1 : 0;
   };
-  const positions: number[] = [], indices: number[] = [];
-  const edgeVertices = new Map<string, number>();
+  const positions = new MeshNumberBuffer(true), indices = new MeshNumberBuffer(false);
+  let upperEdges = new Map<number, number>();
   const faceEdges = MC_FACES.map(face => face.map((v, i) => MC_EDGES.findIndex(e => e.includes(v as never) && e.includes(face[(i + 1) % 4]! as never))));
   const dims = [xs!.length, ys!.length, zs!.length];
+  const values = new Float64Array(8);
   for (let zi = 0; zi < zs!.length - 1; zi++) {
     checkCancel(options);
+    const lowerEdges = upperEdges, verticalEdges = new Map<number, number>();
+    upperEdges = new Map<number, number>();
     for (let yi = 0; yi < ys!.length - 1; yi++) for (let xi = 0; xi < xs!.length - 1; xi++) {
-      const cubePoints = MC_CORNERS.map(c => [xs![xi + c[0]]!, ys![yi + c[1]]!, zs![zi + c[2]]!] as Vec3);
-      const values = cubePoints.map(p => sample(...p));
       let code = 0;
-      for (let k = 0; k < 8; k++) if (values[k]! >= threshold) code |= 1 << k;
+      for (let k = 0; k < 8; k++) {
+        const c = MC_CORNERS[k]!;
+        values[k] = sample(xs![xi+c[0]]!,ys![yi+c[1]]!,zs![zi+c[2]]!);
+        if(values[k]! >= threshold)code |= 1 << k;
+      }
       if (code === 0 || code === 255) continue;
+      const cubePoints = MC_CORNERS.map(c => [xs![xi + c[0]]!, ys![yi + c[1]]!, zs![zi + c[2]]!] as Vec3);
       const local = new Map<number, number>();
       const vertex = (e: number): number => {
         const existing = local.get(e); if (existing !== undefined) return existing;
@@ -246,7 +255,9 @@ export function calculateSurface(grid: VolumeGrid, mask: BinaryMask, options: Su
         const aa = MC_CORNERS[ca]!, bb = MC_CORNERS[cb]!;
         const na = xi + aa[0] + dims[0]! * (yi + aa[1] + dims[1]! * (zi + aa[2]));
         const nb = xi + bb[0] + dims[0]! * (yi + bb[1] + dims[1]! * (zi + bb[2]));
-        const key = edgeKey(na, nb);
+        const edgeAxis = aa[0] !== bb[0] ? 0 : aa[1] !== bb[1] ? 1 : 2;
+        const key = Math.min(na, nb) * 3 + edgeAxis;
+        const edgeVertices = aa[2] !== bb[2] ? verticalEdges : aa[2] ? upperEdges : lowerEdges;
         let id = edgeVertices.get(key);
         if (id === undefined) {
           let v0 = values[ca]!, v1 = values[cb]!;
@@ -320,7 +331,7 @@ export function calculateSurface(grid: VolumeGrid, mask: BinaryMask, options: Su
           if (loop.length === 3) indices.push(...loop);
           else {
             const centre: Vec3 = [0, 0, 0];
-            for (const id of loop) for (let k = 0; k < 3; k++) centre[k] += positions[3 * id + k]! / loop.length;
+            for (const id of loop) for (let k = 0; k < 3; k++) centre[k] += positions.data[3 * id + k]! / loop.length;
             const id = positions.length / 3; positions.push(...centre);
             for (let k = 0; k < loop.length; k++) indices.push(loop[k]!, loop[(k + 1) % loop.length]!, id);
           }
@@ -331,7 +342,8 @@ export function calculateSurface(grid: VolumeGrid, mask: BinaryMask, options: Su
     }
     options.progress?.((zi + 1) / (zs!.length - 1));
   }
-  let result: TriangleMesh = { positions: new Float32Array(positions), indices: new Uint32Array(indices) };
+  upperEdges.clear();
+  let result: TriangleMesh = { positions: positions.finishPositions(), indices: indices.finishIndices() };
   // Table and ambiguity polygons may differ in local winding. Orient by adjacency, then use
   // the mask scalar gradient to distinguish cavity walls from exterior shell walls.
   result = orientFromField(result, grid, sample);
@@ -356,40 +368,35 @@ function trilinearSample(p: Vec3, sample: (x: number, y: number, z: number) => n
   return s;
 }
 function orientFromField(mesh: TriangleMesh, grid: VolumeGrid, sample: (x: number, y: number, z: number) => number): TriangleMesh {
-  const ids = new Uint32Array(mesh.indices);
-  const topology = meshTopology(mesh);
-  const done = new Uint8Array(ids.length / 3);
+  const ids = mesh.indices, adjacent = manifoldFaceNeighbours(ids, mesh.positions.length / 3);
+  const done = new Uint8Array(ids.length / 3), flipped = new Uint8Array(done.length), queue = new Uint32Array(done.length);
   for (let seed = 0; seed < done.length; seed++) {
     if (done[seed]) continue;
-    const queue = [seed]; done[seed] = 1;
-    for (let q = 0; q < queue.length; q++) {
+    let count = 1; queue[0] = seed; done[seed] = 1;
+    for (let q = 0; q < count; q++) {
       const f = queue[q]!;
       for (let e = 0; e < 3; e++) {
+        const other = adjacent[3 * f + e]!; if (other < 0 || done[other]) continue;
         const a = ids[3 * f + e]!, b = ids[3 * f + (e + 1) % 3]!;
-        const entry = topology.edges.get(edgeKey(a, b))!;
-        if (entry.faces.length !== 2) continue;
-        const other = entry.faces[0] === f ? entry.faces[1]! : entry.faces[0]!;
-        if (done[other]) continue;
         let same = false;
         for (let j = 0; j < 3; j++) if (ids[3 * other + j] === a && ids[3 * other + (j + 1) % 3] === b) same = true;
-        if (same) [ids[3 * other + 1], ids[3 * other + 2]] = [ids[3 * other + 2]!, ids[3 * other + 1]!];
-        done[other] = 1; queue.push(other);
+        flipped[other] = flipped[f]! ^ Number(same); done[other] = 1; queue[count++] = other;
       }
     }
     let score = 0;
-    for (const f of queue) {
-      const a = point(mesh.positions, ids[3 * f]!), b = point(mesh.positions, ids[3 * f + 1]!), c = point(mesh.positions, ids[3 * f + 2]!);
-      const n = cross(sub(b, a), sub(c, a)), size = length(n);
-      if (!size) continue;
-      const centre = a.map((v, k) => (v + b[k]! + c[k]!) / 3) as Vec3;
-      const scale = Math.min(...grid.spacing) * 0.05;
+    for (let q = 0; q < count; q++) {
+      const f = queue[q]!, a = point(mesh.positions, ids[3 * f]!), b = point(mesh.positions, ids[3 * f + 1]!), c = point(mesh.positions, ids[3 * f + 2]!);
+      const n = cross(sub(b, a), sub(c, a)), size = length(n); if (!size) continue;
+      if (flipped[f]) for (let k = 0; k < 3; k++) n[k] = -n[k]!;
+      const centre = a.map((v, k) => (v + b[k]! + c[k]!) / 3) as Vec3, scale = Math.min(...grid.spacing) * 0.05;
       const plus = inversePoint(centre.map((v, k) => v + n[k]! / size * scale) as Vec3, grid);
       const minus = inversePoint(centre.map((v, k) => v - n[k]! / size * scale) as Vec3, grid);
       score += size * (trilinearSample(minus, sample) - trilinearSample(plus, sample));
     }
-    if (score < 0) for (const f of queue) [ids[3 * f + 1], ids[3 * f + 2]] = [ids[3 * f + 2]!, ids[3 * f + 1]!];
+    if (score < 0) for (let q = 0; q < count; q++) flipped[queue[q]!] ^= 1;
   }
-  return { positions: mesh.positions, indices: ids };
+  for (let f = 0; f < done.length; f++) if (flipped[f]) [ids[3 * f + 1], ids[3 * f + 2]] = [ids[3 * f + 2]!, ids[3 * f + 1]!];
+  return mesh;
 }
 
 interface EdgeInfo { a: number; b: number; faces: number[]; direction: number }
@@ -408,55 +415,7 @@ function meshTopology(mesh: TriangleMesh) {
 
 export function meshStats(mesh: TriangleMesh): MeshStats {
   validateMesh(mesh);
-  const topology = meshTopology(mesh);
-  const parent = Array.from({ length: mesh.positions.length / 3 }, (_, i) => i);
-  const root = (v: number): number => { while (parent[v] !== v) { parent[v] = parent[parent[v]!]!; v = parent[v]!; } return v; };
-  for (const e of topology.edges.values()) parent[root(e.a)] = root(e.b);
-  const min: Vec3 = [Infinity, Infinity, Infinity], max: Vec3 = [-Infinity, -Infinity, -Infinity];
-  const used = new Set<number>(); let area = 0, degenerate = 0, signed = 0;
-  // An origin near the mesh avoids cancellation for large physical translations.
-  const origin = mesh.positions.length ? point(mesh.positions, 0) : [0, 0, 0] as Vec3;
-  for (let i = 0; i < mesh.indices.length; i += 3) {
-    const ids = [mesh.indices[i]!, mesh.indices[i + 1]!, mesh.indices[i + 2]!];
-    const [a, b, c] = ids.map(id => point(mesh.positions, id));
-    for (const id of ids) { used.add(id); const p = point(mesh.positions, id); for (let k = 0; k < 3; k++) { min[k] = Math.min(min[k]!, p[k]!); max[k] = Math.max(max[k]!, p[k]!); } }
-    const twice = length(cross(sub(b!, a!), sub(c!, a!)));
-    if (twice <= 1e-14) degenerate++;
-    area += twice / 2;
-    const v = dot(sub(a!, origin), cross(sub(b!, origin), sub(c!, origin))) / 6;
-    signed += v;
-  }
-  if (!used.size) { min.fill(0); max.fill(0); }
-  const entries = [...topology.edges.values()];
-  const boundaryEdges = entries.filter(e => e.faces.length === 1).length;
-  const nonManifoldEdges = entries.filter(e => e.faces.length > 2).length;
-  const inconsistentEdges = entries.filter(e => e.faces.length === 2 && e.direction !== 0).length;
-  let nonManifoldVertices = 0;
-  for (const v of used) {
-    // A vertex link must be one cycle (interior) or one path (boundary), not two
-    // otherwise watertight shells touching at a single vertex.
-    const link = new Map<number, number[]>();
-    for (const f of topology.vertexFaces[v]!) {
-      const others = [...mesh.indices.subarray(3 * f, 3 * f + 3)].filter(i => i !== v);
-      if (others.length !== 2) continue;
-      const [a, b] = others as [number, number];
-      link.set(a, [...link.get(a) ?? [], b]); link.set(b, [...link.get(b) ?? [], a]);
-    }
-    if (!link.size) continue;
-    const seen = new Set<number>(), stack = [link.keys().next().value!];
-    while (stack.length) { const a = stack.pop()!; if (seen.has(a)) continue; seen.add(a); for (const b of link.get(a) ?? []) stack.push(b); }
-    if (seen.size !== link.size || [...link.values()].some(n => n.length > 2)) nonManifoldVertices++;
-  }
-  return {
-    vertices: used.size, triangles: mesh.indices.length / 3, edges: entries.length,
-    area, surfaceArea: area, signedVolume: signed,
-    volume: Math.abs(signed), absoluteVolume: Math.abs(signed),
-    boundaryEdges, nonManifoldEdges, nonManifoldVertices, inconsistentEdges, degenerateTriangles: degenerate,
-    components: new Set([...used].map(root)).size,
-    eulerCharacteristic: used.size - entries.length + mesh.indices.length / 3,
-    closed: used.size > 0 && boundaryEdges === 0 && nonManifoldEdges === 0 && nonManifoldVertices === 0 && inconsistentEdges === 0 && degenerate === 0,
-    bounds: { min, max, size: max.map((v, k) => v - min[k]!) as Vec3 },
-  };
+  return compactMeshStats(mesh);
 }
 
 function polynomialAt(c: readonly number[], x: number): number { return ((c[3]! * x + c[2]!) * x + c[1]!) * x + c[0]!; }

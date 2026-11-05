@@ -97,7 +97,7 @@ test('composable document replacement and cancelled poses cannot resurrect old i
 }));
 
 test('an explicit Mask revision invalidates resident data even when the controlled source reuses its buffer',async()=>withWorkers(async()=>{
-  const start=instances.length,h=composableHarness();try{await until(()=>!!h.sampling.samples.value);assert.equal(h.sampling.samples.value!.masks[0]!.data[0],1);const original=h.masks.value[0]!.data;original[7]=0;h.masks.value=h.masks.value.map((mask,i)=>i===0?{...mask,revision:mask.revision!+1}:mask);h.sourceRevision.value++;assert.equal(h.sampling.samples.value,null);await until(()=>!h.sampling.loading.value);assert.equal(h.sampling.samples.value!.masks[0]!.data[0],0);assert.equal(h.masks.value[0]!.data,original);assert.equal(original.byteLength,8);assert.equal(instances.length-start,2);assert.equal(instances[start]!.terminated,true);
+  const start=instances.length,h=composableHarness();try{await until(()=>!!h.sampling.samples.value);assert.equal(h.sampling.samples.value!.masks[0]!.data[0],1);const original=h.masks.value[0]!.data;original[7]=0;h.masks.value=h.masks.value.map((mask,i)=>i===0?{...mask,revision:mask.revision!+1}:mask);h.sourceRevision.value++;assert.equal(h.sampling.samples.value,null);await until(()=>!h.sampling.loading.value);assert.equal(h.sampling.samples.value!.masks[0]!.data[0],0);assert.equal(h.masks.value[0]!.data,original);assert.equal(original.byteLength,8);assert.equal(instances.length-start,1);assert.equal(sent(instances[start]!,'masks').length,1);assert.deepEqual(sent(instances[start]!,'masks')[0]!.transferBytes,[8]);assert.equal(instances[start]!.terminated,false);
   }finally{h.close();}
 }));
 
@@ -139,3 +139,34 @@ test('worker initialization rejects invalid sources visibly and preserves every 
 test('an unavailable Worker leaves an explicit error and no main-thread sampled image',()=>{
   const previous=globalThis.Worker;(globalThis as any).Worker=undefined;const h=composableHarness();try{assert.equal(h.sampling.samples.value,null);assert.equal(h.sampling.loading.value,false);assert.match(h.sampling.error.value,/后台Worker/);}finally{h.close();globalThis.Worker=previous;}
 });
+
+test('Mask-only source updates retain resident CT, transfer only changed arrays and reject stale versions',async()=>withWorkers(async()=>{
+  const start=instances.length,s=source(),document={},owner=acquireMprSamplingOwner(document),peer=acquireMprSamplingOwner(document);
+  try{
+    await owner.request(s,plane([0,0,0]));await peer.request(s,plane([0,0,0]));
+    const next={...s,revision:1,masks:[{...s.masks[0]!,data:new Uint8Array(8),revision:1},s.masks[1]!]};
+    const updated=await owner.request(next,plane([0,0,0]));assert.equal(updated.gray[0],0);assert.equal(updated.masks[0]!.data[0],0);
+    assert.equal(instances.length-start,1);assert.equal(sent(instances[start]!,'init').length,1);
+    assert.deepEqual(sent(instances[start]!,'masks')[0]!.transferBytes,[8]);
+    await assert.rejects(peer.request(s,plane([0,0,0])),MprSamplingCancelled);
+    const after={...next,revision:2,masks:[next.masks[1]!,{id:'C',data:new Uint8Array(8).fill(1),revision:0}]};
+    const added=await peer.request(after,plane([0,0,0]));assert.deepEqual(added.masks.map(mask=>mask.id),['B','C']);assert.equal(added.masks[1]!.data[0],1);
+    assert.equal(instances.length-start,1);assert.equal(s.grid.data.byteLength,32);assert.equal(s.masks[0]!.data[0],1);
+  }finally{owner.dispose();peer.dispose();}
+}));
+test('superseded chunked Mask copies never reuse unpublished data or resolve cancelled owner requests',async()=>withWorkers(async()=>{
+  const start=instances.length,count=256*256*81,document={},owner=acquireMprSamplingOwner(document);
+  const s:MprSamplingSource={revision:0,grid:{dims:[256,256,81],spacing:[1,1,1],data:new Float32Array(count)},masks:[{id:'A',data:new Uint8Array(count),revision:0}]};
+  try{
+    await owner.request(s,plane([0,0,0]));
+    const changed=new Uint8Array(count);changed[0]=1;
+    const next={...s,revision:1,masks:[{id:'A',data:changed,revision:1}]};
+    const obsolete=owner.request(next,plane([0,0,0])).then(()=>{throw new Error('Superseded copy resolved');},error=>assert.ok(error instanceof MprSamplingCancelled));
+    const second={...next,revision:2,masks:[next.masks[0]!,{id:'B',data:new Uint8Array(count).fill(1),revision:0}]};
+    const result=await owner.request(second,plane([0,0,0]));await obsolete;
+    assert.deepEqual(result.masks.map(mask=>mask.data[0]),[1,1]);assert.equal(instances.length-start,1);
+    const cancel=owner.request({...second,revision:3,masks:[{...second.masks[0]!,data:new Uint8Array(count),revision:2},second.masks[1]!]},plane([0,0,0]));
+    owner.cancel();await assert.rejects(cancel,MprSamplingCancelled);
+    assert.equal(s.grid.data.byteLength,count*4);assert.equal(changed.byteLength,count);
+  }finally{owner.dispose();}
+}));

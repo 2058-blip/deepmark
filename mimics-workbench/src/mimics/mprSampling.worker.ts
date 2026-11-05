@@ -1,7 +1,10 @@
+import type {VolumeGrid} from './types.ts';
 import {prepareMprSampler} from './mpr.ts';
 import type {MprSamplerRequest,MprSamplerResponse} from './mprSamplingClient.ts';
 
 const scope=self as unknown as {postMessage:(message:MprSamplerResponse,transfer?:Transferable[])=>void};
+let residentGrid:VolumeGrid|null=null;
+let residentMasks=new Map<string,Uint8Array>();
 let epoch=-1,sampler:ReturnType<typeof prepareMprSampler>|null=null,running=false;
 type SampleRequest=Extract<MprSamplerRequest,{type:'sample'}>;
 const pending=new Map<number,SampleRequest>(),latest=new Map<number,number>();
@@ -22,9 +25,9 @@ async function drain(){
 }
 self.onmessage=(event:MessageEvent<MprSamplerRequest>)=>{
   const message=event.data;
-  if(message.type==='init'){
+  if(message.type==='init'||message.type==='masks'){
     epoch=message.epoch;pending.clear();latest.clear();sampler=null;
-    try{sampler=prepareMprSampler(message.grid,message.masks);send({type:'ready',epoch});}catch(error){send({type:'fatal',epoch,message:error instanceof Error?error.message:'MPR采样源初始化失败。'});}return;
+    try{if(message.type==='init')residentGrid=message.grid;if(!residentGrid)throw new Error('MPR 源影像未初始化。');const masks=message.masks.map(mask=>{const data=mask.data??residentMasks.get(mask.id);if(!data)throw new Error('MPR Mask 缓存缺失。');return{id:mask.id,data};});residentMasks=new Map(masks.map(mask=>[mask.id,mask.data]));sampler=prepareMprSampler(residentGrid,masks);send({type:'ready',epoch});}catch(error){send({type:'fatal',epoch,message:error instanceof Error?error.message:'MPR采样源初始化失败。'});}return;
   }
   if(message.epoch!==epoch)return;
   if(message.type==='cancel'){pending.delete(message.owner);latest.delete(message.owner);return;}

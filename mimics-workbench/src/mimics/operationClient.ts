@@ -13,7 +13,7 @@ export class OperationClient {
   private grid:VolumeGrid|null=null;
   private serial=0;
   private pending:{id:number;resolve:(value:unknown)=>void;reject:(e:Error)=>void;progress?:(value:number)=>void}|null=null;
-  initialize(grid:VolumeGrid){this.cancel();this.grid=grid;this.start();}
+  initialize(grid:VolumeGrid){this.cancel();this.grid=grid;}
   private start(){
     if(!this.grid)return;
     this.worker=new Worker(new URL('./operations.worker.ts',import.meta.url),{type:'module'});

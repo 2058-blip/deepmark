@@ -52,7 +52,8 @@ const contourHint=computed(()=>props.tool==='lasso'?'Lasso：按住左键连续�
 const brushSize=computed(()=>{try{return normalizeBrushSize({width:props.brushWidth??6,height:props.brushHeight??props.brushWidth??6,shape:props.brushShape??'circle'});}catch{return null;}});
 const brushResizePreview=ref<{width:number;height:number}|null>(null);
 function brushKey(){return JSON.stringify([props.tool,props.activeMaskId,props.brushWidth,props.brushHeight,props.sameWidthHeight,props.brushShape]);}
-const offscreen=document.createElement('canvas');let observer:ResizeObserver|undefined,frame=0,lastRaster:unknown;
+const offscreen=document.createElement('canvas');let observer:ResizeObserver|undefined,frame=0,lastRaster:{pixels:Uint8ClampedArray;width:number;height:number}|null=null;
+let lastRasterPlane='',lastRasterVolume:Volume|undefined;
 const planeKey=(plane:MprPlane)=>JSON.stringify([plane.origin,plane.u,plane.v,plane.size]);
 const planeState=computed(()=>{try{return{plane:validateMprPlane(props.plane),error:''};}catch(error){return{plane:null,error:error instanceof Error?error.message:String(error)};}});
 const geometry=computed(()=>{
@@ -68,10 +69,11 @@ const previewIndices=computed(()=>{if(!planeState.value.plane)return null;try{co
 const raster=computed(()=>{
   props.brushPreviewRevision;
   const data=samples.value.data;if(!data)return null;const preview=props.brushPreview?.length===props.grid.data.length?props.brushPreview:null,indices=preview?previewIndices.value:null,pixels=new Uint8ClampedArray(data.gray.length*4),visible=props.masks.filter(mask=>mask.visible&&mask.opacity>0).map(mask=>({mask,bits:data.masks.find(sample=>sample.id===mask.id)?.data,color:[1,3,5].map(index=>parseInt(mask.color.slice(index,index+2),16))}));
+  const center=props.center,width=props.width,inverted=props.displayInverted,activeId=props.activeMaskId;
   for(let i=0;i<data.gray.length;i++){
     let r=6,g=11,b=20;
-    if(data.valid[i]){let gray=Math.max(0,Math.min(255,(data.gray[i]-props.center+props.width/2)/Math.max(1,props.width)*255));if(props.displayInverted)gray=255-gray;r=g=b=gray;}
-    for(const {mask,bits,color} of visible){const bit=preview&&indices&&mask.id===props.activeMaskId?(indices[i]!>=0?preview[indices[i]!]:0):bits?.[i];if(data.support[i]&&bit){const alpha=Math.max(0,Math.min(1,mask.opacity));r=r*(1-alpha)+color[0]*alpha;g=g*(1-alpha)+color[1]*alpha;b=b*(1-alpha)+color[2]*alpha;}}
+    if(data.valid[i]){let gray=Math.max(0,Math.min(255,(data.gray[i]-center+width/2)/Math.max(1,width)*255));if(inverted)gray=255-gray;r=g=b=gray;}
+    for(const {mask,bits,color} of visible){const bit=preview&&indices&&mask.id===activeId?(indices[i]!>=0?preview[indices[i]!]:0):bits?.[i];if(data.support[i]&&bit){const alpha=Math.max(0,Math.min(1,mask.opacity));r=r*(1-alpha)+color[0]*alpha;g=g*(1-alpha)+color[1]*alpha;b=b*(1-alpha)+color[2]*alpha;}}
     // v points upwards on the displayed plane; ImageData rows point downwards.
     const x=i%data.plane.size[0],y=Math.floor(i/data.plane.size[0]),j=4*(x+(data.plane.size[1]-1-y)*data.plane.size[0]);pixels[j]=r;pixels[j+1]=g;pixels[j+2]=b;pixels[j+3]=255;
   }
@@ -270,8 +272,8 @@ function key(event:KeyboardEvent){if(event.key==='Escape'){event.preventDefault?
 function doubleClick(event:MouseEvent){if(contourTool.value){event.preventDefault?.();if(!event.ctrlKey&&!event.shiftKey&&props.tool==='livewire'&&props.allowEdit)completeLiveWire();return;}if(event.shiftKey||brush.value||event.ctrlKey&&props.interactiveEnabled)return;const hit=measurementAt(event);if(hit){event.preventDefault?.();if(hit.item.m.kind==='annotation'&&hit.label)emit('editMeasurement',hit.item.m.id);return;}if(props.allowEdit)emit('complete');}
 function reset(){cancelPointer();zoom.value=1;pan.value=[0,0];cursor.value=null;schedule();}
 function draw(){
-  frame=0;const target=canvas.value;if(!target)return;const dpr=window.devicePixelRatio||1;target.width=Math.round(size.value[0]*dpr);target.height=Math.round(size.value[1]*dpr);const ctx=target.getContext('2d');if(!ctx)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#060b14';ctx.fillRect(0,0,...size.value);
-  const image=raster.value,g=geometry.value;if(image){if(lastRaster!==image){offscreen.width=image.width;offscreen.height=image.height;const oc=offscreen.getContext('2d')!,buffer=oc.createImageData(image.width,image.height);buffer.data.set(image.pixels);oc.putImageData(buffer,0,0);lastRaster=image;}ctx.imageSmoothingEnabled=false;ctx.drawImage(offscreen,g.left,g.top,g.nx*g.dx*g.scale,g.ny*g.dy*g.scale);}
+  frame=0;const target=canvas.value;if(!target)return;const dpr=window.devicePixelRatio||1;const cw=Math.round(size.value[0]*dpr),ch=Math.round(size.value[1]*dpr);if(target.width!==cw)target.width=cw;if(target.height!==ch)target.height=ch;const ctx=target.getContext('2d');if(!ctx)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#060b14';ctx.fillRect(0,0,...size.value);
+  const image=raster.value||(loading.value&&planeState.value.plane&&lastRasterVolume===props.volume&&lastRasterPlane===planeKey(props.plane)?lastRaster:null),g=geometry.value;if(image){if(lastRaster!==image){offscreen.width=image.width;offscreen.height=image.height;const oc=offscreen.getContext('2d')!,buffer=oc.createImageData(image.width,image.height);buffer.data.set(image.pixels);oc.putImageData(buffer,0,0);lastRaster=image;lastRasterPlane=planeKey(props.plane);lastRasterVolume=props.volume;}ctx.imageSmoothingEnabled=false;ctx.drawImage(offscreen,g.left,g.top,g.nx*g.dx*g.scale,g.ny*g.dy*g.scale);}
   if(!planeState.value.plane)return;
   const crosshair=props.crosshair??physicalPoint(props.point,props.grid),pixel=mprWorldToPixel(props.plane,crosshair),cross=pixelScreen(pixel.pixel),left=pixelScreen([-.5,-.5])[0],right=pixelScreen([g.nx-.5,-.5])[0],top=pixelScreen([-.5,g.ny-.5])[1],bottom=pixelScreen([-.5,-.5])[1];ctx.strokeStyle=props.interactiveEnabled?'#d9e4ef90':'#65b5e890';ctx.lineWidth=1;ctx.setLineDash(Math.abs(pixel.distance)>1e-5?[3,3]:[]);ctx.beginPath();ctx.moveTo(left,cross[1]);ctx.lineTo(right,cross[1]);ctx.moveTo(cross[0],top);ctx.lineTo(cross[0],bottom);ctx.stroke();ctx.setLineDash([]);
   paintMeasurements(ctx);

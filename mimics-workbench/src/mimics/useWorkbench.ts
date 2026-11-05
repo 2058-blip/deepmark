@@ -1,3 +1,4 @@
+import type {DraftBounds} from './slicePixels.ts';
 import {computed,ref,shallowRef,reactive,watch,onBeforeUnmount,onMounted,getCurrentInstance} from 'vue';
 import {makeDemo,exportNifti,planeAxes,indexOf} from '../core.ts';
 import type {Volume} from '../core.ts';
@@ -61,7 +62,9 @@ export function useWorkbench(options:WorkbenchOptions={}){
   const showCalculate3D=ref(false);
   const spatialUnitChoice=ref<1|2|3>(2);
   const tool=ref('navigate'),tab=ref('segmentation'),objectTab=ref('masks'),center=ref(40),width=ref(400),dirty=ref(false);
+  let importController:AbortController|null=null;
   const status=ref('打开影像，或加载合成影像开始。'),error=ref(''),busy=ref(false),progress=ref(0);
+  const draftBounds=shallowRef<DraftBounds|null>(null);
   const preview=shallowRef<BinaryMask|null>(null),selection=shallowRef<BinaryMask|null>(null),draft=shallowRef<BinaryMask|null>(null),draftRevision=ref(0);
   const selectionAxis=ref<Axis>(2),interpolationPreview=shallowRef<BinaryMask|null>(null);
   const draftPoints=ref<Vec3[]>([]),draftPlane=ref<SlicePlane|null>(null),series=shallowRef<DicomSeries[]>([]),seriesChoice=ref(0);
@@ -155,7 +158,12 @@ export function useWorkbench(options:WorkbenchOptions={}){
   }
   const undoName=computed(()=>{historyTick.value;return history.past.at(-1)?.name||'';}),redoName=computed(()=>{historyTick.value;return history.future.at(-1)?.name||'';});
   const maskInfo=computed(()=>{if(!grid.value||!activeMask.value)return null;return maskStatistics(grid.value,activeMask.value.data);});
-  const partInfo=computed(()=>activePart.value?meshStats(activePart.value.mesh):null);
+  const partStatsCache=new WeakMap<Float32Array,{indices:Uint32Array;stats:ReturnType<typeof meshStats>}>();
+  const partInfo=computed(()=>{
+    const mesh=activePart.value?.mesh;if(!mesh)return null;
+    const cached=partStatsCache.get(mesh.positions);if(cached?.indices===mesh.indices)return cached.stats;
+    const stats=meshStats(mesh);partStatsCache.set(mesh.positions,{indices:mesh.indices,stats});return stats;
+  });
   function fail(e:unknown){error.value=e instanceof Error?e.message:String(e);status.value=error.value;}
   function validMeasurementSelection(project:ProjectState):ProjectState{
     const id=project.viewState?.selectedMeasurementId;
@@ -198,9 +206,10 @@ export function useWorkbench(options:WorkbenchOptions={}){
     catch(e){if(token===jobGeneration)fail(e);}finally{if(token===jobGeneration){busy.value=false;progress.value=0;currentWorkKind='';}}
   }
   function install(v:Volume,project?:ProjectState,cacheId?:string){
+    const prepared=validMeasurementSelection(project||createProject(v));
     installing=true;contourState=null;measurementEditor.cancel();showCalculate3D.value=false;jobGeneration++;operations.initialize(volumeGrid(v));brushCancel();
     if(thresholdTimer)clearTimeout(thresholdTimer);thresholdTimer=null;
-    volume.value=v;state.value=validMeasurementSelection(project||createProject(v));documentId=cacheId||objectId('workspace');
+    volume.value=v;state.value=prepared;documentId=cacheId||objectId('workspace');
     history.clear();historyTick.value++;revision.value++;busy.value=false;progress.value=0;currentWorkKind='';
     const view=state.value.viewState;
     point.value=view?.point?[...view.point]:v.dims.map(d=>Math.floor(d/2)) as Vec3;
@@ -245,13 +254,13 @@ export function useWorkbench(options:WorkbenchOptions={}){
     if(busy.value)cancel();
     if(offerReplacement({volume:kind==='vessel'?makeVesselDemo():makeDemo()})){center.value=300;width.value=1400;}
   }
-  function beginImport(){cancel();series.value=[];seriesChoice.value=0;pendingReplacement.value=null;const token=++jobGeneration;busy.value=true;error.value='';progress.value=0;currentWorkKind='import';return token;}
+  function beginImport(){cancel();importController=new AbortController();series.value=[];seriesChoice.value=0;pendingReplacement.value=null;const token=++jobGeneration;busy.value=true;error.value='';progress.value=0;currentWorkKind='import';return token;}
   async function openFiles(files:FileList|File[]|null){
     if(!files?.length)return false;const token=beginImport();
     try{
       const list=Array.from(files),file=list[0];let candidate:ReplacementCandidate;
       if(/\.zip$/i.test(file.name)){const bytes=await file.arrayBuffer();if(token!==jobGeneration)return false;candidate=decodeProject(new Uint8Array(bytes));}
-      else if(/\.nii(\.gz)?$/i.test(file.name)){const image=await readFile(file);if(token!==jobGeneration)return false;candidate={volume:image};}
+      else if(/\.nii(\.gz)?$/i.test(file.name)){const image=await readFile(file,{signal:importController?.signal,onProgress:value=>{if(token===jobGeneration){progress.value=value.fraction;status.value=value.stage;}}});if(token!==jobGeneration)return false;candidate={volume:image};}
       else {
         const slices=[];
         for(let i=0;i<list.length;i++){const bytes=await list[i].arrayBuffer();if(token!==jobGeneration)return false;slices.push(parseDicom(bytes,list[i].name));progress.value=(i+1)/list.length;}
@@ -282,7 +291,7 @@ export function useWorkbench(options:WorkbenchOptions={}){
     cancel();const next=redo?history.redo():history.undo();
     if(next){state.value=validMeasurementSelection(next);historyTick.value++;revision.value++;dirty.value=true;status.value=redo?'已重做':'已撤销';}
   }
-  function brushCancel(){const hadDraft=!!draft.value;draft.value=null;strokeState=null;draftRevision.value++;if(hadDraft)status.value='已取消本次笔画';}
+  function brushCancel(){draftBounds.value=null;const hadDraft=!!draft.value;draft.value=null;strokeState=null;draftRevision.value++;if(hadDraft)status.value='已取消本次笔画';}
   let synchronizingBrushSize=false;
   function synchronizeBrushSize(nextWidth:number,nextHeight:number){
     if(synchronizingBrushSize)return;
@@ -303,6 +312,7 @@ export function useWorkbench(options:WorkbenchOptions={}){
   watch(()=>params.sameWidthHeight,()=>{if(!synchronizingBrushSize)synchronizeBrushSize(params.brushWidth,params.brushHeight);},{flush:'sync'});
   watch(()=>params.brushShape,()=>{if(strokeState)brushCancel();},{flush:'sync'});
   function cancel(){
+    importController?.abort();importController=null;
     measurementPreview.value=null;
     resliceProject.cancel();
     mprContour.cancel();
@@ -430,6 +440,8 @@ export function useWorkbench(options:WorkbenchOptions={}){
       if(stroke.scanVisits+visits>MAX_BRUSH_SCAN_VISITS)throw new Error(`本笔路径累计扫描超过 ${MAX_BRUSH_SCAN_VISITS} 个候选体素，已取消整笔；请分段绘制。`);
       if(!stroke.covered){stroke.covered=new Uint8Array(nx*ny);stroke.coveredRows=new Uint32Array(ny);}
       stroke.scanVisits+=visits;stroke.last=[...p];
+      const min:Vec3=[0,0,0],max:Vec3=[0,0,0];min[axis]=max[axis]=slice;min[a]=minU;max[a]=maxU;min[b]=minV;max[b]=maxV;
+      const previous=draftBounds.value;draftBounds.value=previous?{min:previous.min.map((v,k)=>Math.min(v,min[k]!)) as Vec3,max:previous.max.map((v,k)=>Math.max(v,max[k]!)) as Vec3}:{min,max};
       const covered=stroke.covered,rows=stroke.coveredRows!,strides=[1,volume.value.dims[0],volume.value.dims[0]*volume.value.dims[1]],erase=['erase','deselect'].includes(stroke.tool),threshold=stroke.tool==='local-threshold';
       for(let v=minV;v<=maxV;v++){
         if(rows[v]===nx)continue;
@@ -451,7 +463,15 @@ export function useWorkbench(options:WorkbenchOptions={}){
     draft.value=null;strokeState=null;draftRevision.value++;
     if(!stroke.changed)return;
     if(stroke.selecting){selection.value=data;status.value='临时选区已更新，尚未应用';}
-    else commit(stroke.tool==='erase'?'擦除':stroke.tool==='local-threshold'?'局部阈值':'绘制Mask',replaceMask(state.value,stroke.maskId,data));
+    else {
+      // This draft was cloned from a validated binary mask and brushStroke only
+      // writes 0/1. Rechecking every voxel here stalls pen-up on large CTs.
+      const found=state.value.masks.find(mask=>mask.id===stroke.maskId);
+      if(!found)throw new Error('目标Mask已不存在。');
+      if(!Number.isSafeInteger(found.revision)||found.revision<0||found.revision===Number.MAX_SAFE_INTEGER)throw new Error('Mask版本无效或已超过安全整数范围。');
+      const next={...state.value,masks:state.value.masks.map(mask=>mask.id===stroke.maskId?{...mask,data,revision:mask.revision+1}:mask)};
+      commit(stroke.tool==='erase'?'擦除':stroke.tool==='local-threshold'?'局部阈值':'绘制Mask',next);
+    }
   }
 
   function appendMeasurementPoint(p:Vec3,plane:SlicePlane|null,partId:string|null,mprPlane:MprPlane|null=null){
@@ -916,8 +936,8 @@ export function useWorkbench(options:WorkbenchOptions={}){
   watch([mprView.enabled,mprView.plane,mprView.step,mprView.interpolation,mprView.crosshair],scheduleCache);
   if(getCurrentInstance()){
     onMounted(()=>{void listLocalProjects();window.addEventListener('keydown',key);window.addEventListener('beforeunload',beforeUnload);});
-    onBeforeUnmount(()=>{if(cacheTimer)clearTimeout(cacheTimer);const finalSnapshot=cacheSnapshot();if(finalSnapshot)cacheQueue?.enqueue(finalSnapshot);if(thresholdTimer)clearTimeout(thresholdTimer);operations.dispose();window.removeEventListener('keydown',key);window.removeEventListener('beforeunload',beforeUnload);});
+    onBeforeUnmount(()=>{importController?.abort();if(cacheTimer)clearTimeout(cacheTimer);const finalSnapshot=cacheSnapshot();if(finalSnapshot)cacheQueue?.enqueue(finalSnapshot);if(thresholdTimer)clearTimeout(thresholdTimer);operations.dispose();window.removeEventListener('keydown',key);window.removeEventListener('beforeunload',beforeUnload);});
   }
-  const mpr={...mprView,beginContour:mprContour.begin,contourPoint:mprContour.addPoint,previewContourPoint:mprContour.hover,completeContour:mprContour.complete,cancelContourGesture:mprContour.cancelGesture,cancelContour:mprContour.cancel,completeContourCurrent:mprContour.completeCurrent,contourDraft:mprContour.draft,contourPending:mprContour.pending,contourSettingsKey:mprContour.settingsKey,beginBrush:mprBrush.begin,brushStroke:mprBrush.append,endBrush:mprBrush.end,cancelBrush:mprBrush.cancel,cancelBrushGesture:mprBrush.cancelGesture,brushPreview:mprBrush.preview,brushPreviewRevision:mprBrush.previewRevision,resliceMode,resliceId:modifyingResliceId,beginPlaneModify,endPlaneModify,modifyPlane:modifyReslicePlane,interactive:interactiveMpr,interactivePlane,interactiveCenter,startInteractive:startInteractiveMpr,stopInteractive:stopInteractiveMpr,editInteractive:editResliceInteractive,transform:transformMpr,open:openMprView,applyOrientation:applyMprOrientation,preset:presetMpr,addDefinitionPoint:addMprDefinitionPoint,scroll:scrollMprView,displayMeasurements,draftPlane:draftMprPlane,draftPoints:computed(()=>draftMprPlane.value&&grid.value?draftPoints.value.map(p=>physicalPoint(p,grid.value!)):[]),beginDefinition:beginMprPlane,pick:mprPick,createDensityROI:createMprDensityROI,updateMeasurementGeometry,previewMeasurementGeometry,updateMeasurementLabel,moveMeasurementPoint};
-  return {setStlFrame,resliceProject,reslices,mpr,measurementDraftToken,completeEllipseCreation,measurementPreview,previewMeasurementGeometry,updateMeasurementLabel,displayMeasurements,createDensityROI,updateMeasurementGeometry,measurementDetails,selectedMeasurementDetails,measurementEditor,regionSourceId,regionSource,setRegionSource,swapRegionMasks,closeRegionGrowing,localThreshold,multipleEditing,imageTool,displayMasks,selectionAxis,setSelectionAxis,interpolationPreview,copySelection,interpolateSelection,applyInterpolation,cancelInterpolation,clearSelection,closeMultipleEdit,applyTemporarySelection,showCalculate3D,openCalculate3D,closeCalculate3D,calculateParts,physicalUnitsKnown,spatialUnitChoice,confirmSpatialUnit,cacheAvailable:!!repository,renderMode,pendingReplacement,confirmReplacement,showLocalProjects,localProjects,cacheState,cacheError,openLocalProjects,listLocalProjects,restoreLocalProject,flushLocalCache,setBrushSize,brushCancel,advanced,selectedMeasurementId,locateMeasurement,moveMeasurementPoint,updatePart,volume,state,grid,point,activeAxis,tool,tab,objectTab,center,width,dirty,status,error,busy,progress,preview,selection,draft,draftRevision,draftPoints,draftPlane,params,series,seriesChoice,activeMask,activePart,maskInfo,partInfo,undoName,redoName,measurementLabels,revision,imageMeta,demo,openFiles,loadSeries,selectMask,updateMask,newMask,duplicateMask,deleteMask,clearMask,undo,cancel,runMask,thresholdPreview,applyPreview,brushBegin,brushStroke,brushEnd,imagePick,finishDrawing,deleteMeasurement,runPart,partPick,selectPart,togglePart,deletePart,importStl,exportPart,saveProject,exportMask,downloadProject,downloadPart,downloadMask,importMask};
+  const mpr={...mprView,beginContour:mprContour.begin,contourPoint:mprContour.addPoint,previewContourPoint:mprContour.hover,completeContour:mprContour.complete,cancelContourGesture:mprContour.cancelGesture,cancelContour:mprContour.cancel,completeContourCurrent:mprContour.completeCurrent,contourDraft:mprContour.draft,contourPending:mprContour.pending,contourSettingsKey:mprContour.settingsKey,beginBrush:mprBrush.begin,brushStroke:mprBrush.append,endBrush:mprBrush.end,cancelBrush:mprBrush.cancel,cancelBrushGesture:mprBrush.cancelGesture,brushBounds:mprBrush.bounds,brushPreview:mprBrush.preview,brushPreviewRevision:mprBrush.previewRevision,resliceMode,resliceId:modifyingResliceId,beginPlaneModify,endPlaneModify,modifyPlane:modifyReslicePlane,interactive:interactiveMpr,interactivePlane,interactiveCenter,startInteractive:startInteractiveMpr,stopInteractive:stopInteractiveMpr,editInteractive:editResliceInteractive,transform:transformMpr,open:openMprView,applyOrientation:applyMprOrientation,preset:presetMpr,addDefinitionPoint:addMprDefinitionPoint,scroll:scrollMprView,displayMeasurements,draftPlane:draftMprPlane,draftPoints:computed(()=>draftMprPlane.value&&grid.value?draftPoints.value.map(p=>physicalPoint(p,grid.value!)):[]),beginDefinition:beginMprPlane,pick:mprPick,createDensityROI:createMprDensityROI,updateMeasurementGeometry,previewMeasurementGeometry,updateMeasurementLabel,moveMeasurementPoint};
+  return {draftBounds,setStlFrame,resliceProject,reslices,mpr,measurementDraftToken,completeEllipseCreation,measurementPreview,previewMeasurementGeometry,updateMeasurementLabel,displayMeasurements,createDensityROI,updateMeasurementGeometry,measurementDetails,selectedMeasurementDetails,measurementEditor,regionSourceId,regionSource,setRegionSource,swapRegionMasks,closeRegionGrowing,localThreshold,multipleEditing,imageTool,displayMasks,selectionAxis,setSelectionAxis,interpolationPreview,copySelection,interpolateSelection,applyInterpolation,cancelInterpolation,clearSelection,closeMultipleEdit,applyTemporarySelection,showCalculate3D,openCalculate3D,closeCalculate3D,calculateParts,physicalUnitsKnown,spatialUnitChoice,confirmSpatialUnit,cacheAvailable:!!repository,renderMode,pendingReplacement,confirmReplacement,showLocalProjects,localProjects,cacheState,cacheError,openLocalProjects,listLocalProjects,restoreLocalProject,flushLocalCache,setBrushSize,brushCancel,advanced,selectedMeasurementId,locateMeasurement,moveMeasurementPoint,updatePart,volume,state,grid,point,activeAxis,tool,tab,objectTab,center,width,dirty,status,error,busy,progress,preview,selection,draft,draftRevision,draftPoints,draftPlane,params,series,seriesChoice,activeMask,activePart,maskInfo,partInfo,undoName,redoName,measurementLabels,revision,imageMeta,demo,openFiles,loadSeries,selectMask,updateMask,newMask,duplicateMask,deleteMask,clearMask,undo,cancel,runMask,thresholdPreview,applyPreview,brushBegin,brushStroke,brushEnd,imagePick,finishDrawing,deleteMeasurement,runPart,partPick,selectPart,togglePart,deletePart,importStl,exportPart,saveProject,exportMask,downloadProject,downloadPart,downloadMask,importMask};
 }

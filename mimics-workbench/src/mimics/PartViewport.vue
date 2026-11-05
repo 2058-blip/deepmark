@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type {Volume} from '../core.ts';
-import { computeNormals, createMeshPicker, meshStats, type MeshPicker } from './geometry.ts';
+import { createMeshPicker, type MeshPicker } from './geometry.ts';
+import {uploadMesh,uploadMeshEdges,clearMeshEdges,disposeMeshGPU,sameMeshBuffers,meshBounds,type MeshGPU} from './meshGPU.ts';
 import { evaluateMeasurement } from './measurements.ts';
 import type { MeasurementObject, MprPlane, PartObject, TriangleMesh, Vec3 } from './types.ts';
 import { cameraRotation, rotateCameraVector, projectCameraPoint, cameraPickRay, fitCameraHalfHeight, cameraClipMatrix } from './viewportGeometry.ts';
@@ -38,14 +39,17 @@ const visibleCount = computed(() => props.parts.filter(p => p.visible && p.opaci
 const triangleCount = computed(() => props.parts.filter(p => p.visible).reduce((s, p) => s + p.mesh.indices.length / 3, 0));
 const overlaySize = ref<[number, number]>([1, 1]), cameraRevision = ref(0);
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
-interface GPUObject { part: PartObject; positions: WebGLBuffer; normals: WebGLBuffer; edges: WebGLBuffer; count: number; edgeCount: number; centre: Vec3 }
+interface GPUObject extends MeshGPU { part: PartObject; centre: Vec3 }
 let gl: GL | null = null, program: WebGLProgram | null = null, observer: ResizeObserver | undefined;
 let gpu: GPUObject[] = [], frame = 0, destroyed = false;
+let uint32Indices = false;
+const boundsCache = new WeakMap<Float32Array,{indices:Uint32Array;bounds:ReturnType<typeof meshBounds>}>();
+function boundsFor(mesh:TriangleMesh){const old=boundsCache.get(mesh.positions);if(old?.indices===mesh.indices)return old.bounds;const bounds=meshBounds(mesh);boundsCache.set(mesh.positions,{indices:mesh.indices,bounds});return bounds;}
 const pickers = new Map<string, { mesh: TriangleMesh; revision?: number; picker: MeshPicker }>();
 let centre: Vec3 = [0, 0, 0], radius = 1, halfHeight = 1.3, pan: [number, number] = [0, 0];
 let pitch = -0.5, yaw = 0.55, cssWidth = 1, cssHeight = 1;
 let positionLocation = -1, normalLocation = -1;
-let matrixLocation: WebGLUniformLocation | null = null, rotationLocation: WebGLUniformLocation | null = null;
+let matrixLocation: WebGLUniformLocation | null = null, rotationLocation: WebGLUniformLocation | null = null, originLocation: WebGLUniformLocation | null = null;
 let colorLocation: WebGLUniformLocation | null = null, unlitLocation: WebGLUniformLocation | null = null;
 interface CreationEpoch {token:number;volume?:Volume;revision?:number;pendingKey:string;stage:number;tool?:string;allowEdit:boolean}
 interface ReferenceEpoch {token:number;volume?:Volume;revision?:number;tool?:string;allowEdit:boolean}
@@ -220,11 +224,12 @@ function initialise() {
     const version2 = !!gl;
     if (!gl) gl = canvas.value.getContext('webgl', { antialias: true, alpha: false, preserveDrawingBuffer: false });
     if (!gl) { unavailable.value = '当前浏览器未提供 WebGL。请启用硬件加速后重新加载。'; return; }
+    uint32Indices = version2 || !!gl.getExtension('OES_element_index_uint');
     const vertex = version2 ? `#version 300 es
-      in vec3 aPosition; in vec3 aNormal; uniform mat4 uMatrix; uniform mat3 uRotation; out vec3 vNormal;
-      void main(){gl_Position=uMatrix*vec4(aPosition,1.0);vNormal=uRotation*aNormal;}` : `
-      attribute vec3 aPosition; attribute vec3 aNormal; uniform mat4 uMatrix; uniform mat3 uRotation; varying vec3 vNormal;
-      void main(){gl_Position=uMatrix*vec4(aPosition,1.0);vNormal=uRotation*aNormal;}`;
+      in vec3 aPosition; in vec3 aNormal; uniform mat4 uMatrix; uniform mat3 uRotation; uniform vec3 uOrigin; out vec3 vNormal;
+      void main(){gl_Position=uMatrix*vec4(aPosition-uOrigin,1.0);vNormal=uRotation*aNormal;}` : `
+      attribute vec3 aPosition; attribute vec3 aNormal; uniform mat4 uMatrix; uniform mat3 uRotation; uniform vec3 uOrigin; varying vec3 vNormal;
+      void main(){gl_Position=uMatrix*vec4(aPosition-uOrigin,1.0);vNormal=uRotation*aNormal;}`;
     const light = `vec3 n=normalize(vNormal); if(!gl_FrontFacing)n=-n;
       float diffuse=max(dot(n,normalize(vec3(-0.35,0.6,0.8))),0.0);
       float rim=pow(1.0-abs(n.z),2.0); vec3 lit=uColor.rgb*(0.27+0.7*diffuse)+vec3(0.07)*rim;
@@ -241,21 +246,21 @@ function initialise() {
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'WebGL program 链接失败。');
     positionLocation = gl.getAttribLocation(program, 'aPosition'); normalLocation = gl.getAttribLocation(program, 'aNormal');
     matrixLocation = gl.getUniformLocation(program, 'uMatrix'); rotationLocation = gl.getUniformLocation(program, 'uRotation');
+    originLocation=gl.getUniformLocation(program,'uOrigin');
     colorLocation = gl.getUniformLocation(program, 'uColor'); unlitLocation = gl.getUniformLocation(program, 'uUnlit');
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     upload(); resize(); fit(); unavailable.value = '';
   } catch (error) { unavailable.value = error instanceof Error ? error.message : 'WebGL 初始化失败。'; disposeGPU(); }
 }
 function disposeGPU() {
-  if (gl) for (const object of gpu) { gl.deleteBuffer(object.positions); gl.deleteBuffer(object.normals); gl.deleteBuffer(object.edges); }
+  if (gl) for (const object of gpu) disposeMeshGPU(gl,object);
   gpu = [];
 }
 function sceneBounds() {
   const min: Vec3 = [Infinity, Infinity, Infinity], max: Vec3 = [-Infinity, -Infinity, -Infinity];
   let found = false;
   for (const part of props.parts.filter(p => p.visible && p.opacity > 0)) {
-    const p = part.mesh.positions;
-    for (let i = 0; i < p.length; i += 3) for (let k = 0; k < 3; k++) { min[k] = Math.min(min[k]!, p[i + k]!); max[k] = Math.max(max[k]!, p[i + k]!); found = true; }
+    const bounds=boundsFor(part.mesh);for(let k=0;k<3;k++){min[k]=Math.min(min[k]!,bounds.min[k]!);max[k]=Math.max(max[k]!,bounds.max[k]!);}found=true;
   }
   const hasPartBounds=found;
   if(props.reslicePlane)try{
@@ -269,34 +274,22 @@ function sceneBounds() {
 }
 function upload() {
   if (!gl || !program) return;
-  const bounds = sceneBounds();
-  centre = bounds.min.map((v, k) => (v + bounds.max[k]!) / 2) as Vec3;
-  radius = Math.max(1e-4, Math.hypot(...bounds.max.map((v, k) => v - bounds.min[k]!)) / 2 || 1);
-  disposeGPU();
-  for (const id of pickers.keys()) if (!props.parts.some(p => p.id === id)) pickers.delete(id);
-  const buffer = (data: Float32Array): WebGLBuffer => {
-    const b = gl!.createBuffer(); if (!b) throw new Error('WebGL 顶点缓冲区分配失败。');
-    gl!.bindBuffer(gl!.ARRAY_BUFFER, b); gl!.bufferData(gl!.ARRAY_BUFFER, data, gl!.STATIC_DRAW); return b;
-  };
-  for (const part of props.parts) {
-    const mesh = part.mesh; if (!mesh.indices.length) continue;
-    pickerFor(part);
-    const normals = mesh.normals?.length === mesh.positions.length ? mesh.normals : computeNormals(mesh);
-    // Expanded triangles avoid Uint32 index-extension restrictions in WebGL 1.
-    const vertices = new Float32Array(mesh.indices.length * 3), normalData = new Float32Array(vertices.length), edges = new Float32Array(mesh.indices.length * 6);
-    for (let f = 0; f < mesh.indices.length / 3; f++) for (let k = 0; k < 3; k++) {
-      const a = mesh.indices[3 * f + k]!, b = mesh.indices[3 * f + (k + 1) % 3]!;
-      for (let axis = 0; axis < 3; axis++) {
-        vertices[9 * f + 3 * k + axis] = mesh.positions[3 * a + axis]! - centre[axis]!;
-        normalData[9 * f + 3 * k + axis] = normals[3 * a + axis]!;
-        edges[18 * f + 6 * k + axis] = mesh.positions[3 * a + axis]! - centre[axis]!;
-        edges[18 * f + 6 * k + 3 + axis] = mesh.positions[3 * b + axis]! - centre[axis]!;
-      }
+  const bounds=sceneBounds();centre=bounds.min.map((v,k)=>(v+bounds.max[k]!)/2) as Vec3;
+  radius=Math.max(1e-4,Math.hypot(...bounds.max.map((v,k)=>v-bounds.min[k]!))/2||1);
+  const previous=new Map(gpu.map(object=>[object.part.id,object]));gpu=[];
+  for(const [id,cached] of pickers)if(!props.parts.some(part=>part.id===id&&part.visible&&part.opacity>0&&sameMeshBuffers(part.mesh,cached.mesh)))pickers.delete(id);
+  try {
+    for(const part of props.parts) {
+      if(!part.visible||part.opacity<=0||!part.mesh.indices.length)continue;
+      let object=previous.get(part.id);
+      if(object&&!sameMeshBuffers(object.mesh,part.mesh)){disposeMeshGPU(gl,object);previous.delete(part.id);object=undefined;}
+      if(!object)object={...uploadMesh(gl,part.mesh,uint32Indices),part,centre:[0,0,0]};
+      previous.delete(part.id);object.part=part;
+      const b=boundsFor(part.mesh);object.centre=b.min.map((v,k)=>(v+b.max[k]!)/2-centre[k]!) as Vec3;
+      gpu.push(object);
     }
-    const b = meshStats(mesh).bounds;
-    gpu.push({ part, positions: buffer(vertices), normals: buffer(normalData), edges: buffer(edges), count: mesh.indices.length, edgeCount: mesh.indices.length * 2, centre: b.min.map((v, k) => (v + b.max[k]!) / 2 - centre[k]!) as Vec3 });
-  }
-  schedule();
+    unavailable.value='';
+  } finally {for(const object of previous.values())disposeMeshGPU(gl,object);schedule();}
 }
 function fit() {
   clearMeasurementDrag();clearResliceDrag();
@@ -337,6 +330,7 @@ function render() {
   gl.useProgram(program);
   const r = rotation();
   const depth = Math.max(radius * 12, halfHeight * 12, 1);
+  gl.uniform3f(originLocation,centre[0],centre[1],centre[2]);
   gl.uniformMatrix4fv(matrixLocation, false, cameraClipMatrix(camera(), depth)); gl.uniformMatrix3fv(rotationLocation, false, new Float32Array(r));
   // Opaque pass first; transparent objects are sorted back-to-front by their view-space centres.
   const visible = gpu.filter(o => o.part.visible && o.part.opacity > 0);
@@ -347,11 +341,13 @@ function render() {
     gl.depthMask(opacity >= 0.999); gl.uniform4f(colorLocation, rgb[0]!, rgb[1]!, rgb[2]!, opacity); gl.uniform1f(unlitLocation, 0);
     bindPosition(object.positions); gl.bindBuffer(gl.ARRAY_BUFFER, object.normals); gl.enableVertexAttribArray(normalLocation); gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, 0, 0);
     if (wireframe.value) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
-    gl.drawArrays(gl.TRIANGLES, 0, object.count);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,object.indices); gl.drawElements(gl.TRIANGLES,object.count,object.indexType,0);
     if (wireframe.value) {
-      gl.disable(gl.POLYGON_OFFSET_FILL); bindPosition(object.edges); gl.disableVertexAttribArray(normalLocation); gl.vertexAttrib3f(normalLocation, 0, 0, 1);
+      gl.disable(gl.POLYGON_OFFSET_FILL);
+      try { uploadMeshEdges(gl,object); } catch(error) { wireframe.value=false;unavailable.value=error instanceof Error?error.message:String(error);continue; }
+      gl.disableVertexAttribArray(normalLocation); gl.vertexAttrib3f(normalLocation, 0, 0, 1);
       gl.uniform1f(unlitLocation, 1); gl.uniform4f(colorLocation, selected ? 0.8 : 0.12, selected ? 0.9 : 0.16, selected ? 1 : 0.22, Math.max(0.2, opacity));
-      gl.drawArrays(gl.LINES, 0, object.edgeCount);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,object.edges);gl.drawElements(gl.LINES,object.edgeCount,object.indexType,0);
     }
   }
   gl.depthMask(true);
@@ -407,7 +403,7 @@ const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 function pickerFor(part: PartObject): MeshPicker {
   const cached = pickers.get(part.id);
-  if (cached?.mesh === part.mesh && cached.revision === props.revision) return cached.picker;
+  if (cached && sameMeshBuffers(cached.mesh,part.mesh)) return cached.picker;
   const picker = createMeshPicker(part.mesh); pickers.set(part.id, { mesh: part.mesh, revision: props.revision, picker }); return picker;
 }
 function rayHit(clientX: number, clientY: number, partId?: string): { partId: string; position: Vec3 } | undefined {
@@ -648,7 +644,8 @@ watch(() => [props.revision, ...props.parts.map(p => [p.id, p.mesh, p.visible, p
     }
   } catch (error) { unavailable.value = error instanceof Error ? error.message : String(error); }
 });
-watch(() => props.selectedId, schedule); watch(wireframe, schedule);
+watch(() => props.selectedId, schedule);
+watch(wireframe,value=>{if(!value&&gl)for(const object of gpu)clearMeshEdges(gl,object);schedule();});
 watch([()=>props.volume,()=>props.revision,()=>props.referencePointToken,()=>props.tool,()=>props.allowEdit],()=>{if(pointer?.reference&&!referenceCurrent(pointer.reference))pointer.moved=true;},{flush:'sync'});
 watch(() => props.allowEdit, value => { if (value === false) {clearMeasurementDrag();clearResliceDrag();} });
 watch([()=>props.volume,()=>props.revision,()=>props.measurements],()=>clearMeasurementDrag(),{flush:'sync',deep:true});

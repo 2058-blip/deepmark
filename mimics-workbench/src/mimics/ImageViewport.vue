@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed,ref,shallowRef,onMounted,onBeforeUnmount,watch} from 'vue';
 import type {Volume} from '../core.ts';
+import {SlicePixels,type DraftBounds} from './slicePixels.ts';
 import {indexOf,planePoint} from '../core.ts';
 import {direction,edgeDirection,hasAnatomicalDirections} from '../view.ts';
 import {worldToVoxel,evaluateMeasurement} from './measurements.ts';
@@ -15,7 +16,7 @@ import {resliceProjectReferenceLines} from './resliceProjectOverlay.ts';
 import type {WorldReferenceLine,ResliceProjectPoint} from './resliceProjectTypes.ts';
 import {validateAffinePlane,coplanarAffinePlanes} from './affinePlane.ts';
 import {affineDensityROI,editAffineDensityROI,hitAffineDensityROI} from './affineDensityROI.ts';
-const props=defineProps<{volume:Volume;grid:VolumeGrid;axis:Axis;point:Vec3;masks:MaskObject[];revision:number;center:number;width:number;tool:string;diameter:number;brushWidth?:number;brushHeight?:number;sameWidthHeight?:boolean;brushShape?:string;densitySize?:[number,number];preview?:Uint8Array|null;temporarySelection?:Uint8Array|null;previewReplacesActive?:boolean;draft?:Uint8Array|null;draftRevision?:number;activeMaskId:string;measurements:MeasurementObject[];measurementLabels:Record<string,string>;draftPoints:Vec3[];draftPlane?:{axis:Axis;index:number}|null;allowEdit:boolean;displayInverted?:boolean;intensityUnit?:string;interactivePlane?:MprPlane;interactiveCenter?:Vec3;interactiveEnabled?:boolean;mprRevision?:number;referenceLines?:WorldReferenceLine[];referencePointToken?:number}>();
+const props=defineProps<{volume:Volume;grid:VolumeGrid;axis:Axis;point:Vec3;masks:MaskObject[];revision:number;center:number;width:number;tool:string;diameter:number;brushWidth?:number;brushHeight?:number;sameWidthHeight?:boolean;brushShape?:string;densitySize?:[number,number];preview?:Uint8Array|null;temporarySelection?:Uint8Array|null;previewReplacesActive?:boolean;draft?:Uint8Array|null;draftRevision?:number;draftBounds?:DraftBounds|null;activeMaskId:string;measurements:MeasurementObject[];measurementLabels:Record<string,string>;draftPoints:Vec3[];draftPlane?:{axis:Axis;index:number}|null;allowEdit:boolean;displayInverted?:boolean;intensityUnit?:string;interactivePlane?:MprPlane;interactiveCenter?:Vec3;interactiveEnabled?:boolean;mprRevision?:number;referenceLines?:WorldReferenceLine[];referencePointToken?:number}>();
 type GeometryChange={id:string;points:Vec3[];plane?:SlicePlane;densityPlane?:AffinePlane;volume?:Volume;revision?:number};
 const emit=defineEmits<{point:[Vec3];begin:[Axis,number];stroke:[Vec3,Axis,number,boolean?];end:[];cancel:[];resizeBrush:[{width:number;height:number}];pick:[Vec3,Axis,number,boolean];referencePoint:[ResliceProjectPoint];complete:[];activate:[Axis];editMeasurement:[id:string];moveMeasurementPoint:[{id:string;index:number;position:Vec3;plane?:SlicePlane;volume?:Volume;revision?:number}];createDensityROI:[{kind:DensityROIKind;plane:SlicePlane;points:DensityROIPoints;volume?:Volume;revision?:number}];updateMeasurementGeometry:[GeometryChange];previewMeasurementGeometry:[GeometryChange|null];updateMeasurementLabel:[{id:string;offset:Vec3;plane?:SlicePlane;volume?:Volume;revision?:number}];transformMpr:[{plane:MprPlane;crosshair:Vec3;sourcePlane:MprPlane;volume:Volume;revision:number;mprRevision:number}]}>();
 const host=ref<HTMLElement|null>(null),canvas=ref<HTMLCanvasElement|null>(null),size=ref([500,400]);
@@ -42,7 +43,8 @@ const densityPreview=ref<{id?:string;kind:DensityROIKind;plane:SlicePlane;points
 let affineDensityDrag:(EditSnapshot&{measurement:MeasurementObject;collection:MeasurementObject[];densityPlane:AffinePlane;original:DensityROIPoints;start:Vec3;kind:DensityROIKind;action:'move'|'resize';handle?:DensityROIHandle;tool:string;mprRevision?:number})|null=null;
 const affineDensityPreview=shallowRef<{id:string;points:DensityROIPoints}|null>(null);
 const offscreen=document.createElement('canvas');
-let pixelsKey:unknown[]=[];
+const slicePixels=new SlicePixels();
+let sliceImage:ImageData|null=null;
 const geometry=computed(()=>createSliceViewport(props.grid,props.axis,size.value as [number,number],zoom.value,pan.value));
 const rawSlice=computed(()=>props.volume.niftiReference===undefined?props.volume.oblique||!isAxisAlignedGrid(props.grid):!hasAnatomicalDirections(props.volume));
 const sliceLabel=computed(()=>rawSlice.value?`${['I','J','K'][props.axis]} 轴 · 原始 IJK 切片`:direction(props.volume,props.axis));
@@ -96,19 +98,12 @@ function draftEllipse(){if(props.tool!=='ellipse'||!props.allowEdit||props.draft
 function draw(){
   frame=0;const c=canvas.value;if(!c)return;const g=geometry.value,dpr=window.devicePixelRatio||1;
   const cw=Math.round(size.value[0]*dpr),ch=Math.round(size.value[1]*dpr);if(c.width!==cw)c.width=cw;if(c.height!==ch)c.height=ch;const ctx=c.getContext('2d')!;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.textAlign='left';ctx.fillStyle='#060b14';ctx.fillRect(0,0,...size.value as [number,number]);
-  const key=[props.volume,props.axis,props.point[props.axis],props.masks,props.revision,props.center,props.width,props.displayInverted,props.preview,props.temporarySelection,props.previewReplacesActive,props.draft,props.draftRevision,props.activeMaskId];
-  if(key.some((v,i)=>v!==pixelsKey[i])||key.length!==pixelsKey.length){
-  offscreen.width=g.nx;offscreen.height=g.ny;const oc=offscreen.getContext('2d')!,img=oc.createImageData(g.nx,g.ny);
-  const masks=props.masks.filter(m=>m.visible).map(m=>({m,color:rgb(m.color)})),activeData=props.masks.find(m=>m.id===props.activeMaskId)?.data;
-  for(let y=0;y<g.ny;y++)for(let x=0;x<g.nx;x++){
-    const p=planePoint(props.axis,props.point[props.axis],x,g.ny-1-y),idx=indexOf(p,props.volume.dims),k=4*(x+y*g.nx),v=props.volume.data[idx];
-    let r=Math.max(0,Math.min(255,(v-props.center+props.width/2)/Math.max(1,props.width)*255));if(props.displayInverted)r=255-r;let green=r,b=r;
-    for(const {m,color} of masks){if(props.preview&&props.previewReplacesActive&&m.id===props.activeMaskId)continue;const bits=m.id===props.activeMaskId&&props.draft?props.draft:m.data;if(bits[idx]){r=r*(1-m.opacity)+color[0]*m.opacity;green=green*(1-m.opacity)+color[1]*m.opacity;b=b*(1-m.opacity)+color[2]*m.opacity;}}
-    if(props.temporarySelection?.[idx]){const color=activeData?.[idx]?[255,205,60]:[184,98,235];r=r*.35+color[0]*.65;green=green*.35+color[1]*.65;b=b*.35+color[2]*.65;}
-    if(props.preview?.[idx]){r=r*.45+255*.55;green=green*.45+205*.55;b=b*.45+60*.55;}
-    img.data[k]=r;img.data[k+1]=green;img.data[k+2]=b;img.data[k+3]=255;
+  if(!sliceImage||offscreen.width!==g.nx||offscreen.height!==g.ny){offscreen.width=g.nx;offscreen.height=g.ny;sliceImage=offscreen.getContext('2d')!.createImageData(g.nx,g.ny);}
+  const rect=slicePixels.render({volume:props.volume,axis:props.axis,slice:props.point[props.axis],masks:props.masks,revision:props.revision,center:props.center,width:props.width,displayInverted:props.displayInverted,preview:props.preview,temporarySelection:props.temporarySelection,previewReplacesActive:props.previewReplacesActive,draft:props.draft,draftRevision:props.draftRevision,draftBounds:props.draftBounds,activeMaskId:props.activeMaskId},sliceImage.data);
+  if(rect){
+    if(offscreen.width!==g.nx||offscreen.height!==g.ny){offscreen.width=g.nx;offscreen.height=g.ny;}
+    offscreen.getContext('2d')!.putImageData(sliceImage,0,0,rect.x,rect.y,rect.width,rect.height);
   }
-  oc.putImageData(img,0,0);pixelsKey=key;}
   ctx.imageSmoothingEnabled=false;ctx.save();ctx.transform(...g.transform);ctx.drawImage(offscreen,0,0);ctx.restore();
   ctx.strokeStyle=props.interactiveEnabled?'#d9e4ef90':'#65b5e890';ctx.lineWidth=1;ctx.beginPath();
   for(const [axis,lo,hi] of [[g.a,-.5,g.nx-.5],[g.b,-.5,g.ny-.5]] as [Axis,number,number][]){const p=[...props.point] as Vec3;p[axis]=lo;ctx.moveTo(...screen(p));p[axis]=hi;ctx.lineTo(...screen(p));}ctx.stroke();

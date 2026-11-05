@@ -1,3 +1,4 @@
+import {resultTransfers} from './transferBuffers.ts';
 import * as segmentation from './segmentation.ts';
 import * as geometry from './geometry.ts';
 import {calculateLiveWire} from './livewire.ts';
@@ -97,7 +98,6 @@ self.onmessage=(event:MessageEvent)=>{
       case 'partToMask':result={mask:geometry.maskFromMesh(grid,message.mesh,options)};break;
       default:throw new Error('未知操作。');
     }
-    if(result instanceof Uint8Array&&result.buffer instanceof ArrayBuffer)workerScope.postMessage({type:'result',id,result},[result.buffer]);
-    else workerScope.postMessage({type:'result',id,result});
+    workerScope.postMessage({type:'result',id,result},resultTransfers(result,new Set([grid.data.buffer])));
   }catch(error){workerScope.postMessage({type:'error',id,message:error instanceof Error?error.message:String(error)});}
 };

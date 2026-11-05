@@ -1,3 +1,4 @@
+import {checkedVoxelLength,checkedVoxelCount,MAX_ZIP32_BYTES,NATIVE_LITTLE_ENDIAN} from '../volumeCapacity.ts';
 import {zipSync, unzipSync, strToU8, strFromU8} from 'fflate';
 import {parseNifti} from '../core.ts';
 import type {Volume} from '../core.ts';
@@ -197,7 +198,7 @@ export interface HistoryEntry {name:string; before:ProjectState; after:ProjectSt
 const colors=['#48d7ae','#ffb35c','#8daaff','#ed83c6','#e8d76a','#82d7ef'];
 let counter=0;
 export function objectId(prefix:string){return `${prefix}-${Date.now().toString(36)}-${(++counter).toString(36)}`;}
-function maskLength(length:number){if(!Number.isSafeInteger(length)||length<1||length>128*1024*1024)throw new Error('Mask尺寸无效。');}
+function maskLength(length:number){checkedVoxelLength(length,'Mask');}
 function binaryMask(data:BinaryMask,length:number){if(!(data instanceof Uint8Array)||data.length!==length)throw new Error('Mask尺寸或存储类型不一致。');if(data.some(n=>n!==0&&n!==1))throw new Error('Mask必须是独立二值成员数据。');}
 function thresholdRange(threshold:[number,number]|null){if(threshold!==null&&(!Array.isArray(threshold)||threshold.length!==2||!threshold.every(Number.isFinite)||!Object.hasOwn(threshold,0)||!Object.hasOwn(threshold,1)||threshold[0]>threshold[1]))throw new Error('Mask阈值范围无效。');}
 function validMesh(mesh:TriangleMesh){
@@ -287,7 +288,7 @@ export function addPart(state:ProjectState,mesh:TriangleMesh,source?:MaskObject)
   const part:PartObject={id:objectId('part'),name:`${source?.name||'Part'} 3D ${state.parts.length+1}`,color:source?.color||'#8daaff',opacity:1,visible:true,mesh,sourceMaskId:source?.id,sourceRevision:source?.revision};
   return {...state,parts:[...state.parts,part],selectedPartId:part.id};
 }
-function numericBytes(a:Float32Array|Uint32Array){const out=new Uint8Array(a.length*4),view=new DataView(out.buffer);for(let i=0;i<a.length;i++)if(a instanceof Float32Array)view.setFloat32(i*4,a[i]!,true);else view.setUint32(i*4,a[i]!,true);return out;}
+function numericBytes(a:Float32Array|Uint32Array){if(NATIVE_LITTLE_ENDIAN)return new Uint8Array(a.buffer,a.byteOffset,a.byteLength);const out=new Uint8Array(a.length*4),view=new DataView(out.buffer);for(let i=0;i<a.length;i++)if(a instanceof Float32Array)view.setFloat32(i*4,a[i]!,true);else view.setUint32(i*4,a[i]!,true);return out;}
 type NumericArrays=Record<string,Float32Array|Uint32Array>;
 function projectArchive(volume:Volume,state:ProjectState,encodeNumbers:boolean){
   assertKeys(volume,'name dims spacing data header little min max affine oblique unit dicom niftiReference','影像');
@@ -316,7 +317,7 @@ export function validateProject(volume:Volume,state:ProjectState):void {
   const {files,metadata,arrays}=projectArchive(volume,state,false);
   restoreProject(metadata,files,arrays);
   const descriptor=projectDescriptor(metadata),entries=Object.values(files);
-  if(entries.length+1>10000||entries.some(file=>file.byteLength>512*1024*1024)||entries.reduce((sum,file)=>sum+file.byteLength,descriptor.byteLength)>1024*1024*1024)throw new Error('工程数据超过默认工程资源预算。');
+  if(entries.length+1>10000||entries.some(file=>file.byteLength>MAX_ZIP32_BYTES)||entries.reduce((sum,file)=>sum+file.byteLength,descriptor.byteLength)>MAX_ZIP32_BYTES)throw new Error('工程数据超过默认工程资源预算。');
 }
 function projectDescriptor(metadata:unknown){
   assertJSONMetadata(metadata);
@@ -329,7 +330,7 @@ export function encodeProject(volume:Volume,state:ProjectState):Uint8Array {
   validateProject(volume,state);
   const {files,metadata}=projectArchive(volume,state,true);
   files['project.json']=projectDescriptor(metadata);
-  const archive=zipSync(files,{level:1});if(archive.byteLength>512*1024*1024)throw new Error('工程压缩包超过默认内存限制。');return archive;
+  const archive=zipSync(files,{level:1});if(archive.byteLength>MAX_ZIP32_BYTES)throw new Error('工程压缩包超过默认内存限制。');return archive;
 }
 export interface ProjectDecodeLimits {maxArchiveBytes?:number;maxUncompressedBytes?:number;maxEntryBytes?:number;maxFiles?:number}
 function validateContourSet(set:any,grid:VolumeGrid):asserts set is ContourSet{
@@ -374,7 +375,7 @@ function verifyZipChecksums(bytes:Uint8Array,files:Record<string,Uint8Array>){
   if(position!==start+directorySize||seen.size!==Object.keys(files).length)throw new Error('工程ZIP对象目录不一致。');
 }
 export function decodeProject(bytes:Uint8Array,limits:ProjectDecodeLimits={}):{volume:Volume;state:ProjectState}{
-  const archiveLimit=limits.maxArchiveBytes??512*1024*1024,totalLimit=limits.maxUncompressedBytes??1024*1024*1024,entryLimit=limits.maxEntryBytes??512*1024*1024,fileLimit=limits.maxFiles??10000;
+  const archiveLimit=limits.maxArchiveBytes??MAX_ZIP32_BYTES,totalLimit=limits.maxUncompressedBytes??MAX_ZIP32_BYTES,entryLimit=limits.maxEntryBytes??MAX_ZIP32_BYTES,fileLimit=limits.maxFiles??10000;
   if([archiveLimit,totalLimit,entryLimit,fileLimit].some(n=>!Number.isSafeInteger(n)||n<1))throw new Error('工程资源限制无效。');
   if(bytes.byteLength>archiveLimit)throw new Error('工程压缩包超过内存限制。');
   let declaredTotal=0;const paths=new Set<string>();
@@ -396,7 +397,7 @@ function restoreProject(meta:any,files:Record<string,Uint8Array>,arrays?:Numeric
   assertProjectSchema(meta.project,true);
   const vm=meta.volume,dims=vm?.dims;
   if(!Array.isArray(dims)||dims.length!==3||dims.some((n:unknown)=>!Number.isSafeInteger(n)||Number(n)<=0))throw new Error('工程影像尺寸无效。');
-  const n=dims[0]*dims[1]*dims[2];if(!Number.isSafeInteger(n)||n>128*1024*1024)throw new Error('工程影像超过当前内存限制。');
+  const n=checkedVoxelCount(dims,'工程影像');
   const referencedPaths=new Set<string>(['project.json']);
   function file(path:string,size?:number){const b=files[path];if(!b||size!==undefined&&b.byteLength!==size)throw new Error(`工程数据损坏：${path}`);referencedPaths.add(path);return b;}
   function take(path:string,size?:number){return file(path,size).slice().buffer as ArrayBuffer;}
@@ -404,9 +405,9 @@ function restoreProject(meta:any,files:Record<string,Uint8Array>,arrays?:Numeric
   function floats(path:string,size?:number){
     const original=arrays?.[path];
     if(original){file(path,size);if(!(original instanceof Float32Array)||original.some(n=>!Number.isFinite(n)))throw new Error(`工程包含非有限数值：${path}`);return original;}
-    const buffer=take(path,size);if(buffer.byteLength%4)throw new Error(`工程浮点数据长度损坏：${path}`);const view=new DataView(buffer),out=new Float32Array(buffer.byteLength/4);for(let i=0;i<out.length;i++){out[i]=view.getFloat32(i*4,true);if(!Number.isFinite(out[i]))throw new Error(`工程包含非有限数值：${path}`);}return out;
+    const bytes=file(path,size);if(NATIVE_LITTLE_ENDIAN&&bytes.byteOffset%4===0&&bytes.byteLength%4===0){const out=new Float32Array(bytes.buffer,bytes.byteOffset,bytes.byteLength/4);if(out.some(n=>!Number.isFinite(n)))throw new Error('工程包含非有限数值：'+path);return out;}const buffer=take(path,size);if(buffer.byteLength%4)throw new Error(`工程浮点数据长度损坏：${path}`);const view=new DataView(buffer),out=new Float32Array(buffer.byteLength/4);for(let i=0;i<out.length;i++){out[i]=view.getFloat32(i*4,true);if(!Number.isFinite(out[i]))throw new Error(`工程包含非有限数值：${path}`);}return out;
   }
-  function uints(path:string){const original=arrays?.[path];if(original){file(path);if(!(original instanceof Uint32Array))throw new Error('工程索引存储类型无效。');return original;}const buffer=take(path);if(buffer.byteLength%4)throw new Error(`工程索引数据长度损坏：${path}`);const view=new DataView(buffer),out=new Uint32Array(buffer.byteLength/4);for(let i=0;i<out.length;i++)out[i]=view.getUint32(i*4,true);return out;}
+  function uints(path:string){const original=arrays?.[path];if(original){file(path);if(!(original instanceof Uint32Array))throw new Error('工程索引存储类型无效。');return original;}const bytes=file(path);if(NATIVE_LITTLE_ENDIAN&&bytes.byteOffset%4===0&&bytes.byteLength%4===0)return new Uint32Array(bytes.buffer,bytes.byteOffset,bytes.byteLength/4);const buffer=take(path);if(buffer.byteLength%4)throw new Error(`工程索引数据长度损坏：${path}`);const view=new DataView(buffer),out=new Uint32Array(buffer.byteLength/4);for(let i=0;i<out.length;i++)out[i]=view.getUint32(i*4,true);return out;}
   function string(value:unknown,label:string){if(typeof value!=='string')throw new Error(`工程${label}无效。`);return value;}
   function id(value:unknown,label:string){const result=string(value,label);if(!result||result.length>256)throw new Error(`工程${label}无效。`);return result;}
   function opacity(value:unknown){if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>1)throw new Error('工程对象透明度无效。');return value;}

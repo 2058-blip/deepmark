@@ -19,10 +19,11 @@ export interface MprBrushContext {
 export const MAX_MPR_BRUSH_STROKE_VISITS=8_000_000;
 /** Independent source-cell/plane editing policy; no proprietary MPR writeback equivalence is implied. */
 export function useMprBrush(c:MprBrushContext){
+  const bounds=shallowRef<{min:Vec3;max:Vec3}|null>(null);
   const preview=shallowRef<BinaryMask|null>(null),previewRevision=ref(0);let stroke:Stroke|null=null,highestStrokeId=0;
   function config(){const settings=c.getSettings();if(!Number.isFinite(settings.widthMm)||!Number.isFinite(settings.heightMm)||settings.widthMm<=0||settings.heightMm<=0||!['circle','square'].includes(settings.shape))throw new Error('MPR 画笔宽高必须是有限正毫米数。');if(c.tool.value==='local-threshold'&&(!Number.isFinite(settings.lower)||!Number.isFinite(settings.upper)||settings.lower!>settings.upper!))throw new Error('局部阈值范围无效。');return{...settings};}
   function key(settings:MprBrushSettings,tool=c.tool.value){return JSON.stringify([settings.widthMm,settings.heightMm,settings.shape,tool==='local-threshold'?settings.lower:null,tool==='local-threshold'?settings.upper:null]);}
-  function clear(reason=''){const existed=!!stroke;stroke=null;preview.value=null;previewRevision.value++;if(existed&&reason)c.status.value=reason;}
+  function clear(reason=''){const existed=!!stroke;stroke=null;preview.value=null;bounds.value=null;previewRevision.value++;if(existed&&reason)c.status.value=reason;}
   function epochValid(change:MprBrushEpoch){
     return!!change&&Number.isSafeInteger(change.strokeId)&&change.strokeId>0&&change.volume===c.volume.value&&change.revision===c.revision.value&&change.mprRevision===c.poseRevision.value&&!c.busy.value&&!!c.grid.value&&c.volume.value?.unit==='mm'&&change.activeMaskId===c.state.value.selectedMaskId&&change.activeMaskId===c.activeMask.value?.id&&!!c.activeMask.value?.visible&&c.validPlane(change.mprPlane);
   }
@@ -49,15 +50,16 @@ export function useMprBrush(c:MprBrushContext){
       const remaining=MAX_MPR_BRUSH_STROKE_VISITS-s.scanVisits;if(remaining<=0)throw new Error('本笔画超过源体素扫描预算，已取消整笔；请分段绘制。');
       const result=sweepMprBrush(c.grid.value!,s.mprPlane,{from:change.startSegment?change.position:s.last??change.position,to:change.position,widthMm:s.settings.widthMm,heightMm:s.settings.heightMm,shape:s.settings.shape},{maxScanVisits:Math.min(1_000_000,remaining)});
       if(s.scanVisits+result.scanVisits>MAX_MPR_BRUSH_STROKE_VISITS)throw new Error('本笔画超过源体素扫描预算，已取消整笔；请分段绘制。');s.scanVisits+=result.scanVisits;
-      let changed=false;for(const index of result.indices){if(visited(s,index))continue;const value=s.tool==='erase'?0:s.tool==='paint'?1:Number(Number.isFinite(c.grid.value!.data[index])&&c.grid.value!.data[index]!>=s.settings.lower!&&c.grid.value!.data[index]!<=s.settings.upper!);if(preview.value![index]!==value){preview.value![index]=value;changed=s.changed=true;}}
-      s.last=[...change.position];if(changed)previewRevision.value++;return true;
+      const dims=c.grid.value!.dims,low:Vec3=bounds.value?[...bounds.value.min]:[Infinity,Infinity,Infinity],high:Vec3=bounds.value?[...bounds.value.max]:[-Infinity,-Infinity,-Infinity];
+      let changed=false;for(const index of result.indices){if(visited(s,index))continue;const value=s.tool==='erase'?0:s.tool==='paint'?1:Number(Number.isFinite(c.grid.value!.data[index])&&c.grid.value!.data[index]!>=s.settings.lower!&&c.grid.value!.data[index]!<=s.settings.upper!);if(preview.value![index]!==value){preview.value![index]=value;changed=s.changed=true;const x=index%dims[0],y=Math.floor(index/dims[0])%dims[1],z=Math.floor(index/(dims[0]*dims[1]));low[0]=Math.min(low[0],x);low[1]=Math.min(low[1],y);low[2]=Math.min(low[2],z);high[0]=Math.max(high[0],x);high[1]=Math.max(high[1],y);high[2]=Math.max(high[2],z);}}
+      s.last=[...change.position];if(changed){bounds.value={min:low,max:high};previewRevision.value++;}return true;
     }catch(error){clear();c.fail(error);return false;}
   }
   function end(change:MprBrushEpoch){
     if(stroke&&Number.isSafeInteger(change?.strokeId)&&change.strokeId>0&&change.strokeId!==stroke.strokeId)return false;
     if(!change||!current(change)){clear('MPR 笔画上下文已变化，取消整笔预览');return false;}
     const s=stroke!,data=preview.value!;clear();if(!s.changed){c.status.value='MPR 笔画范围内的 Mask 无变化';return false;}
-    try{c.commit(s.tool==='paint'?'MPR 绘制 Mask':s.tool==='erase'?'MPR 擦除 Mask':'MPR 局部阈值',replaceMask(c.state.value,s.activeMaskId,data));return true;}catch(error){c.fail(error);return false;}
+    try{const found=c.state.value.masks.find(mask=>mask.id===s.activeMaskId);if(!found)throw new Error('目标Mask已不存在。');if(!Number.isSafeInteger(found.revision)||found.revision<0||found.revision===Number.MAX_SAFE_INTEGER)throw new Error('Mask版本无效或已超过安全整数范围。');const next={...c.state.value,masks:c.state.value.masks.map(mask=>mask.id===s.activeMaskId?{...mask,data,revision:mask.revision+1}:mask)};c.commit(s.tool==='paint'?'MPR 绘制 Mask':s.tool==='erase'?'MPR 擦除 Mask':'MPR 局部阈值',next);return true;}catch(error){c.fail(error);return false;}
   }
   function cancelGesture(change:MprBrushEpoch){
     const s=stroke;if(!s||!change)return false;
@@ -67,5 +69,5 @@ export function useMprBrush(c:MprBrushContext){
     }catch{return false;}
   }
   watch([c.volume,c.revision,c.poseRevision,c.tool,c.busy,()=>c.state.value.selectedMaskId,()=>c.activeMask.value?.visible,()=>c.activeMask.value?.data,()=>key(c.getSettings())],()=>{if(stroke&&!current())clear('MPR 笔画上下文已变化，取消整笔预览');},{flush:'sync'});
-  return{preview,previewRevision,begin,append,end,cancelGesture,cancel:()=>clear()};
+  return{bounds,preview,previewRevision,begin,append,end,cancelGesture,cancel:()=>clear()};
 }
