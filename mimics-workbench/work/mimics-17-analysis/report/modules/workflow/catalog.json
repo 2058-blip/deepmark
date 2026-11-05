@@ -1,0 +1,2437 @@
+[
+  {
+    "id": "S01",
+    "name": "Thresholding（全局阈值）",
+    "menu": "Segmentation > Thresholding；Segmentation toolbar；Masks > New",
+    "inputs": "活动 mask，图像强度及 HU/GV 单位",
+    "steps": [
+      "在 Masks 选活动 mask 或 New",
+      "打开 Thresholding",
+      "选预定义组织或拖 Min/Max 滑块",
+      "必要时双击数值/用微调箭头并 Enter",
+      "在三正交视图翻片检查",
+      "点 Apply"
+    ],
+    "parameters": "Min/Max：包含区间内体素；单下限时包含所有不低于下限者；预设可继续修改；边界限制在项目实际最小/最大强度。截图还显示 Fill holes、Keep largest，正文未解释其算法或作用域。",
+    "preview_commit": "滑块有实时颜色反馈；Apply 才使用阈值；截图存在 Cancel。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "改变全局阈值会丢失此前分割编辑；先阈值后 Region Growing。270 HU、538 HU、211 HU、-444 HU 等分别为教程病例数值，并非通用阈值。",
+    "sources": [
+      "Mimics Reference Guide/Thresholding1.htm",
+      "Mimics Reference Guide/With the thresholding toolbar.htm",
+      "Mimics Reference Guide/With a Profile Line.htm",
+      "Mimics Reference Guide/Region growing2.htm"
+    ],
+    "shortcut": "",
+    "defaults": "预设依组织和项目；不提供通用 HU 数值。图中 Bone(CT)、226/1613 是截图状态。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Thresholding > With the thresholding toolbar",
+      " > Mimics Menus > Segmentation Menu > Thresholding > With a Profile Line",
+      " > Mimics Tutorial > Mimi > Thresholding",
+      " > Mimics Tutorial > Mimi > Region growing"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H095: evidence/help/chm/Mimics Reference Guide/Thresholding1.htm",
+      "H101: evidence/help/chm/Mimics Reference Guide/With the thresholding toolbar.htm",
+      "H100: evidence/help/chm/Mimics Reference Guide/With a Profile Line.htm",
+      "H078: evidence/help/chm/Mimics Reference Guide/Region growing2.htm"
+    ],
+    "source_refs": [
+      "H095",
+      "H101",
+      "H100",
+      "H078"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "活动 mask，图像强度及 HU/GV 单位",
+    "data_output": "阈值mask"
+  },
+  {
+    "id": "S02",
+    "name": "Region Growing（已有 mask 连通域提取）",
+    "menu": "Segmentation > Region Growing；Segmentation toolbar",
+    "inputs": "先有非空 source mask；种子必须在其中",
+    "steps": [
+      "设 Source",
+      "设 Target 为 New Mask 或已有 mask",
+      "设 Multiple Layer 和6/26-connectivity",
+      "决定 Leave Original Mask",
+      "左键单击对象内部",
+      "检查各切片后 Close"
+    ],
+    "parameters": "Multiple Layer off=单片，on=全体3D；6连接只邻面；26连接含面/边/顶点。Target 可累加；双箭头交换已有 source/target。",
+    "preview_commit": "单击即生长和写入 target，无独立 Apply。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "Leave Original Mask 勾选=复制粘贴；不勾=剪切粘贴，源体素会移除。残余细桥会把结构连在一起，必须先编辑断开。",
+    "sources": [
+      "Mimics Reference Guide/Region Growing1.htm",
+      "Mimics Reference Guide/Region growing2.htm",
+      "Mimics Reference Guide/Editing Thresholding.htm"
+    ],
+    "shortcut": "Ctrl+R",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Region Growing",
+      " > Mimics Tutorial > Mimi > Region growing",
+      " > Mimics Tutorial > Simon > Preparation of the data > Editing - Thresholding"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H077: evidence/help/chm/Mimics Reference Guide/Region Growing1.htm",
+      "H078: evidence/help/chm/Mimics Reference Guide/Region growing2.htm",
+      "H035: evidence/help/chm/Mimics Reference Guide/Editing Thresholding.htm"
+    ],
+    "source_refs": [
+      "H077",
+      "H078",
+      "H035"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "先有非空 source mask；种子必须在其中",
+    "data_output": "新建或累加target mask；可移除source内选中体素"
+  },
+  {
+    "id": "S03",
+    "name": "Edit Masks：Draw / Erase / local Threshold",
+    "menu": "Segmentation > Edit Masks；Segmentation toolbar",
+    "inputs": "仅活动 mask；选当前切片",
+    "steps": [
+      "选 Square/Circle/Lasso/Flood-Fill/LiveWire",
+      "设 Width/Height",
+      "选 Draw、Erase 或 Threshold",
+      "在图像按住左键画/擦",
+      "逐片或跨视图复核",
+      "需要时 Update Polylines 后 Close"
+    ],
+    "parameters": "Same Width & Height 锁宽高；Lasso 按住左键描绘，松开结束；Flood-Fill 按住生长到边缘，Tolerance 越高需越锐利边界才阻止增长，Impatience 控制扩张速度；local Threshold 有三组区间，中间=活动mask原阈值不可改，自定义组双击数值后 Enter。",
+    "preview_commit": "编辑直接改变 mask；右键 Erase full slice 清整片；local Threshold 在刷到区域内按强度加入或移除体素。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "local Threshold 只当前图像局部，不能当全数据集阈值。刷子包含并不代表都加入：已有但超区间的体素也会删去。",
+    "sources": [
+      "Mimics Reference Guide/Edit Masks.htm",
+      "Mimics Reference Guide/Edit.htm",
+      "Mimics Reference Guide/Editing.htm"
+    ],
+    "shortcut": "Ctrl+D / Ctrl+E / Ctrl+T；编辑内 D/E/T；Alt 切 Draw/Erase；Ctrl+左拖改刷子大小；Shift+左键临时1-click导航",
+    "defaults": "local Threshold 中间组继承活动 mask 阈值；不是固定 226/1613。截图刷子50×50不是经正文确认的默认。",
+    "help_hierarchy": [
+      " > General Information > Shortcut Keys > Shortcuts on Segmentation functions > Edit",
+      " > Mimics Menus > Segmentation Menu > Edit Masks",
+      " > Mimics Tutorial > Obturator > Editing"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H032: evidence/help/chm/Mimics Reference Guide/Edit Masks.htm",
+      "H034: evidence/help/chm/Mimics Reference Guide/Edit.htm",
+      "H036: evidence/help/chm/Mimics Reference Guide/Editing.htm"
+    ],
+    "source_refs": [
+      "H032",
+      "H034",
+      "H036"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "仅活动 mask；选当前切片",
+    "data_output": "修改后的活动mask"
+  },
+  {
+    "id": "S04",
+    "name": "Multiple Slice Edit（临时 mask 批量编辑）",
+    "menu": "Segmentation > Multiple Slice Edit；Segmentation toolbar",
+    "inputs": "活动 mask + 由工具自动创建的临时 mask",
+    "steps": [
+      "选 Copy to slices 方向 Axial/Coronal/Sagittal",
+      "用 Select/Deselect 在临时 mask 选区域",
+      "填 Number of slices",
+      "点击向上/下箭头复制到其他层",
+      "按需在目标层再改再复制",
+      "选 Operation on active mask",
+      "Apply"
+    ],
+    "parameters": "Type/刷子尺寸/Tolerance/Impatience 同编辑工具；临时与原mask交集用第三色显示；Operation=Remove/Add/local Threshold；右键 Select full slice；复制数量0代表向该方向所有层，非0会跳到最后复制层。",
+    "preview_commit": "临时 mask 是预选，Apply 才将所选操作写回活动mask；截图提供 Close。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "确定方向和层数后再复制。不要把临时色、交集色误认为已改动源mask；Close 的未应用选择处理正文未详述。",
+    "sources": [
+      "Mimics Reference Guide/Multiple slice edit.htm",
+      "Mimics Reference Guide/The multiple slice edit interface.htm"
+    ],
+    "shortcut": "菜单截图显示 Ctrl+M",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Multiple Slice Edit",
+      " > Mimics Menus > Segmentation Menu > Multiple Slice Edit > The multiple slice edit interface"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H064: evidence/help/chm/Mimics Reference Guide/Multiple slice edit.htm",
+      "H094: evidence/help/chm/Mimics Reference Guide/The multiple slice edit interface.htm"
+    ],
+    "source_refs": [
+      "H064",
+      "H094"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "活动 mask + 由工具自动创建的临时 mask",
+    "data_output": "Apply后修改的活动mask"
+  },
+  {
+    "id": "S05",
+    "name": "Interpolation（Multiple Slice Edit 内）",
+    "menu": "Multiple Slice Edit 对话框的插值按钮",
+    "inputs": "在不同切片已画出的临时 mask 轮廓/区域",
+    "steps": [
+      "先按 S04 选择方向并在间隔层画临时区域",
+      "点击插值按钮",
+      "检查各中间层",
+      "选择 Add/Remove/local Threshold",
+      "Apply",
+      "完成当前插值后再处理另一组选区"
+    ],
+    "parameters": "插值方向取 Copy to slices 当前方向；正文没有给插值次数、数学方法或独立默认参数。",
+    "preview_commit": "插值作用于临时mask；需 Apply 才进入下一轮其他区域插值。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "View > Interpolated Images 只插值XZ/YZ灰度显示，mask不变；它与此工具不是同一功能。",
+    "sources": [
+      "Mimics Reference Guide/The multiple slice edit interface.htm",
+      "Mimics Reference Guide/Multiple slice edit.htm",
+      "Mimics Reference Guide/Interpolated images.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > View Menu > Interpolated Images",
+      " > Mimics Menus > Segmentation Menu > Multiple Slice Edit",
+      " > Mimics Menus > Segmentation Menu > Multiple Slice Edit > The multiple slice edit interface"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H094: evidence/help/chm/Mimics Reference Guide/The multiple slice edit interface.htm",
+      "H064: evidence/help/chm/Mimics Reference Guide/Multiple slice edit.htm",
+      "H045: evidence/help/chm/Mimics Reference Guide/Interpolated images.htm"
+    ],
+    "source_refs": [
+      "H094",
+      "H064",
+      "H045"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "在不同切片已画出的临时 mask 轮廓/区域",
+    "data_output": "插值临时mask，Apply后修改活动mask"
+  },
+  {
+    "id": "S06",
+    "name": "Dynamic Region Growing",
+    "menu": "Segmentation > Dynamic Region Growing",
+    "inputs": "原图强度；不要求先全局阈值",
+    "steps": [
+      "设 Target",
+      "设 Fill Cavities/Multiple Layer",
+      "设 Deviation Min/Max",
+      "在目标内部左键选种子",
+      "需要第二种子时 Ctrl+单击",
+      "检查新mask",
+      "Close"
+    ],
+    "parameters": "比较邻域灰度，正文规则 |平均灰度-候选灰度|<d；Target 可新建或已有，其已有体素灰度也参与；Multiple Layer off=单片、on=全数据；Seed point显示最后种子HU/GV；偏差相对灰度范围。",
+    "preview_commit": "选种子即开始生成，未描述独立预览/Apply。结果mask以已选体素最小/最大灰度设阈值。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "与普通Region Growing不同，它直接看灰度连通性。正文沿用平均灰度公式又将界面Min/Max描述为相对种子偏差，不能据此伪造精确内部实现；需与代码证据互证。",
+    "sources": [
+      "Mimics Reference Guide/Dynamic Region Growing.htm"
+    ],
+    "shortcut": "",
+    "defaults": "文档截图 Target=<New Mask>、Fill Cavities/Multiple Layer 勾选、Deviation Min=50 HU Max=50 HU；仅可证明截图状态。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Dynamic Region Growing"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H030: evidence/help/chm/Mimics Reference Guide/Dynamic Region Growing.htm"
+    ],
+    "source_refs": [
+      "H030"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "原图强度；不要求先全局阈值",
+    "data_output": "新建或更新target mask"
+  },
+  {
+    "id": "S07",
+    "name": "Boolean Operations（mask布尔）",
+    "menu": "Segmentation > Boolean Operations",
+    "inputs": "Mask A、Mask B",
+    "steps": [
+      "选择A和B",
+      "选 Minus/Intersection/Union",
+      "设Result",
+      "Apply",
+      "检查",
+      "Close"
+    ],
+    "parameters": "A-B的结果阈值沿用A；交集low=max(lowA,lowB),high=min(highA,highB)；并集low=min(lowA,lowB),high=max(highA,highB)。",
+    "preview_commit": "Apply 写结果mask；截图 Result 可 New Mask。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "减法顺序不可交换。教程下颌骨去两侧假体需要连续两次减法，不是一次同时选3个输入。",
+    "sources": [
+      "Mimics Reference Guide/Boolean Operations.htm",
+      "Mimics Reference Guide/Boolean Operations1.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Boolean Operations",
+      " > Mimics Tutorial > Simon > Preparation of the data > Boolean Operations"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H009: evidence/help/chm/Mimics Reference Guide/Boolean Operations.htm",
+      "H010: evidence/help/chm/Mimics Reference Guide/Boolean Operations1.htm"
+    ],
+    "source_refs": [
+      "H009",
+      "H010"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "Mask A、Mask B",
+    "data_output": "布尔结果mask"
+  },
+  {
+    "id": "S08",
+    "name": "Morphology Operations",
+    "menu": "Segmentation > Morphology Operations",
+    "inputs": "Source mask",
+    "steps": [
+      "选Source",
+      "选Erode/Dilate/Open/Close",
+      "设Target",
+      "按需Limited to另一个mask",
+      "设Number of pixels和8/26-connectivity",
+      "Apply"
+    ],
+    "parameters": "Erode减边缘，Dilate加边缘；Open先腐蚀后膨胀；Close先膨胀后腐蚀；8连接逐平面邻域但执行完整数据集；26连接3D，仅层距≤pixel size×number of pixels时才能体现跨层作用；target阈值继承source。",
+    "preview_commit": "Apply 生成目标mask；Close退出。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不能把这里8连接与Region Growing的6连接混写。Limited to配合Erode会执行布尔交集，不能简单当一般几何裁剪。",
+    "sources": [
+      "Mimics Reference Guide/Morphology Operations.htm"
+    ],
+    "shortcut": "",
+    "defaults": "图示Number of pixels=1、8-connectivity、Limited to=None，非正文保证的固定默认。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Morphology Operations"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H063: evidence/help/chm/Mimics Reference Guide/Morphology Operations.htm"
+    ],
+    "source_refs": [
+      "H063"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "Source mask",
+    "data_output": "形态学target mask"
+  },
+  {
+    "id": "S09",
+    "name": "Cavity Fill",
+    "menu": "Segmentation > Cavity Fill",
+    "inputs": "包围腔体的Source mask",
+    "steps": [
+      "先Duplicate源mask",
+      "设Source/Target",
+      "设Multiple Layer",
+      "用桶形光标左键单击腔体",
+      "检查外溢及各切片"
+    ],
+    "parameters": "Multiple Layer决定3D或单片2D；结果可放新mask。",
+    "preview_commit": "单击选腔后执行；帮助没有单独预览说明。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "腔体必须各方向被mask封闭，否则会向周围外溢。可先Edit Masks封口。",
+    "sources": [
+      "Mimics Reference Guide/Cavity Fill.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Cavity Fill"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H017: evidence/help/chm/Mimics Reference Guide/Cavity Fill.htm"
+    ],
+    "source_refs": [
+      "H017"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "包围腔体的Source mask",
+    "data_output": "填充后的target mask"
+  },
+  {
+    "id": "S10",
+    "name": "Cavity Fill from Polylines",
+    "menu": "Segmentation > Cavity Fill from Polylines",
+    "inputs": "polyline set",
+    "steps": [
+      "选Source polyline set",
+      "设Target mask",
+      "执行填充",
+      "检查与原mask边界"
+    ],
+    "parameters": "逐条封闭polyline填充成mask。正文未写具体提交按钮名称。",
+    "preview_commit": "结果为mask；按钮及Cancel语义不补造。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "polyline在计算时经过插值，回填mask可能比原mask大；需要原mask精确范围时用Cavity Fill。",
+    "sources": [
+      "Mimics Reference Guide/Cavity Fill from Polylines.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Cavity Fill from Polylines"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H016: evidence/help/chm/Mimics Reference Guide/Cavity Fill from Polylines.htm"
+    ],
+    "source_refs": [
+      "H016"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "polyline set",
+    "data_output": "由polyline填充的mask"
+  },
+  {
+    "id": "S11",
+    "name": "2D LiveWire（Edit Masks 类型）",
+    "menu": "Edit Masks > Type: LiveWire",
+    "inputs": "当前切片；活动mask；当前 Draw/Erase/Threshold 操作",
+    "steps": [
+      "在Edit Masks选LiveWire",
+      "沿目标边界点若干点",
+      "检查吸附轮廓",
+      "以当前编辑操作作用于轮廓区域"
+    ],
+    "parameters": "连接线吸附图像边缘；它是编辑光标类型，非独立3D自动轮廓工具。",
+    "preview_commit": "正文未给2D LiveWire专门闭合/提交手势，不能把3D LiveWire双击步骤无证据移植。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "与3D LiveWire不同；文档缺失的手势需后续运行验证，不写成已确认。",
+    "sources": [
+      "Mimics Reference Guide/Edit Masks.htm",
+      "Mimics Reference Guide/The multiple slice edit interface.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Edit Masks",
+      " > Mimics Menus > Segmentation Menu > Multiple Slice Edit > The multiple slice edit interface"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H032: evidence/help/chm/Mimics Reference Guide/Edit Masks.htm",
+      "H094: evidence/help/chm/Mimics Reference Guide/The multiple slice edit interface.htm"
+    ],
+    "source_refs": [
+      "H032",
+      "H094"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "当前切片；活动mask；当前 Draw/Erase/Threshold 操作",
+    "data_output": "按选定编辑模式修改活动mask"
+  },
+  {
+    "id": "S12",
+    "name": "3D LiveWire",
+    "menu": "Segmentation > 3D LiveWire",
+    "inputs": "原图；在另外两正交方向勾轮廓",
+    "steps": [
+      "选Target和Automatic contour方向，例如Axial",
+      "在Coronal/Sagittal沿边界点选",
+      "双击闭合",
+      "多层重复",
+      "查看自动方向turtle map",
+      "拖点或加约束线修正",
+      "Segment生成mask"
+    ],
+    "parameters": "Gradient magnitude 0%偏暗边界、100%偏亮边界；Attraction近-3包含小凹陷、近3排除；Apply parameters to all contours控制全体或当前轮廓；Start/Stop指定应用层范围；Ctrl+鼠标移动可画直线。",
+    "preview_commit": "自动轮廓可视反馈；Segment才计算mask。生成后选此mask重开工具仍能改控制点。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "turtle线至少与另一线相交，否则不用于分割；约束线只修当前层。右键可删当前层/全视图轮廓或construction line。",
+    "sources": [
+      "Mimics Reference Guide/3D LiveWire.htm",
+      "Mimics Reference Guide/The 3D LiveWire Interface.htm"
+    ],
+    "shortcut": "",
+    "defaults": "截图显示Automatic contour=Axial、Gradient magnitude=60%、Attraction=0；正文未声明通用默认。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > 3D LiveWire",
+      " > Mimics Menus > Segmentation Menu > 3D LiveWire > The 3D LiveWire Interface"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H002: evidence/help/chm/Mimics Reference Guide/3D LiveWire.htm",
+      "H093: evidence/help/chm/Mimics Reference Guide/The 3D LiveWire Interface.htm"
+    ],
+    "source_refs": [
+      "H002",
+      "H093"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "原图；在另外两正交方向勾轮廓",
+    "data_output": "mask及可继续编辑的轮廓/控制点"
+  },
+  {
+    "id": "S13",
+    "name": "Edit Mask in 3D",
+    "menu": "Segmentation > Edit Mask in 3D",
+    "inputs": "活动mask；ROI内3D预览",
+    "steps": [
+      "在2D移动/缩放ROI",
+      "在3D预览用Square/Circle/Lasso框选",
+      "Select/Deselect修正",
+      "必要时Grow只保留所点模型、Invert反选",
+      "Hide/Show辅助观察",
+      "选Removes或Separate"
+    ],
+    "parameters": "ROI大小可在Preferences > Masks设；Ctrl+左拖调刷子；Removes删除选中体素；Separate把选区移入新mask。",
+    "preview_commit": "自带3D预览；选区不等于提交，Remove/Separate才改变mask。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "ROI保证速度，不能把ROI外不可见部分当成不存在。Separate是mask分离，与Simulation > Split的3D对象分裂不同。",
+    "sources": [
+      "Mimics Reference Guide/Edit Mask in 3D.htm",
+      "Mimics Reference Guide/Masks preferences.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Edit Mask in 3D",
+      " > Mimics Menus > Options Menu > Preferences > Masks preferences"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H031: evidence/help/chm/Mimics Reference Guide/Edit Mask in 3D.htm",
+      "H049: evidence/help/chm/Mimics Reference Guide/Masks preferences.htm"
+    ],
+    "source_refs": [
+      "H031",
+      "H049"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "活动mask；ROI内3D预览",
+    "data_output": "删改mask或分离后的新mask"
+  },
+  {
+    "id": "S14",
+    "name": "Smart Expand",
+    "menu": "Segmentation > Smart Expand；Segmentation toolbar",
+    "inputs": "粗略内部Source mask",
+    "steps": [
+      "Masks > New设阈值",
+      "Clear得到空mask",
+      "用Draw在间隔Axial/Sagittal层只画目标内部",
+      "选Smart Expand",
+      "设Source/Target及Maximum Expand Distance",
+      "Apply",
+      "检查结果，必要时再次Apply",
+      "按需Smooth Mask"
+    ],
+    "parameters": "沿源mask外扩，遇图像灰度梯度边界停止；Maximum Expand Distance限制搜索区域且越大越慢；Target可New或覆盖已有mask。",
+    "preview_commit": "Apply执行。教程建议再次运行可改善肝脏结果，不代表所有病例都必须两次。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "源mask不要画到邻接解剖。教程10pixels对应其约每10片绘制的病例，998/1394是该教程阈值。没有本地证据表明此功能名叫Smart Fill。",
+    "sources": [
+      "Mimics Reference Guide/Smart Expand.htm",
+      "Mimics Reference Guide/Creating the source mask.htm",
+      "Mimics Reference Guide/Initialize the source mask.htm",
+      "Mimics Reference Guide/Launch smart expand.htm",
+      "Mimics Reference Guide/Smooth mask2.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Smart Expand",
+      " > Mimics Tutorial > Smart Expand > Creating the source mask",
+      " > Mimics Tutorial > Smart Expand > Initialize the source mask",
+      " > Mimics Tutorial > Smart Expand > Launch smart expand",
+      " > Mimics Tutorial > Smart Expand > Smooth mask"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H085: evidence/help/chm/Mimics Reference Guide/Smart Expand.htm",
+      "H025: evidence/help/chm/Mimics Reference Guide/Creating the source mask.htm",
+      "H044: evidence/help/chm/Mimics Reference Guide/Initialize the source mask.htm",
+      "H047: evidence/help/chm/Mimics Reference Guide/Launch smart expand.htm",
+      "H087: evidence/help/chm/Mimics Reference Guide/Smooth mask2.htm"
+    ],
+    "source_refs": [
+      "H085",
+      "H025",
+      "H044",
+      "H047",
+      "H087"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "粗略内部Source mask",
+    "data_output": "扩展后的target mask"
+  },
+  {
+    "id": "S15",
+    "name": "Smooth Mask",
+    "menu": "Segmentation > Smooth Mask",
+    "inputs": "活动mask",
+    "steps": [
+      "先选mask",
+      "点Smooth Mask",
+      "检查边界/细枝",
+      "需要时重复",
+      "再Calculate 3D"
+    ],
+    "parameters": "滤除手工分割产生的离群点和伪影，尽量保持重要边界；文档未给可调参数对话框。",
+    "preview_commit": "点击即应用；教程说明重复点击会增加平滑。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "这是体素mask平滑，区别于Tools > Smoothing对三角网格的后处理。",
+    "sources": [
+      "Mimics Reference Guide/Smooth Mask.htm",
+      "Mimics Reference Guide/Smooth mask2.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Smooth Mask",
+      " > Mimics Tutorial > Smart Expand > Smooth mask"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H086: evidence/help/chm/Mimics Reference Guide/Smooth Mask.htm",
+      "H087: evidence/help/chm/Mimics Reference Guide/Smooth mask2.htm"
+    ],
+    "source_refs": [
+      "H086",
+      "H087"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "活动mask",
+    "data_output": "平滑后的活动mask"
+  },
+  {
+    "id": "S16",
+    "name": "Crop Mask",
+    "menu": "Segmentation > Crop Mask",
+    "inputs": "活动mask与ROI",
+    "steps": [
+      "选择mask",
+      "打开Crop Mask",
+      "选定ROI",
+      "检查范围",
+      "执行裁剪"
+    ],
+    "parameters": "删除ROI外mask；灰度图像保留。正文未写按钮名和ROI交互细节。",
+    "preview_commit": "根据ROI限制mask；不补造Apply/OK步骤。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不同于Crop Project；后者影响项目图像。",
+    "sources": [
+      "Mimics Reference Guide/Crop Mask.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Crop Mask"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H026: evidence/help/chm/Mimics Reference Guide/Crop Mask.htm"
+    ],
+    "source_refs": [
+      "H026"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "活动mask与ROI",
+    "data_output": "ROI限制后的mask"
+  },
+  {
+    "id": "S17",
+    "name": "Calculate Polylines / Update Polylines",
+    "menu": "Segmentation > Calculate Polylines；Segmentation > Update Polylines",
+    "inputs": "选中mask",
+    "steps": [
+      "打开Calculate Polylines",
+      "选需计算的mask",
+      "Calculate",
+      "检查高分辨率轮廓",
+      "改单片mask后用Update",
+      "多片改变先逐片编辑再全部重算"
+    ],
+    "parameters": "轮廓与STL+使用的分割轮廓一致；可辅助确定阈值。",
+    "preview_commit": "Calculate计算集合；Update只更新当前层。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "阈值改变后整个polyline集合都须重算，单层Update不够。",
+    "sources": [
+      "Mimics Reference Guide/Calculate Polylines.htm",
+      "Mimics Reference Guide/Update Polylines.htm"
+    ],
+    "shortcut": "Ctrl+U 更新（菜单截图）",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Calculate Polylines",
+      " > Mimics Menus > Segmentation Menu > Update Polylines"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H012: evidence/help/chm/Mimics Reference Guide/Calculate Polylines.htm",
+      "H099: evidence/help/chm/Mimics Reference Guide/Update Polylines.htm"
+    ],
+    "source_refs": [
+      "H012",
+      "H099"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "选中mask",
+    "data_output": "polyline set或当前层polyline"
+  },
+  {
+    "id": "S18",
+    "name": "Calculate Polylines from 3D",
+    "menu": "Segmentation > Calculate Polylines from 3D",
+    "inputs": "3D object或STL",
+    "steps": [
+      "选择源3D/STL",
+      "执行轮廓计算",
+      "在每片检查输出polyline"
+    ],
+    "parameters": "按项目各切片与3D/STL相交形成轮廓。正文未列数值参数。",
+    "preview_commit": "输出polyline set；按钮名未给出。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "它不是由mask计算polyline；空间采样依项目切片。",
+    "sources": [
+      "Mimics Reference Guide/Calculate polylines from 3D.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Calculate Polylines from 3D"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H014: evidence/help/chm/Mimics Reference Guide/Calculate polylines from 3D.htm"
+    ],
+    "source_refs": [
+      "H014"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "3D object或STL",
+    "data_output": "从3D/STL采样的polyline set"
+  },
+  {
+    "id": "S19",
+    "name": "Calculate Mask from 3D/object",
+    "menu": "Segmentation > Calculate Mask from object（toolbar名称）；正文页称 Calculate Mask from 3D",
+    "inputs": "3D object或STL、项目切片",
+    "steps": [
+      "打开工具",
+      "设Source 3D object/STL",
+      "设Target mask",
+      "执行",
+      "检查填充"
+    ],
+    "parameters": "逐项目切片取对象轮廓再填充为mask。",
+    "preview_commit": "写入目标mask；正文未给按钮名。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "注意菜单/正文称呼差异；从离散网格回到离散体素，不承诺与原mask完全相同。",
+    "sources": [
+      "Mimics Reference Guide/Calculate mask from 3D.htm",
+      "Mimics Reference Guide/Segmentation toolbar.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > View Menu > Toolbars > Segmentation toolbar",
+      " > Mimics Menus > Segmentation Menu > Calculate Mask from 3D"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H013: evidence/help/chm/Mimics Reference Guide/Calculate mask from 3D.htm",
+      "H082: evidence/help/chm/Mimics Reference Guide/Segmentation toolbar.htm"
+    ],
+    "source_refs": [
+      "H013",
+      "H082"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "3D object或STL、项目切片",
+    "data_output": "从3D/STL填充的mask"
+  },
+  {
+    "id": "S20",
+    "name": "Label（写入mask的实体文字）",
+    "menu": "Segmentation > Label",
+    "inputs": "目标mask、文字",
+    "steps": [
+      "输入Label文字",
+      "选Mask/Font/Size/Depth",
+      "设2D slice-able及方向",
+      "左拖到位置",
+      "需要修改/删去时右键Properties/Delete"
+    ],
+    "parameters": "Size/Depth单位mm；Depth从当前层向上，若到顶则向下复制；2D slice-able限定水平/垂直且不能改font；View from Top/Bottom指图像堆栈上下。",
+    "preview_commit": "标签可随STL导出；正文未列提交按钮。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "这不是Add Text Annotations。若需切层导出可见，必须勾2D slice-able；Mimics3D显示外观可能不正确。",
+    "sources": [
+      "Mimics Reference Guide/Label.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Label"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H046: evidence/help/chm/Mimics Reference Guide/Label.htm"
+    ],
+    "source_refs": [
+      "H046"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "目标mask、文字",
+    "data_output": "mask实体label"
+  },
+  {
+    "id": "S21",
+    "name": "Predefined Thresholds（组织阈值预设）",
+    "menu": "Options > Preferences > Predefined Thresholds（帮助设置页）",
+    "inputs": "预定义阈值列表",
+    "steps": [
+      "选条目后Edit名称和上下限",
+      "Add或Delete增删",
+      "Move Up/Down调顺序",
+      "Reset恢复原设置"
+    ],
+    "parameters": "上下限采用General preferences所选HU/GV单位；当前Thresholding可选预设再微调。",
+    "preview_commit": "设置页动作会更改预设；不等同于已给当前mask Apply。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "Bone(CT)在阈值截图是预设名称；本地帮助没有证实独立CT Bone工具或Advanced Thresholding。",
+    "sources": [
+      "Mimics Reference Guide/Predefined Thresholds.htm",
+      "Mimics Reference Guide/General preferences.htm",
+      "Mimics Reference Guide/With the thresholding toolbar.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Thresholding > With the thresholding toolbar",
+      " > Mimics Menus > Options Menu > Preferences > General preferences",
+      " > Mimics Menus > Options Menu > Preferences > Predefined Thresholds"
+    ],
+    "category": "分割与mask",
+    "source": [
+      "H065: evidence/help/chm/Mimics Reference Guide/Predefined Thresholds.htm",
+      "H042: evidence/help/chm/Mimics Reference Guide/General preferences.htm",
+      "H101: evidence/help/chm/Mimics Reference Guide/With the thresholding toolbar.htm"
+    ],
+    "source_refs": [
+      "H065",
+      "H042",
+      "H101"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "预定义阈值列表",
+    "data_output": "用户阈值预设列表"
+  },
+  {
+    "id": "R01",
+    "name": "Calculate 3D",
+    "menu": "Segmentation > Calculate 3D；Masks > Calculate 3D；Segmentation toolbar",
+    "inputs": "非空mask，可多选",
+    "steps": [
+      "打开Calculate 3D",
+      "选mask行",
+      "选Low/Medium/High/Optimal/Custom",
+      "Custom时Options设参数",
+      "Calculate",
+      "在3D Objects检查、命名、与2D轮廓比较"
+    ],
+    "parameters": "Quality控制矩阵降采样/计算；星号是按电脑推荐。Custom参数可涉及插值、矩阵、平滑、减面；具体详见STL+参数页。",
+    "preview_commit": "Calculate开始计算并自动显示3D；Close退出。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "空mask不能计算。正文说Optimal最准确，High仍有XY矩阵减少；Low/Medium尺寸不精确。重建只生成网格，不代替mask质检。",
+    "sources": [
+      "Mimics Reference Guide/Calculate 3D.htm",
+      "Mimics Reference Guide/Listed masks.htm",
+      "Mimics Reference Guide/Quality.htm",
+      "Mimics Reference Guide/Calculate.htm",
+      "Mimics Reference Guide/3D objects.htm",
+      "Mimics Reference Guide/STL STL VRML Parameters.htm"
+    ],
+    "shortcut": "",
+    "defaults": "没有统一质量默认；星号表示机器推荐。截图High被选、Optimal带*，两者不可混同。",
+    "help_hierarchy": [
+      " > General Information > Project Management > 3D objects",
+      " > Mimics Menus > Segmentation Menu > Calculate 3D",
+      " > Mimics Menus > Segmentation Menu > Calculate 3D > Listed masks",
+      " > Mimics Menus > Segmentation Menu > Calculate 3D > Quality",
+      " > Mimics Menus > Segmentation Menu > Calculate 3D > Calculate"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H011: evidence/help/chm/Mimics Reference Guide/Calculate 3D.htm",
+      "H048: evidence/help/chm/Mimics Reference Guide/Listed masks.htm",
+      "H075: evidence/help/chm/Mimics Reference Guide/Quality.htm",
+      "H015: evidence/help/chm/Mimics Reference Guide/Calculate.htm",
+      "H003: evidence/help/chm/Mimics Reference Guide/3D objects.htm",
+      "H079: evidence/help/chm/Mimics Reference Guide/STL STL VRML Parameters.htm"
+    ],
+    "source_refs": [
+      "H011",
+      "H048",
+      "H075",
+      "H015",
+      "H003",
+      "H079"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "非空mask，可多选",
+    "data_output": "3D object三角表面"
+  },
+  {
+    "id": "R02",
+    "name": "Smoothing（三角网格）",
+    "menu": "Mimics Tools > Smoothing；3D Objects > Action > Smoothing",
+    "inputs": "3D object或STL",
+    "steps": [
+      "选对象",
+      "打开Smoothing",
+      "设Iterations、Smooth factor",
+      "选择Compensate shrinkage、Keep originals",
+      "检查结果"
+    ],
+    "parameters": "Iterations为循环数；Smooth factor决定强度；Compensate shrinkage抵消体积收缩；Keep originals不勾会删除源对象。",
+    "preview_commit": "正文没有逐字说明预览/提交按钮；不写未经证实的Preview/Apply名称。结果进入3D Objects。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "Tools菜单需Simulation module。不要将Design菜单同名页或3-matic Fix教程步骤替代此路径。",
+    "sources": [
+      "Mimics Reference Guide/Smoothing.htm",
+      "Mimics Reference Guide/Tools Menu.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Tools Menu",
+      " > Mimics Menus > Tools Menu > Smoothing"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H088: evidence/help/chm/Mimics Reference Guide/Smoothing.htm",
+      "H097: evidence/help/chm/Mimics Reference Guide/Tools Menu.htm"
+    ],
+    "source_refs": [
+      "H088",
+      "H097"
+    ],
+    "license": "Simulation module（Tools Menu / Simulation Menu原文）",
+    "data_input": "3D object或STL",
+    "data_output": "平滑后的3D object"
+  },
+  {
+    "id": "R03",
+    "name": "Triangle Reduction（Mimics减面）",
+    "menu": "Mimics Tools > Triangle Reduction；3D Objects > Action > Triangle Reduction",
+    "inputs": "3D object或STL",
+    "steps": [
+      "选对象",
+      "选Point/Edge/Advanced Edge based",
+      "设Tolerance、Edge Angle、Iterations",
+      "执行并检查三角数和形状"
+    ],
+    "parameters": "Tolerance单位mm，平面合并最大偏差；Edge Angle界定需保留的棱边；Iterations为迭代数。STL+文档建议容差关联像素尺寸、约15次迭代收敛，不是默认值。",
+    "preview_commit": "结果进入3D Objects；本页未逐字列提交按钮。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "噪声大先平滑；容差过大损失关键几何。Reduce.htm是3-matic Fix toolbar案例，15°/0.1/5是案例参数，不能当Mimics默认。",
+    "sources": [
+      "Mimics Reference Guide/Triangle Reduction.htm",
+      "Mimics Reference Guide/STL STL VRML Parameters.htm",
+      "Mimics Reference Guide/Tools Menu.htm",
+      "Mimics Reference Guide/Reduce.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Tools Menu",
+      " > Mimics Menus > Tools Menu > Triangle Reduction",
+      " > Mimics Tutorial > Non-Manifold Assembly > Remesh of the femur and implant > Reduce"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H098: evidence/help/chm/Mimics Reference Guide/Triangle Reduction.htm",
+      "H079: evidence/help/chm/Mimics Reference Guide/STL STL VRML Parameters.htm",
+      "H097: evidence/help/chm/Mimics Reference Guide/Tools Menu.htm",
+      "H076: evidence/help/chm/Mimics Reference Guide/Reduce.htm"
+    ],
+    "source_refs": [
+      "H098",
+      "H079",
+      "H097",
+      "H076"
+    ],
+    "license": "Simulation module（Tools Menu / Simulation Menu原文）",
+    "data_input": "3D object或STL",
+    "data_output": "三角数减少的3D object"
+  },
+  {
+    "id": "R04",
+    "name": "Wrap",
+    "menu": "Mimics Tools > Wrap；3D Objects > Action > Wrap",
+    "inputs": "选中3D object/STL",
+    "steps": [
+      "选对象",
+      "设Smallest Detail与Closing Distance",
+      "选择Dilate result/Protect thin walls/Keep originals",
+      "执行",
+      "检查细壁、孔洞和包络"
+    ],
+    "parameters": "Smallest Detail≈新表面三角形尺寸；Closing Distance决定闭合缝隙尺度；Dilate result纳入mask极值附近像素；Protect thin walls防薄壁塌陷但可能使模型变厚。",
+    "preview_commit": "创建包络表面；正文未逐字列预览/提交按钮。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "Tools菜单需Simulation。保护薄壁改变厚度；Keep originals不勾会删源对象，表述“only cut objects”是原文模板措辞，不代表Wrap就是Cut。",
+    "sources": [
+      "Mimics Reference Guide/Wrap.htm",
+      "Mimics Reference Guide/Tools Menu.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Tools Menu",
+      " > Mimics Menus > Tools Menu > Wrap"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H102: evidence/help/chm/Mimics Reference Guide/Wrap.htm",
+      "H097: evidence/help/chm/Mimics Reference Guide/Tools Menu.htm"
+    ],
+    "source_refs": [
+      "H102",
+      "H097"
+    ],
+    "license": "Simulation module（Tools Menu / Simulation Menu原文）",
+    "data_input": "选中3D object/STL",
+    "data_output": "包络3D object"
+  },
+  {
+    "id": "R05",
+    "name": "Cut（三种切割）",
+    "menu": "Simulation > Cut > Cut with Polyplane / Cut with Curve / Cut Orthogonal to Screen",
+    "inputs": "3D object/STL与切割路径",
+    "steps": [
+      "先选对象",
+      "Polyplane在2D/3D画切割路径并Properties调深度厚度延伸",
+      "Curve在3D沿对象点选路径，双击或右键结束",
+      "检查黄色延伸不穿过对象",
+      "按各工具执行"
+    ],
+    "parameters": "Keep originals保护原对象；Curve的Extensions设外延；Cutting path Properties有Preview；Orthogonal需先从列表选对象方可预览/应用。",
+    "preview_commit": "Curve检查后OK会同时cut和split；Polyplane等路径可Preview。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "Curve全部延伸都须浮在模型外才完成切割。普通Split前需先Cut，不能用Split直接任意切面。",
+    "sources": [
+      "Mimics Reference Guide/Cut.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Simulation > Simulation Menu > Cut"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H028: evidence/help/chm/Mimics Reference Guide/Cut.htm"
+    ],
+    "source_refs": [
+      "H028"
+    ],
+    "license": "Simulation module（Tools Menu / Simulation Menu原文）",
+    "data_input": "3D object/STL与切割路径",
+    "data_output": "已切割3D object（Curve还会split）"
+  },
+  {
+    "id": "R06",
+    "name": "Split（3D cut parts）",
+    "menu": "Simulation > Split（教程也写CMF/Simulation）",
+    "inputs": "已经Cut过的3D对象",
+    "steps": [
+      "先Cut",
+      "打开Split",
+      "选Objects to Split",
+      "选All parts/Largest part/Two largest parts",
+      "选择Keep originals",
+      "Preview",
+      "Apply（教程写OK）"
+    ],
+    "parameters": "保留全部、最大或两大部分；Keep originals保留原对象。",
+    "preview_commit": "正式页明确Preview和/或Apply；教程写Preview再OK，属于帮助内部按钮文字差异。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不是Split Mask：本地mask分离靠Region Growing或Edit Mask in 3D > Separate。源页文件名虽含15.0，当前CHM目录仍将它用作Split页。",
+    "sources": [
+      "Mimics Reference Guide/Mimics 15.0 Reference Guide_track_v2_no_numbers2.htm",
+      "Mimics Reference Guide/Splitting.htm",
+      "Mimics Reference Guide/Simulation Menu.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Simulation > Simulation Menu",
+      " > Mimics Modules > Simulation > Simulation Menu > Split",
+      " > Mimics Tutorial > Simulation > Splitting"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H062: evidence/help/chm/Mimics Reference Guide/Mimics 15.0 Reference Guide_track_v2_no_numbers2.htm",
+      "H090: evidence/help/chm/Mimics Reference Guide/Splitting.htm",
+      "H084: evidence/help/chm/Mimics Reference Guide/Simulation Menu.htm"
+    ],
+    "source_refs": [
+      "H062",
+      "H090",
+      "H084"
+    ],
+    "license": "Simulation module（Tools Menu / Simulation Menu原文）",
+    "data_input": "已经Cut过的3D对象",
+    "data_output": "分开的3D objects"
+  },
+  {
+    "id": "R07",
+    "name": "STL+ triangulated export",
+    "menu": "Export > Binary STL / ASCII STL / DXF / VRML / PLY；File > STL+；Masks或3D Objects > Action > STL+",
+    "inputs": "mask、3D、3dd、CAD或FEA之一类",
+    "steps": [
+      "选择输入类别与对象",
+      "选Output directory/Output format",
+      "Add入队",
+      "可改Output Filename或Remove",
+      "设Scale factor",
+      "mask/3dd点Next进入计算参数",
+      "已建3D/CAD/FEA点Finish导出"
+    ],
+    "parameters": "不能将不同类别混入同一queue；支持Binary/ASCII STL、DXF、VRML2、PLY、single PLY；单PLY能保留多对象颜色；mask/3dd路径会重新计算网格。",
+    "preview_commit": "Add只入队；Next设参数或Finish实际导出。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "STL+是模块功能；本次不操作许可。若只想导出现有网格，选Start from 3D以避免从mask另算。导出文件不适用Ctrl+Z保证。",
+    "sources": [
+      "Mimics Reference Guide/Exporting triangulated files.htm",
+      "Mimics Reference Guide/STL mask 3D or file selection.htm",
+      "Mimics Reference Guide/STL STL VRML Parameters.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [],
+    "category": "3D重建与导出",
+    "source": [
+      "H039: evidence/help/chm/Mimics Reference Guide/Exporting triangulated files.htm",
+      "H080: evidence/help/chm/Mimics Reference Guide/STL mask 3D or file selection.htm",
+      "H079: evidence/help/chm/Mimics Reference Guide/STL STL VRML Parameters.htm"
+    ],
+    "source_refs": [
+      "H039",
+      "H080",
+      "H079"
+    ],
+    "license": "STL+ module（Exporting triangulated files原文）",
+    "data_input": "mask、3D、3dd、CAD或FEA之一类",
+    "data_output": "Binary/ASCII STL、DXF、VRML、PLY文件"
+  },
+  {
+    "id": "R08",
+    "name": "STL+ custom reconstruction参数",
+    "menu": "STL+ > mask/3dd > Next；Calculate 3D的Custom另有Options",
+    "inputs": "mask/3dd以及所选输出",
+    "steps": [
+      "选插值方法",
+      "设Slices范围",
+      "设XY/Z matrix reduction",
+      "按需Smoothing及Triangle Reduction",
+      "核对Scaling",
+      "开始计算/导出"
+    ],
+    "parameters": "Contour interpolation偏医疗，Gray value偏技术；灰度法需层厚=层距，改Z分辨率可能破坏此条件；XY/Z代表体素分组；平滑Iterations/Factor/Compensate shrinkage；减面模式、容差、角度、迭代、buffer。",
+    "preview_commit": "页面说明参数意义，没有给Calculate3D Custom所有控件与STL+完全一致的保证。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不要把STL+的Maximum quality命名套成Calculate3D的Optimal；它们在帮助中分别出现。过度矩阵减少损细节，轮廓法可能尺寸变大；灰度法薄结构可能破孔。",
+    "sources": [
+      "Mimics Reference Guide/STL STL VRML Parameters.htm",
+      "Mimics Reference Guide/Quality.htm"
+    ],
+    "shortcut": "",
+    "defaults": "STL+ Slices默认首末图像台位、覆盖全部分割；Reset恢复该范围。其他固定默认未给。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Calculate 3D > Quality"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H079: evidence/help/chm/Mimics Reference Guide/STL STL VRML Parameters.htm",
+      "H075: evidence/help/chm/Mimics Reference Guide/Quality.htm"
+    ],
+    "source_refs": [
+      "H079",
+      "H075"
+    ],
+    "license": "STL+ module（Exporting triangulated files原文）",
+    "data_input": "mask/3dd以及所选输出",
+    "data_output": "按自定参数生成/导出的三角网格"
+  },
+  {
+    "id": "R09",
+    "name": "IGES导出",
+    "menu": "Export > Iges（mask/3dd轮廓）；MedCAD > Export all Objects to Iges（CAD）",
+    "inputs": "mask/3dd轮廓或CAD objects",
+    "steps": [
+      "根据目标选Export或MedCAD路径",
+      "mask路径选择对象及轮廓参数",
+      "需保持原坐标时First Layer height=first table position",
+      "若只需原层轮廓Layer thickness=slice distance",
+      "导出"
+    ],
+    "parameters": "轮廓IGES entity type106 form12；mask路径可增加插值层与过滤小轮廓/数据点；CAD可一次导出全部或在CAD Objects各自导出。",
+    "preview_commit": "选参数后导出；按钮细节正文未列。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "IGES轮廓不等于封闭三角STL；First Layer height改变会平移坐标。",
+    "sources": [
+      "Mimics Reference Guide/Starting from the Export menu.htm",
+      "Mimics Reference Guide/Starting from MedCAD menu.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Exporting Iges files > Starting from the Export menu",
+      " > Mimics Modules > Analysis/Medcad > Exporting Iges files > Starting from Medcad menu"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H092: evidence/help/chm/Mimics Reference Guide/Starting from the Export menu.htm",
+      "H091: evidence/help/chm/Mimics Reference Guide/Starting from MedCAD menu.htm"
+    ],
+    "source_refs": [
+      "H092",
+      "H091"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "mask/3dd轮廓或CAD objects",
+    "data_output": "轮廓或CAD IGES文件"
+  },
+  {
+    "id": "R10",
+    "name": "FEA网格/材料导出",
+    "menu": "FEA > Export（CHM目录树 FEA/CFD > FEA Menu > Export 确认）",
+    "inputs": "3D/STL/volume mesh及可用材料赋值",
+    "steps": [
+      "选对象与格式",
+      "按需Edit选择element types及是否含surface",
+      "决定导网格连材料或仅材料",
+      "导出"
+    ],
+    "parameters": "Patran Neutral、Abaqus、ANSYS、Fluent、Nastran等；材料存在时随FEA mesh输出；默认element类型按格式/单元形状不同，详源表。",
+    "preview_commit": "导出写文件，不能以Undo视为删除外部文件。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "colored STL为帮助明确标注的invalid STL，只供材料可视化，不能作为通用有效STL网格。",
+    "sources": [
+      "Mimics Reference Guide/Export.htm",
+      "Mimics Reference Guide/FEA menu1.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > FEA/CFD > FEA Menu > FEA menu",
+      " > Mimics Modules > FEA/CFD > FEA Menu > Export"
+    ],
+    "category": "3D重建与导出",
+    "source": [
+      "H038: evidence/help/chm/Mimics Reference Guide/Export.htm",
+      "H040: evidence/help/chm/Mimics Reference Guide/FEA menu1.htm"
+    ],
+    "source_refs": [
+      "H038",
+      "H040"
+    ],
+    "license": "FEA模块主题；具体许可未由该页逐项说明",
+    "data_input": "3D/STL/volume mesh及可用材料赋值",
+    "data_output": "FEA mesh及可选材料文件"
+  },
+  {
+    "id": "A01",
+    "name": "Measure Distance",
+    "menu": "Measurements > Measure Distance；Measurements toolbar",
+    "inputs": "2D图像或3D模型",
+    "steps": [
+      "选工具",
+      "左键首点",
+      "移动看mm长度",
+      "左键第二点固定",
+      "拖端点微调",
+      "右键Hide/Delete或Measurements列表"
+    ],
+    "parameters": "长度单位mm；端点随拖动重算。",
+    "preview_commit": "第二点固定结果；右键删除为明确撤销途径。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "普通直线长度与沿表面/沿中心线长度不可混同。",
+    "sources": [
+      "Mimics Reference Guide/Measure distance.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Measurements Menu > Measure Distance"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H058: evidence/help/chm/Mimics Reference Guide/Measure distance.htm"
+    ],
+    "source_refs": [
+      "H058"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "2D图像或3D模型",
+    "data_output": "mm距离measurement"
+  },
+  {
+    "id": "A02",
+    "name": "Measure Angle",
+    "menu": "Measurements > Measure Angle",
+    "inputs": "CT图像、alignment image或3D模型",
+    "steps": [
+      "选工具",
+      "左键依次三点",
+      "读角度",
+      "拖中心或端点调整",
+      "右键上下文管理"
+    ],
+    "parameters": "单位degree。",
+    "preview_commit": "三点定义后显示；点可拖动。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "必须核对选点与视图，2D角度和3D角度不能凭相同标签互换。",
+    "sources": [
+      "Mimics Reference Guide/Measure angle.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Measurements Menu > Measure Angle"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H054: evidence/help/chm/Mimics Reference Guide/Measure angle.htm"
+    ],
+    "source_refs": [
+      "H054"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "CT图像、alignment image或3D模型",
+    "data_output": "degree角度measurement"
+  },
+  {
+    "id": "A03",
+    "name": "Measure Diameter",
+    "menu": "Measurements > Measure Diameter",
+    "inputs": "CT图像或3D object",
+    "steps": [
+      "选工具",
+      "沿结构轮廓点三点",
+      "读mm直径",
+      "拖任一点微调",
+      "右键管理"
+    ],
+    "parameters": "三点定义圆形直径。",
+    "preview_commit": "第三点后得到直径。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "该三点圆径不同于centerline最小/最大/拟合直径。",
+    "sources": [
+      "Mimics Reference Guide/Measure diameter.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Measurements Menu > Measure Diameter"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H057: evidence/help/chm/Mimics Reference Guide/Measure diameter.htm"
+    ],
+    "source_refs": [
+      "H057"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "CT图像或3D object",
+    "data_output": "mm直径measurement"
+  },
+  {
+    "id": "A04",
+    "name": "Measure Ellipse",
+    "menu": "Measurements > Measure Ellipse",
+    "inputs": "图像或3D模型",
+    "steps": [
+      "点长轴首点",
+      "再点长轴末点",
+      "移动鼠标定义短轴",
+      "拖轴端点调整",
+      "拖角旋转、拖中心平移、拖标签位置"
+    ],
+    "parameters": "D1/D2长短径，P周长，A面积，DP周长等效圆径，DA面积等效圆径，E椭圆性；单位按量纲mm/mm²。 E的原图公式已核对：E = sqrt((R1²−R2²)/R1²)，R1最大半径、R2最小半径（无量纲）。",
+    "preview_commit": "实时显示；正文没写短轴最后确认点击，保留该文档缺口。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "此测量明确没有context menu；不要套用其他测量右键删除流程，可在Measurements tab管理。公式在HTML以图片等表示，纯文本漏式时不补造。",
+    "sources": [
+      "Mimics Reference Guide/Measure Ellipse.htm",
+      "Mimics Reference Guide/Measurements.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > General Information > Project Management > Measurements",
+      " > Mimics Menus > Measurements Menu > Measure Ellipse"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H052: evidence/help/chm/Mimics Reference Guide/Measure Ellipse.htm",
+      "H061: evidence/help/chm/Mimics Reference Guide/Measurements.htm"
+    ],
+    "source_refs": [
+      "H052",
+      "H061"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "图像或3D模型",
+    "data_output": "椭圆measurement",
+    "formula_image": "evidence/help/chm/Resources/Images/Measure ellipse/03000001.png"
+  },
+  {
+    "id": "A05",
+    "name": "Measure Area",
+    "menu": "Measurements > Measure Area",
+    "inputs": "单个2D平面，包括普通及MPR reslice",
+    "steps": [
+      "选工具",
+      "沿闭合多边形逐点",
+      "双击闭合",
+      "读取结果和Measurements tab",
+      "拖控制点即时更新",
+      "右键控制点增/删点"
+    ],
+    "parameters": "Area、Perimeter、Da/Dp等效直径、Centroid、Lmax过质心最大距离、L与其垂直且过质心。",
+    "preview_commit": "双击闭合才显示。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "这是2D截面多边形面积，不是3D模型表面积。",
+    "sources": [
+      "Mimics Reference Guide/Measure Area.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Measurements Menu > Measure Area"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H051: evidence/help/chm/Mimics Reference Guide/Measure Area.htm"
+    ],
+    "source_refs": [
+      "H051"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "单个2D平面，包括普通及MPR reslice",
+    "data_output": "闭合2D多边形及面积/周长/质心measurement"
+  },
+  {
+    "id": "A06",
+    "name": "Measure Distance Over the Surface",
+    "menu": "Measurements > Measure Distance Over the Surface",
+    "inputs": "3D surface",
+    "steps": [
+      "选工具",
+      "沿所需路径点若干点",
+      "读mm结果",
+      "拖点微调",
+      "右键端点管理"
+    ],
+    "parameters": "在3D表面求路径最短距离，并由所给点指引路径。",
+    "preview_commit": "正文未给结束绘制专用手势。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不能把欧氏距离当此值；用户点的路径约束会影响所测路径。",
+    "sources": [
+      "Mimics Reference Guide/Shortest distance over surface.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Measurements Menu > Measure Distance Over the Surface"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H083: evidence/help/chm/Mimics Reference Guide/Shortest distance over surface.htm"
+    ],
+    "source_refs": [
+      "H083"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "3D surface",
+    "data_output": "沿表面mm距离measurement"
+  },
+  {
+    "id": "A07",
+    "name": "Measure Density in Rectangle",
+    "menu": "Tools > Measure Density in Rectangle（单页记载）；Measurements toolbar提供测量入口",
+    "inputs": "2D图像ROI",
+    "steps": [
+      "选工具",
+      "单击放框或左拖同时放框调尺寸",
+      "松开读数",
+      "拖边角调大小、黄边拖动平移",
+      "翻片看更新",
+      "右键Hide/Delete"
+    ],
+    "parameters": "面积mm²，平均密度及标准差HU或GV。",
+    "preview_commit": "释放鼠标重算；翻片也更新。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "Tools Menu页又只列网格三项，而密度页沿用Tools路径，属帮助内部菜单记载不一致；应优先Measurements工具栏/菜单实机核对。",
+    "sources": [
+      "Mimics Reference Guide/Measure density in rectangle.htm",
+      "Mimics Reference Guide/Measurements toolbar.htm",
+      "Mimics Reference Guide/Tools Menu.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > View Menu > Toolbars > Measurements toolbar",
+      " > Mimics Menus > Measurements Menu > Measure Density in Rectangle",
+      " > Mimics Menus > Tools Menu"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H056: evidence/help/chm/Mimics Reference Guide/Measure density in rectangle.htm",
+      "H060: evidence/help/chm/Mimics Reference Guide/Measurements toolbar.htm",
+      "H097: evidence/help/chm/Mimics Reference Guide/Tools Menu.htm"
+    ],
+    "source_refs": [
+      "H056",
+      "H060",
+      "H097"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "2D图像ROI",
+    "data_output": "矩形ROI面积及HU/GV统计"
+  },
+  {
+    "id": "A08",
+    "name": "Measure Density in Ellipse",
+    "menu": "Tools > Measure Density in Ellipse（单页记载）；Measurements toolbar",
+    "inputs": "2D图像ROI",
+    "steps": [
+      "选工具",
+      "单击或左拖放椭圆",
+      "松开读数",
+      "拖四标记调形状、黄边其他处平移",
+      "翻片",
+      "右键Hide/Delete"
+    ],
+    "parameters": "面积mm²，平均密度及标准差HU或GV。",
+    "preview_commit": "松开/翻片更新。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "同矩形密度页存在旧Tools路径记载；量的是灰度统计，不是经材料标定后的物理密度。",
+    "sources": [
+      "Mimics Reference Guide/Measure density in ellipse.htm",
+      "Mimics Reference Guide/Measurements toolbar.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > View Menu > Toolbars > Measurements toolbar",
+      " > Mimics Menus > Measurements Menu > Measure Density in Ellipse"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H055: evidence/help/chm/Mimics Reference Guide/Measure density in ellipse.htm",
+      "H060: evidence/help/chm/Mimics Reference Guide/Measurements toolbar.htm"
+    ],
+    "source_refs": [
+      "H055",
+      "H060"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "2D图像ROI",
+    "data_output": "椭圆ROI面积及HU/GV统计"
+  },
+  {
+    "id": "A09",
+    "name": "Add Text Annotations",
+    "menu": "annotation tool；Project Management > Annotation > New",
+    "inputs": "2D/3D图像或对象上锚点",
+    "steps": [
+      "选annotation工具或New",
+      "左键所指结构",
+      "在Annotation Properties填Text",
+      "设Arrow Style/Text Rotation/Text alignment",
+      "双击文本再编辑",
+      "右键Properties/Hide/Delete"
+    ],
+    "parameters": "Annotation tab记录Name/Visible/Object/Text，支持Duplicate/Locate；Options中可改字体与框背景。",
+    "preview_commit": "选锚点弹属性；正文未列确定按钮名称。长文本显示省略号，悬停看全文。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "这是附着对象的说明，不会像Segmentation > Label那样成为mask实体。",
+    "sources": [
+      "Mimics Reference Guide/Add Text Annotations.htm",
+      "Mimics Reference Guide/Annotation.htm",
+      "Mimics Reference Guide/Annotation1.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > General Information > Project Management > Annotation",
+      " > Mimics Menus > Measurements Menu > Add Text Annotations",
+      " > Mimics Menus > Options Menu > Preferences > Annotation"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H006: evidence/help/chm/Mimics Reference Guide/Add Text Annotations.htm",
+      "H007: evidence/help/chm/Mimics Reference Guide/Annotation.htm",
+      "H008: evidence/help/chm/Mimics Reference Guide/Annotation1.htm"
+    ],
+    "source_refs": [
+      "H006",
+      "H007",
+      "H008"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "2D/3D图像或对象上锚点",
+    "data_output": "附着对象的text annotation"
+  },
+  {
+    "id": "A10",
+    "name": "Profile Line / 阈值剖面",
+    "menu": "Tools toolbar > Profile line",
+    "inputs": "图像强度剖面",
+    "steps": [
+      "左键首点和末点画线",
+      "打开Profile graph",
+      "Start Thresholding",
+      "拖上下阈值线",
+      "End Thresholding保存（教程有保存确认）",
+      "关窗"
+    ],
+    "parameters": "显示沿线HU/GV强度；上下线代表阈值。",
+    "preview_commit": "用图形实时调阈值，再End Thresholding并确认。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "病例阈值是辅助选择示例；剖面线不是组织分割边界。",
+    "sources": [
+      "Mimics Reference Guide/Profile line.htm",
+      "Mimics Reference Guide/With a Profile Line.htm",
+      "Mimics Reference Guide/Thresholding1.htm",
+      "Mimics Reference Guide/Thresholding4.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Segmentation Menu > Profile Line",
+      " > Mimics Menus > Segmentation Menu > Thresholding > With a Profile Line",
+      " > Mimics Tutorial > Mimi > Thresholding",
+      " > Mimics Tutorial > Obturator > Preparation of the data > Thresholding"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H066: evidence/help/chm/Mimics Reference Guide/Profile line.htm",
+      "H100: evidence/help/chm/Mimics Reference Guide/With a Profile Line.htm",
+      "H095: evidence/help/chm/Mimics Reference Guide/Thresholding1.htm",
+      "H096: evidence/help/chm/Mimics Reference Guide/Thresholding4.htm"
+    ],
+    "source_refs": [
+      "H066",
+      "H100",
+      "H095",
+      "H096"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "图像强度剖面",
+    "data_output": "强度profile graph及选定阈值"
+  },
+  {
+    "id": "A11",
+    "name": "3D Histogram",
+    "menu": "Measurements toolbar > 3D Histogram",
+    "inputs": "完整数据集强度分布",
+    "steps": [
+      "打开3D Histogram",
+      "设X/Y范围、Y对数或十进制",
+      "Update",
+      "按需保存Text"
+    ],
+    "parameters": "X=HU/GV，Y=像素数；可自动或用户设范围。",
+    "preview_commit": "Update才应用图表设置；可导出txt。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "原文说明GV0即-1024HU不纳入直方图，以免背景峰淹没其余分布；不能将图表计数视为含该背景的全体体素计数。",
+    "sources": [
+      "Mimics Reference Guide/3D Histogram.htm",
+      "Mimics Reference Guide/Measurements toolbar.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > View Menu > Toolbars > Measurements toolbar",
+      " > Mimics Menus > Measurements Menu > 3D Histogram"
+    ],
+    "category": "测量与标注",
+    "source": [
+      "H001: evidence/help/chm/Mimics Reference Guide/3D Histogram.htm",
+      "H060: evidence/help/chm/Mimics Reference Guide/Measurements toolbar.htm"
+    ],
+    "source_refs": [
+      "H001",
+      "H060"
+    ],
+    "license": "本地帮助未逐工具明确许可边界，依Mimics模块配置",
+    "data_input": "完整数据集强度分布",
+    "data_output": "全图强度直方图及可选text文件"
+  },
+  {
+    "id": "A12",
+    "name": "2D Mask Area（逐切片分割面积导出）",
+    "category": "测量与标注",
+    "source": [
+      "H105: evidence/help/chm/Mimics Reference Guide/2D Mask Area.htm"
+    ],
+    "source_refs": [
+      "H105"
+    ],
+    "sources": [
+      "Mimics Reference Guide/2D Mask Area.htm"
+    ],
+    "menu": "Export > 2D Mask Area（CHM目录树确认）",
+    "license": "本地帮助未逐工具明确许可边界，依模块配置",
+    "data_input": "已有mask、所选视图及切片范围",
+    "inputs": "已有mask、所选视图及切片范围",
+    "data_output": "逐切片mask面积text文件",
+    "steps": [
+      "选择Mask",
+      "Images中选视图",
+      "Range选所有切片、当前切片或指定范围",
+      "设Filename和Path",
+      "导出文本"
+    ],
+    "parameters": "Range按选定视图定义；本页未写面积的显示/导出单位，不据常识补成文档原值。",
+    "preview_commit": "导出写text文件；本页未给执行按钮文字。",
+    "defaults": "正文未给固定默认范围或路径。",
+    "shortcut": "",
+    "undo": "外部文件不应假设Ctrl+Z可删除；mask本身为只读输入。",
+    "risks": "与Measure Area人工多边形不同；单片面积不是体积。Path字段原文误称gray values file，按页首mask area定义解释。",
+    "help_hierarchy": [
+      "Mimics Menus > Export Menu > 2D Mask Area"
+    ]
+  },
+  {
+    "id": "C01",
+    "name": "Fit Centerline",
+    "menu": "MedCAD > Centerline > Fit Centerline",
+    "inputs": "血管等管状3D object",
+    "steps": [
+      "选3D object",
+      "设Smooth factor",
+      "通常保持自动解析参数",
+      "需要时Show Params再切Manual",
+      "选Resolving resolution及Control point distance Variable/Fixed",
+      "执行",
+      "在CAD Objects检查"
+    ],
+    "parameters": "Resolving resolution小可识别更细管；Control point distance小捕捉更多细节；Variable推荐。平滑用Fourier，停止阈值mm=smooth factor×average branch radius。",
+    "preview_commit": "输出分支集合；执行按钮名正文未明确。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "急弯平滑过强会使线跑到管外，需降低factor重算。分支集合按估计平均体积排序，非纯长度。",
+    "sources": [
+      "Mimics Reference Guide/Centerline.htm",
+      "Mimics Reference Guide/Centerline properties.htm"
+    ],
+    "shortcut": "",
+    "defaults": "Mimics17 centerline spline明确默认Cubic，可改Quadratic；自动算法设置解析分辨率及控制点间距，非固定全局数值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline",
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline properties"
+    ],
+    "category": "中心线",
+    "source": [
+      "H023: evidence/help/chm/Mimics Reference Guide/Centerline.htm",
+      "H022: evidence/help/chm/Mimics Reference Guide/Centerline properties.htm"
+    ],
+    "source_refs": [
+      "H023",
+      "H022"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "血管等管状3D object",
+    "data_output": "CAD centerline及branch sets"
+  },
+  {
+    "id": "C02",
+    "name": "Edit Centerline Control Points",
+    "menu": "CAD Objects > 选centerline > Action > Edit Centerline Control Points",
+    "inputs": "已有centerline",
+    "steps": [
+      "点控制点变绿",
+      "检查黑色影响边界",
+      "改Influence distance或重新选边界点",
+      "拖绿色点",
+      "双击Apply",
+      "可继续改下一点",
+      "Esc/Close/换工具退出"
+    ],
+    "parameters": "Influence distance是控制点到限制点的最小距离；无恰好距离时用更远最近点；branch point可选三个分支边界。",
+    "preview_commit": "双击提交该次修改。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "改中心线会改变各中心线测量，应在CPR截面校正位置后再读数。",
+    "sources": [
+      "Mimics Reference Guide/Edit centerline control points.htm",
+      "Mimics Reference Guide/Centerline measurements.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline actions > Edit centerline control points"
+    ],
+    "category": "中心线",
+    "source": [
+      "H033: evidence/help/chm/Mimics Reference Guide/Edit centerline control points.htm",
+      "H019: evidence/help/chm/Mimics Reference Guide/Centerline measurements.htm"
+    ],
+    "source_refs": [
+      "H033",
+      "H019"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "已有centerline",
+    "data_output": "编辑后的centerline"
+  },
+  {
+    "id": "C03",
+    "name": "Centerline Post Processing",
+    "menu": "CAD Objects > centerline > Action > Centerline Post processing",
+    "inputs": "已有centerline",
+    "steps": [
+      "选线",
+      "设Additional smoothing",
+      "按需Filter short branches",
+      "检查枝长和几何后执行"
+    ],
+    "parameters": "Fourier平滑0到1低到高；短枝过滤只删外围单端连树或离散枝，长度低于阈值；阈值可从Properties查看噪声枝长后决定。",
+    "preview_commit": "正文未给专门预览/提交按钮。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "过强平滑降低几何准确度；不是按所有短的主干段随意删除。",
+    "sources": [
+      "Mimics Reference Guide/Centerline post processing.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline actions > Centerline post-processing"
+    ],
+    "category": "中心线",
+    "source": [
+      "H021: evidence/help/chm/Mimics Reference Guide/Centerline post processing.htm"
+    ],
+    "source_refs": [
+      "H021"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "已有centerline",
+    "data_output": "平滑/短枝过滤后的centerline"
+  },
+  {
+    "id": "C04",
+    "name": "Split Centerline",
+    "menu": "CAD Objects > centerline > Action > Split centerline",
+    "inputs": "已有centerline控制点",
+    "steps": [
+      "左键选分割控制点",
+      "需要时再点另一控制点",
+      "双击确认"
+    ],
+    "parameters": "按控制点分裂centerline。",
+    "preview_commit": "双击确认。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "与3D object的Simulation Split、mask Separate是三种不同对象操作。",
+    "sources": [
+      "Mimics Reference Guide/Split centerline.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline actions > Split centerline"
+    ],
+    "category": "中心线",
+    "source": [
+      "H089: evidence/help/chm/Mimics Reference Guide/Split centerline.htm"
+    ],
+    "source_refs": [
+      "H089"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "已有centerline控制点",
+    "data_output": "分开的centerline"
+  },
+  {
+    "id": "C05",
+    "name": "Delete Centerline Part",
+    "menu": "CAD Objects > centerline > Action > Delete centerline part",
+    "inputs": "已有centerline",
+    "steps": [
+      "左键首控制点",
+      "再点第二控制点",
+      "点已选点可取消",
+      "双击确认删除"
+    ],
+    "parameters": "两点定义待删除部分。",
+    "preview_commit": "双击执行。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "先检查点序及所指分支，防删错管段。",
+    "sources": [
+      "Mimics Reference Guide/Delete centerline part.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline actions > Delete centerline part"
+    ],
+    "category": "中心线",
+    "source": [
+      "H029: evidence/help/chm/Mimics Reference Guide/Delete centerline part.htm"
+    ],
+    "source_refs": [
+      "H029"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "已有centerline",
+    "data_output": "删去指定部分的centerline"
+  },
+  {
+    "id": "C06",
+    "name": "Cut Centerline Ending",
+    "menu": "CAD Objects > centerline > Action > Cut Centerline Ending",
+    "inputs": "centerline及关联STL",
+    "steps": [
+      "打开工具",
+      "Indicate",
+      "在3D线末端区选一或多个截面",
+      "执行",
+      "检查平坦入口出口"
+    ],
+    "parameters": "截面垂直于centerline；只能置于endpoint到branchpoint之间，不能两branchpoint之间。",
+    "preview_commit": "原STL保留并生成新STL；原centerline被cut版本替换。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "该操作可移除提取末端偏向血管壁的不正确部分。保留STL不等于保留原centerline。",
+    "sources": [
+      "Mimics Reference Guide/Cut centerline endings.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline actions > Cut centerline endings"
+    ],
+    "category": "中心线",
+    "source": [
+      "H027: evidence/help/chm/Mimics Reference Guide/Cut centerline endings.htm"
+    ],
+    "source_refs": [
+      "H027"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "centerline及关联STL",
+    "data_output": "新cut STL与替换原线的cut centerline"
+  },
+  {
+    "id": "C07",
+    "name": "Grow Segment / Add Branch to Centerline",
+    "menu": "MedCAD centerline tools；CAD Objects中centerline右键",
+    "inputs": "已有centerline及STL",
+    "steps": [
+      "Grow：选centerline，再指STL上希望延伸到的点",
+      "Add Branch：在STL上指期望新枝的位置",
+      "检查生成分支"
+    ],
+    "parameters": "用户选STL点作为引导。",
+    "preview_commit": "点选后显示增长线或自动添加枝。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "它们是管线编辑，不是从mask执行Region Growing。",
+    "sources": [
+      "Mimics Reference Guide/Grow Segment of the Centerline.htm",
+      "Mimics Reference Guide/Add Branch to the Centerline.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline actions > Add Branch to the Centerline",
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline actions > Grow Segment of the Centerline"
+    ],
+    "category": "中心线",
+    "source": [
+      "H043: evidence/help/chm/Mimics Reference Guide/Grow Segment of the Centerline.htm",
+      "H005: evidence/help/chm/Mimics Reference Guide/Add Branch to the Centerline.htm"
+    ],
+    "source_refs": [
+      "H043",
+      "H005"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "已有centerline及STL",
+    "data_output": "增长线段或新branch"
+  },
+  {
+    "id": "C08",
+    "name": "Centerline Measurements",
+    "menu": "Measurements menu / toolbar；Measurements tab > New",
+    "inputs": "已校验centerline和关联3D object；Analysis Module",
+    "steps": [
+      "先File > Reslice Along Curve进入CPR检查中心位置",
+      "选所需中心线测量",
+      "按工具点一个线点或两个线点",
+      "在CPR对照截面",
+      "需要时修线后重测"
+    ],
+    "parameters": "Dfit最小二乘拟合圆径；Scf截面周长；Area正交面积；Dmin/Dmax为线点到轮廓的最小/最大半径×2；C曲率；T=1-直距/沿枝距；Dh=4Area/Scf；Xh=Dh/Dmax；Dd沿枝距离；E拟合椭圆性；Triad为T/N/B方向；另有Twist Angle。",
+    "preview_commit": "单点/两点依工具；实际确认手势并非各页全列。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "Dfit自MIS16起改成least squares；不是MIS15及更早的平均半径×2。不同页对T局部窗和两点定义写法不同，应按当前工具界面核对，不强行统一。",
+    "sources": [
+      "Mimics Reference Guide/Measurements Menu.htm",
+      "Mimics Reference Guide/Centerline measurements.htm",
+      "Mimics Reference Guide/Centerline Measurements 2.htm",
+      "Mimics Reference Guide/Centerline measurements3.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Menus > Measurements Menu",
+      " > Mimics Menus > Measurements Menu > Centerline Measurements",
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline Measurements"
+    ],
+    "category": "中心线",
+    "source": [
+      "H059: evidence/help/chm/Mimics Reference Guide/Measurements Menu.htm",
+      "H019: evidence/help/chm/Mimics Reference Guide/Centerline measurements.htm",
+      "H018: evidence/help/chm/Mimics Reference Guide/Centerline Measurements 2.htm",
+      "H020: evidence/help/chm/Mimics Reference Guide/Centerline measurements3.htm"
+    ],
+    "source_refs": [
+      "H059",
+      "H019",
+      "H018",
+      "H020"
+    ],
+    "license": "Analysis Module（Measurements Menu原文）",
+    "data_input": "已校验centerline和关联3D object；Analysis Module",
+    "data_output": "centerline measurement对象"
+  },
+  {
+    "id": "C09",
+    "name": "Centerline Export",
+    "menu": "CAD Objects > centerline Properties > 选branch sets > Export",
+    "inputs": "centerline分支集合",
+    "steps": [
+      "Properties选需导出的branches",
+      "Export",
+      "设Output directory/File name/Save as type",
+      "选择输出测量列",
+      "导出"
+    ],
+    "parameters": "Text按branch segment分组，含Px/Py/Pz、T/N/BN向量及Dfit/Dmin/Dmax/C/Dh/Xh/Scf/Area/E；IGES导控制点连接，可附best/min/max径。",
+    "preview_commit": "写Text或IGES文件。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "单位按列含义，不能把Text全当mm；IGES不是三角网格。",
+    "sources": [
+      "Mimics Reference Guide/Centerline properties.htm",
+      "Mimics Reference Guide/Export of centerline properties.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Centerline properties",
+      " > Mimics Modules > Analysis/Medcad > Medcad Menu > Centerline > Export of centerline properties"
+    ],
+    "category": "中心线",
+    "source": [
+      "H022: evidence/help/chm/Mimics Reference Guide/Centerline properties.htm",
+      "H037: evidence/help/chm/Mimics Reference Guide/Export of centerline properties.htm"
+    ],
+    "source_refs": [
+      "H022",
+      "H037"
+    ],
+    "license": "MedCAD菜单中心线工具；Coronary Segmentation页将中心线提取注明为Analysis module",
+    "data_input": "centerline分支集合",
+    "data_output": "Text或IGES中心线/测量文件"
+  },
+  {
+    "id": "M01",
+    "name": "Measure and Analyse / Anthropometric Analysis",
+    "menu": "Simulation > Measure and Analyze / Anthropometric Analysis",
+    "inputs": "分析模板、landmarks、planes",
+    "steps": [
+      "选择模板",
+      "按列表Indicate各点（2D/3D）",
+      "如模板需面，依提示指点",
+      "选测量并Indicate",
+      "Details查看pre/post 2D/3D",
+      "Export CSV或Print"
+    ],
+    "parameters": "自建模板：Overview > New，先建点再建面再建测量；距离点点/点面，角3点或2线，体积≥4点形成凸多边体。模板默认名称不可改，用Copy后编辑。",
+    "preview_commit": "点可Locate/Edit/Clear；拖动需Indicate模式；Details输出。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "默认模板不能直接修改或删除；斜扫描需Change sagittal plane修正。它不是Measurements菜单的简单三点角工具。",
+    "sources": [
+      "Mimics Reference Guide/Measure and Analyse.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Simulation > Simulation Menu > Measure and Analyse"
+    ],
+    "category": "人体测量分析",
+    "source": [
+      "H053: evidence/help/chm/Mimics Reference Guide/Measure and Analyse.htm"
+    ],
+    "source_refs": [
+      "H053"
+    ],
+    "license": "Simulation module（Tools Menu / Simulation Menu原文）",
+    "data_input": "分析模板、landmarks、planes",
+    "data_output": "landmarks/planes/测量模板与CSV报告"
+  },
+  {
+    "id": "P01",
+    "name": "Pulmonary Threshold Region Growing",
+    "menu": "Pulmonary模块 > Threshold Region Growing（具体子菜单图片未复核）",
+    "inputs": "种子、强度区间和Cylinder bounds",
+    "steps": [
+      "设Target",
+      "设Threshold",
+      "设Fill Cavities及Multiple Layer",
+      "设Bounds圆柱范围",
+      "点种子",
+      "检查增长"
+    ],
+    "parameters": "仅取连通且在阈值和边界内体素；Target可新建或已有；Multiple Layer决定单片/3D。",
+    "preview_commit": "点种子生长；正文未列独立提交按钮。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不同于普通Region Growing只在source mask连通域里提取；也不同于Dynamic基于动态灰度范围。",
+    "sources": [
+      "Mimics Reference Guide/Pulmonary/Threshold Region Growing.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Pulmonary > Pulmonary Menu > Threshold Region Growing"
+    ],
+    "category": "肺模块",
+    "source": [
+      "H074: evidence/help/chm/Mimics Reference Guide/Pulmonary/Threshold Region Growing.htm"
+    ],
+    "source_refs": [
+      "H074"
+    ],
+    "license": "Pulmonary模块主题（具体许可证可用性未运行核验）",
+    "data_input": "种子、强度区间和Cylinder bounds",
+    "data_output": "阈值连通target mask"
+  },
+  {
+    "id": "P02",
+    "name": "Pulmonary Dynamic Region Growing",
+    "menu": "Pulmonary模块 > Dynamic Region Growing",
+    "inputs": "原图、种子、圆柱距离界限",
+    "steps": [
+      "设Target/Deviation",
+      "设Fill Cavities和Multiple Layer",
+      "设Distance圆柱范围",
+      "点种子",
+      "Ctrl+第二种子",
+      "复核"
+    ],
+    "parameters": "一般Dynamic Region Growing参数加Distance限制圆柱。",
+    "preview_commit": "点种子后计算。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不要把Pulmonary页独有Distance字段写成普通Dynamic Region Growing对话框参数。",
+    "sources": [
+      "Mimics Reference Guide/Pulmonary/Dynamic Region Growing Pulmonary.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Pulmonary > Pulmonary Menu > Dynamic Region Growing"
+    ],
+    "category": "肺模块",
+    "source": [
+      "H068: evidence/help/chm/Mimics Reference Guide/Pulmonary/Dynamic Region Growing Pulmonary.htm"
+    ],
+    "source_refs": [
+      "H068"
+    ],
+    "license": "Pulmonary模块主题（具体许可证可用性未运行核验）",
+    "data_input": "原图、种子、圆柱距离界限",
+    "data_output": "圆柱限制下动态target mask"
+  },
+  {
+    "id": "P03",
+    "name": "Segment Airway",
+    "menu": "Pulmonary模块 > Segment Airway",
+    "inputs": "吸气或呼气扫描、气管入口两点",
+    "steps": [
+      "设Leakage detection等",
+      "Start",
+      "任意2D视图在气管起点指两点",
+      "检查2D/3D预览",
+      "缺枝处指起点再Continue",
+      "错枝右键Delete/Delete with children",
+      "泄漏处Put leakage marker或Subdivide in parts后删除并Accept current setting",
+      "Calculate 3D"
+    ],
+    "parameters": "Weak leakage detection枝更多但漏更多；Strong枝短漏少；noise preprocessing只在不能启动/缺枝很多时用；3D post processing改善网格。",
+    "preview_commit": "显式2D/3D预览；手动修正后Calculate3D。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "同样重建输出的官方复现参数：Gray Value插值；smooth 0.7×3、compensate on、减面off、matrix1×1；Wrap薄壁on、closing0.35、smallest detail=pixel size。这是此工具复现配方，非全局默认。",
+    "sources": [
+      "Mimics Reference Guide/Pulmonary/Segment Airway.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Pulmonary > Pulmonary Menu > Segment Airway"
+    ],
+    "category": "肺模块",
+    "source": [
+      "H070: evidence/help/chm/Mimics Reference Guide/Pulmonary/Segment Airway.htm"
+    ],
+    "source_refs": [
+      "H070"
+    ],
+    "license": "Pulmonary模块主题（具体许可证可用性未运行核验）",
+    "data_input": "吸气或呼气扫描、气管入口两点",
+    "data_output": "airway mask及3D model"
+  },
+  {
+    "id": "P04",
+    "name": "Segment Lungs / Segment Lung Lobes",
+    "menu": "Pulmonary模块相应工具",
+    "inputs": "肺3D模型、airway centerline",
+    "steps": [
+      "Lungs选airway centerline后Calculate",
+      "Lobes选左右肺3D",
+      "Detect Fissure",
+      "编辑fissure控制点",
+      "Cut lung lobes"
+    ],
+    "parameters": "Lungs输出左右mask和3D；Lobes用拟合自由曲面分割肺裂再切分肺叶。",
+    "preview_commit": "显式Calculate或Detect Fissure推进阶段；更细编辑参见Segment Lung & Lobes。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "不能当成通用一键分割任何器官的功能。",
+    "sources": [
+      "Mimics Reference Guide/Pulmonary/Segment Lungs.htm",
+      "Mimics Reference Guide/Pulmonary/Segment Lung Lobes.htm",
+      "Mimics Reference Guide/Pulmonary/Segment Lung & Lobes.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Pulmonary > Pulmonary Menu > Segment Lung > Segment Lung & Lobes",
+      " > Mimics Modules > Pulmonary > Pulmonary Menu > Segment Lung > Segment Lungs",
+      " > Mimics Modules > Pulmonary > Pulmonary Menu > Segment Lung > Segment Lung Lobes"
+    ],
+    "category": "肺模块",
+    "source": [
+      "H073: evidence/help/chm/Mimics Reference Guide/Pulmonary/Segment Lungs.htm",
+      "H072: evidence/help/chm/Mimics Reference Guide/Pulmonary/Segment Lung Lobes.htm",
+      "H071: evidence/help/chm/Mimics Reference Guide/Pulmonary/Segment Lung & Lobes.htm"
+    ],
+    "source_refs": [
+      "H073",
+      "H072",
+      "H071"
+    ],
+    "license": "Pulmonary模块主题（具体许可证可用性未运行核验）",
+    "data_input": "肺3D模型、airway centerline",
+    "data_output": "左右肺/肺叶mask及3D models"
+  },
+  {
+    "id": "P05",
+    "name": "Label Centerline（肺支气管命名）",
+    "menu": "Pulmonary模块 > Label Centerline",
+    "inputs": "airway 3D或已有centerline",
+    "steps": [
+      "New选airway3D再Next生成标签线",
+      "核对红枝",
+      "右键枝选标签或双击列表标签改dropdown",
+      "Edit选已有线再Next修改"
+    ],
+    "parameters": "IKEDA命名；绿=较高概率，红=需人工核验。",
+    "preview_commit": "自动线进入CAD Objects，标签可再编辑。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "与Segmentation Label实体文字、Annotation文本是三个不同对象。",
+    "sources": [
+      "Mimics Reference Guide/Pulmonary/Label Centerline.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > Pulmonary > Pulmonary Menu > Label Centerline"
+    ],
+    "category": "肺模块",
+    "source": [
+      "H069: evidence/help/chm/Mimics Reference Guide/Pulmonary/Label Centerline.htm"
+    ],
+    "source_refs": [
+      "H069"
+    ],
+    "license": "Pulmonary模块主题（具体许可证可用性未运行核验）",
+    "data_input": "airway 3D或已有centerline",
+    "data_output": "按IKEDA命名的CAD centerline"
+  },
+  {
+    "id": "CV01",
+    "name": "Cardiac Mask Morphing",
+    "menu": "C&V Segmentation tab > Cardiac Mask Morphing",
+    "inputs": "同一患者心脏CT相位项目；源相位准确mask",
+    "steps": [
+      "导入各相位并核对顺序/方向",
+      "双击或Go to phase选Source",
+      "在Morph列勾最多10mask",
+      "设Bounds批处理范围和参数",
+      "Next开始，过程中按钮变Stop",
+      "完成后Show segments，右键重分类/删除，再Accept",
+      "最后才普通mask编辑",
+      "检查后再下一相位"
+    ],
+    "parameters": "Dilation voxels决定ROI；Leak threshold百分比控制边界灰度允许变化；Hole patch size按体素封孔；Enable orientation preprocessing补方向；Fill holes按体素体积阈值填完全封闭孔；Constrain to threshold按同阈值约束已勾mask。",
+    "preview_commit": "Next只在已选mask后可用；Show segments提供分类编辑；Next/Stop控制批处理。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "批处理以前一结果当下一Source，会积累错误；普通手工mask编辑会丢segment信息，应先做segment级编辑。相位像素尺寸/层距/层数不兼容会报错；64位更适合。原文Deviation coefficient未提供说明，不填补。",
+    "sources": [
+      "Mimics Reference Guide/4D mask morphing.htm"
+    ],
+    "shortcut": "",
+    "defaults": "Compress images in memory建议勾选。Leak threshold噪声数据20-30%、干净数据8-15%是建议范围非固定默认。",
+    "help_hierarchy": [
+      " > Mimics Modules > C&V Segmentation > 4D Mask Morphing"
+    ],
+    "category": "心血管分割与4D",
+    "source": [
+      "H004: evidence/help/chm/Mimics Reference Guide/4D mask morphing.htm"
+    ],
+    "source_refs": [
+      "H004"
+    ],
+    "license": "C&V Segmentation module（4D / Coronary页原文）",
+    "data_input": "同一患者心脏CT相位项目；源相位准确mask",
+    "data_output": "其他心动相位同名mask"
+  },
+  {
+    "id": "CV02",
+    "name": "Frame Mask Morphing",
+    "menu": "C&V Segmentation tab > Frame morphing",
+    "inputs": "支架frame手工mask及同患者相位项目",
+    "steps": [
+      "导入相位",
+      "双击选Source",
+      "Morph列选源mask",
+      "设Connectivity/Intensity threshold/Radius",
+      "Apply，必要时Stop",
+      "查看skeleton/frame/threshold三套输出",
+      "按需Rebuild frame",
+      "Add link放两点后双击",
+      "Remove link选link再双击"
+    ],
+    "parameters": "Connectivity控制节点邻接；Intensity threshold与距骨架位置决定纳入强度；Radius控制从骨架生长范围与厚度；Add link时Esc取消。",
+    "preview_commit": "Apply执行；Add/Remove link后mask和STL重算。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "各目标都用初始手工mask，次序不限，与Cardiac链式累积不同。threshold输出不能用Add/Remove link；改变Connectivity后Rebuild会丢手工link更改。",
+    "sources": [
+      "Mimics Reference Guide/4D mask morphing.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > C&V Segmentation > 4D Mask Morphing"
+    ],
+    "category": "心血管分割与4D",
+    "source": [
+      "H004: evidence/help/chm/Mimics Reference Guide/4D mask morphing.htm"
+    ],
+    "source_refs": [
+      "H004"
+    ],
+    "license": "C&V Segmentation module（4D / Coronary页原文）",
+    "data_input": "支架frame手工mask及同患者相位项目",
+    "data_output": "skeleton/frame/threshold三组mask及STL"
+  },
+  {
+    "id": "CV03",
+    "name": "Coronary Segmentation",
+    "menu": "C&V Segmentation menu / toolbar > Coronary Segmentation",
+    "inputs": "增强CT；aorta点、冠脉起止点及心脏ROI",
+    "steps": [
+      "缩放白框ROI含心腔/心肌/冠脉",
+      "Indicate aorta或a指定主动脉点",
+      "Add或s指定冠脉起点",
+      "该行+或e指定对应终点",
+      "等待绿色路径和红色模型预览",
+      "调参数后Apply",
+      "需要钙化分离时Calcifications启用并Apply",
+      "Save所需points/aorta/coronary/calcification masks"
+    ],
+    "parameters": "路径参数Average myocardium intensity、Air gray value、Radius范围/step；mask参数Intensity deviation(GV)、Localization radius(mm)、Smoothing coefficient 0-1、Number of iterations；Calcification threshold(GV)。Reset回前值，Defaults回默认，二者之后均需Apply。",
+    "preview_commit": "先路径再mask/3D预览，保存只保留所选点和mask；coronary path和预览模型不保存，需从mask另算3D。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "起点不可落在aorta mask内，终点必须关联正确起点；阻塞处可在前方放终点、后方另起点。狭窄可能是真实或欠分割，必须回图像检查。",
+    "sources": [
+      "Mimics Reference Guide/Coronary Segmentation.htm"
+    ],
+    "shortcut": "a=主动脉，s=起点，e=终点；原文一处把e误称start point，按上下文记录为终点",
+    "defaults": "正文明确default示例：Localization radius2mm、iterations20、smoothing0.5、path radius0.5-2mm step0.5mm；默认钙化分离关闭。其他默认未给。",
+    "help_hierarchy": [
+      " > Mimics Modules > C&V Segmentation > Coronary Segmentation"
+    ],
+    "category": "心血管分割与4D",
+    "source": [
+      "H024: evidence/help/chm/Mimics Reference Guide/Coronary Segmentation.htm"
+    ],
+    "source_refs": [
+      "H024"
+    ],
+    "license": "C&V Segmentation module（4D / Coronary页原文）",
+    "data_input": "增强CT；aorta点、冠脉起止点及心脏ROI",
+    "data_output": "主动脉/冠脉/钙化mask与CAD points（路径不保存）"
+  },
+  {
+    "id": "X01",
+    "name": "X-ray registration measurements",
+    "menu": "X-ray > Contour-based Measurement / Measure Matching Points Distance",
+    "inputs": "配准轮廓或两个同几何3D对象",
+    "steps": [
+      "Contour-based：比较对应轮廓点并读Accuracy/SD/Average/point count",
+      "Matching points：两列表选相同几何的两模型，OK后在一个模型点选，结果进Measurements",
+      "重按OK加多项",
+      "Cancel结束"
+    ],
+    "parameters": "Accuracy是可建立对应测量的投影轮廓比例；Matching points单位距离mm。",
+    "preview_commit": "Matching points的OK开始点选，Cancel退出。",
+    "undo": "全局 Edit > Undo / Ctrl+Z；Redo / Ctrl+Y。帮助仅说明撤销上一次动作，未证明每个长计算或导出均可撤销。保留源对象或 Duplicate 可回退；Close 只表示退出工具，不能自动理解为回滚。",
+    "risks": "用于评估配准，不是直接检查分割mask的真值准确率。",
+    "sources": [
+      "Mimics Reference Guide/X-ray/Contour-based Measurement.htm",
+      "Mimics Reference Guide/X-ray/Measure Matching Points Distance.htm"
+    ],
+    "shortcut": "",
+    "defaults": "正文未规定固定默认值。截图所示为文档示例状态，不能据此认定安装默认值。",
+    "help_hierarchy": [
+      " > Mimics Modules > X-ray > X-ray Menu > Contour-based Measurement",
+      " > Mimics Modules > X-ray > X-ray Menu > Measure Matching Points Distance"
+    ],
+    "category": "X-ray配准测量",
+    "source": [
+      "H103: evidence/help/chm/Mimics Reference Guide/X-ray/Contour-based Measurement.htm",
+      "H104: evidence/help/chm/Mimics Reference Guide/X-ray/Measure Matching Points Distance.htm"
+    ],
+    "source_refs": [
+      "H103",
+      "H104"
+    ],
+    "license": "X-ray模块主题",
+    "data_input": "配准轮廓或两个同几何3D对象",
+    "data_output": "配准误差统计或matching point measurement"
+  }
+]

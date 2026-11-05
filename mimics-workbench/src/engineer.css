@@ -1,0 +1,26 @@
+/* 灰度分区设置（折叠面板内） */
+.gray-settings .field-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  color: var(--text-2); font-size: 11px;
+}
+.gray-settings select, .gray-settings input[type="number"] { width: 128px; font-size: 11px; }
+
+/* Canvas 叠加层：纯展示，不拦截鼠标 */
+.gray-region-outline { position: absolute; pointer-events: none; overflow: visible; }
+.gray-region-outline path { filter: drop-shadow(0 0 1px #000); }
+.gray-region-info {
+  position: absolute; left: 10px; bottom: 12px;
+  max-width: calc(100% - 22px);
+  font-size: 10px; line-height: 1.6;
+  color: #e9dda2;
+  background: rgba(8, 10, 12, 0.85);
+  border: 1px solid rgba(229, 212, 111, 0.25);
+  padding: 2px 7px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.brush-cursor { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.brush-cursor ellipse { fill: none; stroke: #9fdcf5; stroke-width: 1.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 1px #000); }
+.brush-cursor text { fill: #cdeefb; font-size: 11px; paint-order: stroke; stroke: #0a0c0e; stroke-width: 3px; stroke-linejoin: round; }
+.eraser-cursor ellipse { stroke: #ffb4ba; stroke-dasharray: 4 3; }
+.eraser-cursor text { fill: #ffd2d6; }

@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "self_test": {
+    "passed": 27,
+    "cases": [
+      "analytic tetrahedron bounds, area and volume",
+      "closed tetrahedron has no open or non-manifold edges",
+      "open triangle has three boundary edges",
+      "three faces sharing an edge are non-manifold",
+      "out-of-bounds mesh index rejected",
+      "hand-built ZIP, big-endian metre NIfTI and STL compare exactly",
+      "independent masks retain two members and one overlapping voxel",
+      "metre affine yields 12 cubic mm mask volume within float32 rounding",
+      "same open triangle with unused vertex zero compares without signed-volume assumptions",
+      "NIfTI unit 1 byte-order < independently decoded",
+      "NIfTI unit 2 byte-order < independently decoded",
+      "NIfTI unit 3 byte-order < independently decoded",
+      "NIfTI unit 1 byte-order > independently decoded",
+      "NIfTI unit 2 byte-order > independently decoded",
+      "NIfTI unit 3 byte-order > independently decoded",
+      "signed big-endian voxels and intensity scaling are independent",
+      "qform quaternion, reflection and micron units are independent",
+      "same-count wrong membership fails quantitative comparison",
+      "non-binary project Mask rejected",
+      "wrong referenced buffer length rejected",
+      "project index buffer bounds checked",
+      "truncated binary STL rejected",
+      "changed STL face winding fails source comparison",
+      "truncated NIfTI data rejected",
+      "NIfTI datatype/bitpix conflict rejected",
+      "non-finite NIfTI value rejected",
+      "ZIP CRC corruption rejected"
+    ]
+  },
+  "errors": []
+}

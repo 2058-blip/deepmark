@@ -1,0 +1,24 @@
+/* 阈值工具面板（左侧操作区内，选中“阈值”时显示） */
+.threshold-panel {
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim);
+  padding: 10px;
+  border-radius: var(--radius);
+}
+.threshold-panel .section-heading { margin: 0; color: var(--accent-bright); }
+.threshold-panel > label:not(.preview-toggle) { font-size: 10px; color: var(--text-2); }
+.threshold-panel > input[type="number"] {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.preview-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; line-height: 1.5;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.preview-toggle input { accent-color: var(--accent); margin: 0; }
+.threshold-panel .primary { font-size: 12px; margin-top: 2px; padding: 6px; }
+.field-error { color: var(--danger); font-size: 11px; line-height: 1.6; margin: 0; }

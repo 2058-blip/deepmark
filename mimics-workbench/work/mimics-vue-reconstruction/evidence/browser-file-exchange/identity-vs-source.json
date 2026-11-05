@@ -1,0 +1,235 @@
+{
+  "ok": true,
+  "verification_scope": "independently decoded identity reslice: every stored Float32 voxel, every Mask byte and all Part mesh arrays",
+  "source": {
+    "path": "C:\\Users\\wwulli\\Desktop\\deepmark\\work\\mimics-vue-reconstruction\\evidence\\browser-file-exchange\\source.deepmark.zip",
+    "sha256": "6c67ea04c749027ef94d62a17d0ed82d3863854d01c17c9fd0af56ba988289b1",
+    "dims": [
+      96,
+      96,
+      64
+    ],
+    "affine_mm": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.5,
+        0.0
+      ]
+    ]
+  },
+  "identity": {
+    "path": "C:\\Users\\wwulli\\Desktop\\deepmark\\work\\mimics-vue-reconstruction\\evidence\\browser-file-exchange\\identity.deepmark.zip",
+    "sha256": "ffdfdccc434a288ad90b86da1c12dc1a64af8995f04143b35ce0df9280284add",
+    "dims": [
+      96,
+      96,
+      64
+    ],
+    "affine_mm": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.5,
+        0.0
+      ]
+    ]
+  },
+  "checks": {
+    "dimensions_equal": true,
+    "physical_affine_equal": true,
+    "update_cs_off": true,
+    "gray_float32_values_equal": true,
+    "gray_float32_bytes_equal": true,
+    "all_independent_mask_bytes_equal": true,
+    "all_stored_mesh_arrays_equal": true,
+    "sampling_matrix_matches_independent_source_and_target_affines": true
+  },
+  "gray": {
+    "compared_voxel_count": 589824,
+    "value_mismatch_count": 0,
+    "source_float32_sha256": "7363f61814f44262a734ca77e2a74d0810584972b8d94eed833fd1d17ea7e3b8",
+    "identity_float32_sha256": "7363f61814f44262a734ca77e2a74d0810584972b8d94eed833fd1d17ea7e3b8"
+  },
+  "masks": [
+    {
+      "id": "mask-mw3czi8l-1",
+      "ok": true,
+      "membership_mismatch_count": 0,
+      "source_member_count": 56,
+      "identity_member_count": 56,
+      "raw_bytes_equal": true,
+      "source_revision": 2,
+      "identity_revision": 3,
+      "threshold_metadata_equal": true
+    }
+  ],
+  "parts": [
+    {
+      "id": "part-mw3ddl4n-4",
+      "ok": true,
+      "checks": {
+        "position_float32_values_equal": true,
+        "position_bytes_equal": true,
+        "index_uint32_values_equal": true,
+        "index_bytes_equal": true,
+        "normal_bytes_equal": true,
+        "oriented_faces_equal": true
+      },
+      "triangle_count": 284,
+      "source_revision_preserved": true
+    }
+  ],
+  "transform": {
+    "utf8_byte_length": 1520,
+    "sha256": "b2ae78e05fdedfeb55cbfc57d2f8ba472ba7b6b00d9e0c11992c4779d5b2e5b0",
+    "update_cs": false,
+    "old_world_mm_to_new_world_mm": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "new_world_mm_to_old_world_mm": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "new_ijk_to_old_ijk": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "world_inverse_max_abs_residual": 0.0,
+    "source_sampling_map_checked": true,
+    "independently_expected_new_ijk_to_old_ijk": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "sampling_matrix_max_abs_residual": 0.0
+  },
+  "source_optional_object_counts": {
+    "centerlines": 0,
+    "polylines": 0,
+    "resliceObjects": 1
+  },
+  "identity_optional_object_counts": {
+    "centerlines": 0,
+    "polylines": 0,
+    "resliceObjects": 1
+  },
+  "errors": [],
+  "limitations": [
+    "This is an identity-grid test; it does not establish arbitrary-angle interpolation accuracy or native Mimics equivalence.",
+    "Project headers, names and expected Mask revision changes need not be byte-identical.",
+    "Optional world objects are counted here; their full conversion semantics remain separately tested."
+  ]
+}

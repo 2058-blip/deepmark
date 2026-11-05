@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="740" viewBox="0 0 1320 740" role="img" aria-labelledby="title desc">
+<title id="title">Mimics 17对象数据流：图像、Mask、网格与标注</title>
+<desc id="desc">图像经分割产生Mask，Mask经表面重建产生网格；测量和标注是独立对象，体绘制是独立显示路径。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#56708c"/></marker></defs>
+<rect width="1320" height="740" rx="20" fill="#f6f8fc"/>
+<style>text{font-family:Microsoft YaHei,Segoe UI,sans-serif;fill:#14263f}.title{font-size:28px;font-weight:700}.sub{font-size:16px;fill:#51647c}.box-title{font-size:22px;font-weight:700}.body{font-size:17px}.edge{fill:none;stroke:#56708c;stroke-width:3;marker-end:url(#arrow)}.note{font-size:15px;fill:#51647c}</style>
+<text x="44" y="53" class="title">Mimics 17 · 从图像到可检查的几何</text>
+<text x="44" y="84" class="sub">对象数据流示意；算法代码与UI连接的证据等级见报告，不是运行时抓取的完整调用图</text>
+<rect x="44" y="144" width="260" height="150" rx="14" fill="#e6efff" stroke="#c6d1df"/>
+<text x="64" y="180" class="box-title">图像 Image</text>
+<text x="64" y="211" class="body">灰度 / HU或GV</text>
+<text x="64" y="237" class="body">层序、间距、方向</text>
+<text x="64" y="263" class="body">保留原始物理尺度</text>
+<rect x="382" y="144" width="260" height="150" rx="14" fill="#e0f3ee" stroke="#c6d1df"/>
+<text x="402" y="180" class="box-title">分割 Mask</text>
+<text x="402" y="211" class="body">阈值 / 区域增长 / 编辑</text>
+<text x="402" y="237" class="body">成员集合与阈值元信息</text>
+<text x="402" y="263" class="body">布尔 / 形态学 / 填洞</text>
+<rect x="720" y="144" width="260" height="150" rx="14" fill="#efe9fb" stroke="#c6d1df"/>
+<text x="740" y="180" class="box-title">三角表面 Mesh</text>
+<text x="740" y="211" class="body">Calculate 3D</text>
+<text x="740" y="237" class="body">相邻切片 → MC查表</text>
+<text x="740" y="263" class="body">顶点、三角形、对象属性</text>
+<rect x="1032" y="144" width="244" height="150" rx="14" fill="#fff0dd" stroke="#c6d1df"/>
+<text x="1052" y="180" class="box-title">检查与后处理</text>
+<text x="1052" y="211" class="body">平滑 / 减面 / Wrap</text>
+<text x="1052" y="237" class="body">检查边界、拓扑与尺度</text>
+<text x="1052" y="263" class="body">STL / CAD / FEA协作</text>
+<path d="M304 219 H382" class="edge"/>
+<path d="M642 219 H720" class="edge"/>
+<path d="M960 219 H1032" class="edge"/>
+<rect x="44" y="417" width="290" height="132" rx="14" fill="#eaf0f8" stroke="#c6d1df"/>
+<text x="64" y="453" class="box-title">体绘制 Volume Rendering</text>
+<text x="64" y="484" class="body">透明度 / 颜色传递函数</text>
+<text x="64" y="510" class="body">用于显示，不等于可导出STL</text>
+<rect x="414" y="417" width="408" height="132" rx="14" fill="#eaf0f8" stroke="#c6d1df"/>
+<text x="434" y="453" class="box-title">测量与文字标注</text>
+<text x="434" y="484" class="body">点、线、ROI、量值、文字及附着对象</text>
+<text x="434" y="510" class="body">独立于Mask；实体Label则可写入Mask</text>
+<rect x="902" y="417" width="374" height="132" rx="14" fill="#eaf0f8" stroke="#c6d1df"/>
+<text x="922" y="453" class="box-title">中心线与截面量测</text>
+<text x="922" y="484" class="body">分支、控制点、切线与截面指标</text>
+<text x="922" y="510" class="body">按模块提供；不同于任意折线</text>
+<path d="M174 294 V417" class="edge"/>
+<path d="M850 294 V345 H618 V417" class="edge"/>
+<path d="M850 345 H1089 V417" class="edge"/>
+<path d="M304 270 H344 V367 H477 V417" class="edge"/>
+<path d="M788 294 V328 H512 V294" class="edge"/>
+<text x="513" y="354" class="note">显式反算Mask/轮廓；不假设双向自动同步</text>
+<rect x="44" y="600" width="1232" height="94" rx="12" fill="#fff" stroke="#c6d1df"/>
+<text x="64" y="633" class="body">操作链：选择对象 → 参数或点/轮廓输入 → 预览/临时结果 → Apply / Segment / Calculate → 对象提交与Undo</text>
+<text x="64" y="665" class="note">不同工具提交时机不同。更光滑不等于更准确；Mask体积、网格体积和地标构造体积需要区分。</text>
+</svg>

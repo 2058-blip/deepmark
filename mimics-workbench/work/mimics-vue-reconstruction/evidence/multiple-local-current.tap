@@ -1,0 +1,32 @@
+✔ three ranges start from the mask default and the middle choice cannot change source metadata (2.3469ms)
+✔ editing either custom range only becomes effective after that range is chosen (0.4464ms)
+✔ invalid local bounds and choices reject atomically and equality or fractional bounds remain valid (0.2968ms)
+✔ mask or stored threshold changes reset custom drafts, while unrelated metadata and voxel edits preserve them (0.3558ms)
+✔ replacing the volume resets drafts even when the active mask and its stored values stay the same (0.1681ms)
+✔ missing stored thresholds use the existing application fallback and no image supplies only a neutral placeholder (0.2602ms)
+✔ multiple/select/deselect share a session direction and preserve completed selection across type and operation changes (14.8145ms)
+✔ displayMasks isolates the active Mask with ephemeral visibility without changing real metadata or history (7.4666ms)
+✔ Multiple Slice lasso Select/Deselect applies union/difference only to the temporary mask (7.6621ms)
+✔ Multiple Slice livewire Select/Deselect applies union/difference only to the temporary mask (65.0076ms)
+✔ type, Select/Deselect, axis and slice changes cancel only unfinished contours while retaining completed members (23.7472ms)
+✔ changing target clears the old temporary mask and unfinished contour without changing either real Mask (5.8267ms)
+✔ in-flight Multiple Slice LiveWire results cannot revive contours after type, operation, axis, slice or target changes (34.8776ms)
+✔ wrong-view editing cannot alter the fixed-axis selection until setSelectionAxis explicitly changes it (6.0214ms)
+✔ nonzero copy uses the fixed session axis, replaces full destination slices and jumps to the clipped last destination (61.2736ms)
+✔ reverse copy clips at the first slice and fixed sagittal copies also use their own axis (124.6ms)
+✔ zero copy fills all remaining slices in either direction and keeps the current slice (126.278ms)
+✔ empty, invalid and cancelled copy preserve both selection and crosshair (6.5355ms)
+✔ interpolation publishes a separate known preview and blocks editing, copy, repeat interpolation and final Apply until resolved (56.0964ms)
+✔ cancelInterpolation discards only its preview and cancelled/failed computations cannot replace the temporary mask (109.7047ms)
+✔ final temporary add edits only the known ROI in one active-Mask transaction (56.9671ms)
+✔ final temporary remove edits only the known ROI in one active-Mask transaction (55.4035ms)
+✔ final temporary threshold edits only the known ROI in one active-Mask transaction (59.9098ms)
+✔ closeMultipleEdit drops temporary state and interpolation preview, returns to navigation, and leaves active data untouched (62.6235ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1106.4918

@@ -1,0 +1,34 @@
+# Reslice Project: independent workbench/Worker audit
+
+This audit owns only `tests/mimics-reslice-project-workflow.test.ts` and this note. It reads the actual `useResliceProject`, workbench integration, worker branches, generated-project data builder, ZIP schema, file-transfer and repository contracts. It does not modify shared source, execute the original program, use patient input, or infer native numerical equivalence. Root remains responsible for UI/browser and real filesystem validation.
+
+## Synthetic fixture and independent expectations
+
+The source fixture is a 5×5×5 NIfTI with **int16** stored values, slope2 and intercept−100. Parsed raw intensities are exactly `10*x + 100*y + 1000*z`. It includes two independently overlapping Masks (`x==y`, `z>=2`) with distinct metadata/revisions, one historical Part, one native-IJK distance measurement, one attached Annotation and one saved RP. Expected generated gray/Mask arrays are written directly from those integer coordinates, not obtained from a second sampler/kernel call.
+
+Tests call the real `useWorkbench` and run the production `operations.worker.ts` through Node worker threads. A result gate can retain an actual computed result, cancel the owning operation and deliver that old result after a replacement job starts. The repository mock records cloned volume/state snapshots. The file handler exercises production archive generation but reports explicit cancelled, failed, download-started or written outcomes; it is not evidence of a browser picker or physical disk write.
+
+## Eleven verified workflows
+
+1. Show and preview allocate no generated volume and start no worker. Defaults are Update CS Off and copy-world-objects On. Requested width/height are real millimetres; explicit rounding to sample counts and effective FOV are checked. Invalid width gives no plan or job. The full source state/data/header/affine/history/dirty/MPR/crosshair/selection invariants remain intact.
+2. The actual worker generates the expected detached 3D world-linear volume and both overlapping Masks. Mask revisions increment while retained Part source revisions remain historical/stale. Native-IJK measurement context becomes physical MPR. Returned sampling metadata does not duplicate the output gray/Mask buffers. Mutating the generated result cannot mutate the original project.
+3. Update CS plus90° rotation transforms copied Part/measurement/RP points and rotates label offsets. ZIP export uses the **generated** volume rather than the resident worker's original grid. Standard decode restores exactly27 expected samples and both Masks; fixed `reslice-transform.txt` and project transform metadata match. Standalone TXT bytes match the generated transformation text.
+4. Cancel/re-run with actual held results cannot let an old result/finally publish or clear a newer job. A redundant Generate while the new job is busy cannot steal its cancellation ownership. The new job remains cancellable; retry then succeeds.
+5. Pending draft replacement, source revision change and source-volume replacement each discard a held old generation without partial result or source writes.
+6. Qualified draw-line events require all mandatory fields, current source identity/revision and ABA-safe line token. Sparse/nonfinite points, stale MPR pose, points inconsistent with their declared MPR plane and missing Part references reject. The captured first point is privately cloned; the second valid point completes the line and retires its token. Old events cannot enter a restarted drawing session.
+7. Source/world-axis presets and adopting the current MPR update only preview geometry, keep physical dimensions explicit and start no background job.
+8. Cancelled, failed and download-only exports never mark the result written. Default Save Result omits `delivery`, preserving its existing Save As route. Explicit Download Result passes `delivery:'download'`; its actual worker archive decodes to the generated27-sample volume and matching fixed transform TXT. The original-project download instead contains125 original samples, the original int16/slope2 header and no generated transform. Thin Part/Mask download wrappers also pass the download marker and return the original triangle/source-Mask data. A transform-only write does not mark the project ZIP written. An acknowledged generated-project write does, while preserving the original source's dirty state and history in every case. These handler captures verify routing/data ownership, not an actual browser download or filesystem receipt.
+9. Open Result on a dirty source creates the existing replacement guard. Cancel retains the original project; Discard installs the generated project, clears old history and marks the generated project dirty.
+10. Cache-and-open records the **original** int16 header/slope and original raw source data before installation. The generated Float32 result later caches under a distinct document ID with the expected new data.
+11. Following the later physical-plane migration phase, native-grid Polyline copying succeeds by preserving exact ring parameters on stored world planes. The original explicit image-and-all-Masks option still succeeds, reports excluded physical groups, and leaves every original object intact. The earlier refusal was a recorded feature gap and is no longer an expected requirement.
+
+## Reproduced integration gaps and fixes
+
+The initial11 cases passed after correcting this test fixture's Annotation to the existing one-point schema. Strengthening the negative paths then found actual controller gaps; shared source fixes were made by root, not this audit:
+
+- `position.some(...)` skipped sparse-array holes. `{position:[1,,1], volume:current, revision:current, lineToken:current}` incorrectly returned true and stored an undefined first-point coordinate. The negative test reproduced `true !== false`. Root changed validation to explicit dense finite coordinate checks and also checks MPR point coplanarity/FOV and non-Part source support.
+- A redundant Generate during an owned busy job failed `ready()` before acquiring a token, then its catch cleared the shared private `working` flag. Subsequent `resliceProject.cancel()` could no longer abort that still-busy job. An actual held-worker case reproduced busy remaining true after Cancel. Root now refuses busy/working entry without touching the owner and only clears working for the matching generation token; the existing finally token guard is retained.
+
+The final strengthened suite passes **11/11**, with no skipped/cancelled tests, approximately1.22seconds in the recorded targeted run. It proves these application workflows on synthetic data and real worker exchange; it does not establish native object-inheritance rules, original Reslice Project interpolation equivalence, browser picking or a real disk-write receipt.
+
+Command: `node --experimental-strip-types --test tests/mimics-reslice-project-workflow.test.ts`.

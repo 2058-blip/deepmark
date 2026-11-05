@@ -1,0 +1,153 @@
+Browser tab: 1501583401, Title: "医学分割标注 · Deepmark", URL: "http://127.0.0.1:5173/".
+0 AXWebArea 医学分割标注 · Deepmark, URL: 127.0.0.1:5173/
+	1 container
+		2 text ◈ Deepmark  Studio
+		3 text 影像 · 分割 · 三维重建
+		4 text 未打开工程
+		5 button 本地工程
+		6 button 打开影像 / 工程
+		7 button DICOM 文件夹
+		8 button (disabled) Reslice Project…
+		9 button (disabled) 保存工程
+		10 button (disabled) 下载工程副本
+		11 link Description: 协作工作台 ↗, Help: 打开原有协作标注工作台, Value: 127.0.0.1:5173/?workspace=collaboration
+		12 button 分割与标注
+		13 button 三维重建
+		14 button 测量与注释
+		15 button 轮廓与中心线
+		16 button (disabled) ↶ 撤销
+		17 button (disabled) ↷ 重做
+		18 text 工程对象 0
+		19 button Mask 0
+		20 button 3D 0
+		21 button 测量 0
+		22 button RP 0
+		23 button 曲线 0
+		24 button (disabled) ＋ 新建
+		25 button (disabled) 复制
+		26 button (disabled) 删除
+		27 text 加载影像后创建 Mask。每个 Mask 独立保存，可以相互重叠。
+		28 button (disabled) 导入 Mask
+		29 button (disabled) 导出 NIfTI
+		30 button (disabled) 下载 NIfTI 副本
+		31 text 窗宽窗位
+		32 container
+			33 text 窗位
+			34 stepper (disabled, settable, integer) 窗位, Value: 40
+		35 container
+			36 text 窗宽
+			37 stepper (disabled, settable, integer) 窗宽, Value: 400
+		38 button 骨窗
+		39 button 软组织
+		40 button 肺窗
+		41 text ◈
+		42 text IMAGE TO GEOMETRY
+		43 heading 从影像建立三维模型, Value: 1
+			44 text 从影像建立三维模型
+		45 text 独立 Mask 分割 · 三视图联动 · 表面重建 · 几何测量
+		46 button 打开影像或工程
+		47 button 加载合成练习影像
+		48 button 合成血管
+		49 text NIfTI / 未压缩 DICOM 系列 / Deepmark 工程 ZIP
+		50 text 01
+		51 text 影像与空间
+		52 text →
+		53 text 02
+		54 text 分割与编辑
+		55 text →
+		56 text 03
+		57 text 三维表面
+		58 text →
+		59 text 04
+		60 text 测量与导出
+		61 text 分割工具
+		62 button (disabled) ⌖ 定位
+			63 text ⌖
+			64 text 定位
+		65 button (disabled) ◩ 阈值
+			66 text ◩
+			67 text 阈值
+		68 button (disabled) ✣ 区域生长
+			69 text ✣
+			70 text 区域生长
+		71 button (disabled) ✺ 动态增长
+			72 text ✺
+			73 text 动态增长
+		74 button (disabled) ✎ 绘制
+			75 text ✎
+			76 text 绘制
+		77 button (disabled) ▱ 擦除
+			78 text ▱
+			79 text 擦除
+		80 button (disabled) ◈ 局部阈值
+			81 text ◈
+			82 text 局部阈值
+		83 button (disabled) ◇ 闭合轮廓
+			84 text ◇
+			85 text 闭合轮廓
+		86 button (disabled) ⌁ LiveWire
+			87 text ⌁
+			88 text LiveWire
+		89 button (disabled) ▤ 多片编辑
+			90 text ▤
+			91 text 多片编辑
+		92 button (disabled) ◒ 布尔运算
+			93 text ◒
+			94 text 布尔运算
+		95 button (disabled) ▦ 形态学
+			96 text ▦
+			97 text 形态学
+		98 button (disabled) ◉ 填充腔体
+			99 text ◉
+			100 text 填充腔体
+		101 button (disabled) ⊙ 填充孔洞
+			102 text ⊙
+			103 text 填充孔洞
+		104 button (disabled) ▣ 最大连通域
+			105 text ▣
+			106 text 最大连通域
+		107 button (disabled) ✧ Smart Expand
+			108 text ✧
+			109 text Smart Expand
+		110 button (disabled) ⌗ 裁剪Mask
+			111 text ⌗
+			112 text 裁剪Mask
+		113 text 定位
+		114 text 左键联动三视图定位；滚轮翻片；Ctrl＋滚轮缩放；右键拖动平移。
+		116 container 本地工程副本
+			117 container
+				118 heading 本地工程副本, Value: 2, ID: local-project-title
+					119 text 本地工程副本
+				120 button 关闭本地工程列表
+			121 text 编辑和浏览位置保存在当前浏览器中，可在刷新后恢复。工程文件仍可单独导出。
+			122 container
+				123 text MPR-reslice-717-oblique
+				124 text 48 × 48 × 64 · 1 Mask · 1 Part
+				125 text 2026/11/5 19:12:41
+				126 button 恢复此工程
+				127 text 合成练习影像
+				128 text 96 × 96 × 64 · 1 Mask · 1 Part
+				129 text 2026/11/5 19:08:18
+				130 button 恢复此工程
+				131 text 合成练习影像
+				132 text 96 × 96 × 64 · 1 Mask · 0 Part
+				133 text 2026/11/5 17:26:31
+				134 button 恢复此工程
+				135 text 合成练习影像
+				136 text 96 × 96 × 64 · 1 Mask · 0 Part
+				137 text 2026/11/5 13:57:29
+				138 button 恢复此工程
+				139 text 合成练习影像
+				140 text 96 × 96 × 64 · 2 Mask · 0 Part
+				141 text 2026/11/5 13:57:02
+				142 button 恢复此工程
+				143 text 合成练习影像
+				144 text 96 × 96 × 64 · 1 Mask · 1 Part
+				145 text 2026/11/5 12:55:07
+				146 button 恢复此工程
+			147 container
+				148 button 刷新列表
+				149 button 关闭
+		115 text 打开影像，或加载合成影像开始。 本地处理 · 就绪
+
+The focused UI element is 5 button 本地工程

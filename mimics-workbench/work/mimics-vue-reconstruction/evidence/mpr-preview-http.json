@@ -1,0 +1,9 @@
+{
+  "origin": "http://127.0.0.1:5173",
+  "root_status": 200,
+  "current_bundle_present": true,
+  "worker_status": 200,
+  "worker_content_type": "text/javascript",
+  "worker_bytes": 7382,
+  "scope": "HTTP asset availability only; not browser rendering or interactions"
+}

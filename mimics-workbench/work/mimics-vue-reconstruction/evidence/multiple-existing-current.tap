@@ -1,0 +1,45 @@
+✔ ordinary lasso add edits known voxels directly with one Undo/Redo and preserves the temporary selection (15.4985ms)
+✔ ordinary lasso remove edits known voxels directly with one Undo/Redo and preserves the temporary selection (8.2907ms)
+✔ ordinary lasso threshold edits known voxels directly with one Undo/Redo and preserves the temporary selection (7.4893ms)
+✔ ordinary LiveWire add closes the real worker path and edits the active mask without a temporary Apply (73.7195ms)
+✔ ordinary LiveWire remove closes the real worker path and edits the active mask without a temporary Apply (67.8792ms)
+✔ ordinary LiveWire threshold closes the real worker path and edits the active mask without a temporary Apply (66.1826ms)
+✔ invalid contours and unchanged operations never create a history entry (25.449ms)
+✔ changing the target, edit operation, threshold range or slice cancels an unfinished ordinary contour (26.8678ms)
+✔ LiveWire parameter changes and explicit cancellation discard pending worker contour results (19.7532ms)
+✔ non-measurement tools never fall through to measurement creation and Multiple Slice Select only edits the temporary mask (7.5221ms)
+✔ deleting a selected measurement and replaying the transaction cannot leave an unsavable selection (142.5629ms)
+✔ undoing a newly created selected measurement clears it immediately and redo remains savable (131.2657ms)
+✔ threshold controls follow the selected mask metadata, defaults and mask deletion undo-redo (6.8023ms)
+✔ applied threshold metadata and panel range restore together through undo-redo and project save (118.7871ms)
+✔ local project restoration applies threshold and measurement selection, while legacy view state resets selection (8.6927ms)
+✔ failed image/project import preserves committed data, dirty state, history and location (11.4006ms)
+✔ cancelled image import cannot replace a subsequently loaded image (7.7888ms)
+✔ an obsolete import finally cannot clear busy or progress owned by the next import (7.7792ms)
+✔ late Mask and STL imports cannot attach objects to a replacement project (8.637ms)
+✔ same-sized Mask with different physical geometry is rejected without altering the project (5.8897ms)
+✔ cancelled brush followed by end never commits and leaves no ghost draft (5.7674ms)
+✔ changing target during a brush cannot overwrite the new target (6.078ms)
+✔ successive brush strokes commit independently and selection is cleared on image replacement (7.6616ms)
+✔ cancelling a parsed replacement preserves the dirty project, selection, history and view (5.9446ms)
+✔ seed collection is exclusive and changing tools clears its uncommitted constraints (5.9206ms)
+✔ worker failure and invalid region target leave data atomic and permit retry (62.7966ms)
+✔ changing threshold cleanup parameters invalidates the in-flight preview before Apply (59.609ms)
+✔ Part geometry and provenance remain historical after source edits and ZIP restore (68.1449ms)
+✔ worker project export and controller ZIP restore retain the saved working position and selected annotation (63.2507ms)
+✔ save cancellation, write failure and unconfirmed download preserve dirty data and history (59.3136ms)
+✔ cache-before-replacement failure preserves the dirty document, then successful retry restores its data and view (9.0847ms)
+✔ missing or corrupt cached projects cannot replace a valid current document (5.1656ms)
+✔ unknown image units block 3D until explicit metre/mm/micron confirmation establishes one consistent millimetre grid (333.164ms)
+✔ two-label NIfTI import creates independent masks in one reversible controller transaction (5.2891ms)
+✔ Mask import accepts physically equivalent metre and micron headers into a millimetre controller project (4.9349ms)
+✔ Calculate 3D batches two overlapping masks into one reversible transaction and keeps Calculate separate from Close (56.9813ms)
+✔ Calculate 3D publishes no partial batch when a later empty Mask fails and permits a valid retry (58.1927ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1110.8993

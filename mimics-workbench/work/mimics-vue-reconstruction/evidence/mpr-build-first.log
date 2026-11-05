@@ -1,0 +1,19 @@
+
+> slicer-web-annotation@0.1.0 build
+> vue-tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 99 modules transformed.
+✗ Build failed in 1.30s
+error during build:
+[vite:esbuild-transpile] remove C:\Users\wwulli\AppData\Local\Temp\esbuild-ebef22bfe772f9c97b2c9bfe635adcc9c30087271868aa6a83c59208042aced0: Access is denied.
+    at C:\Users\wwulli\Desktop\deepmark\node_modules\esbuild\lib\main.js:1001:38
+    at responseCallbacks.<computed> (C:\Users\wwulli\Desktop\deepmark\node_modules\esbuild\lib\main.js:886:9)
+    at handleIncomingPacket (C:\Users\wwulli\Desktop\deepmark\node_modules\esbuild\lib\main.js:940:31)
+    at Socket.readFromStdout (C:\Users\wwulli\Desktop\deepmark\node_modules\esbuild\lib\main.js:864:7)
+    at Socket.emit (node:events:514:28)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)

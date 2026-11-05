@@ -1,0 +1,500 @@
+{
+  "origin": "Synthetic DICOM byte construction and CLI parse/group/convert checks; not browser import or file-picker verification",
+  "synthetic": true,
+  "patientName": "SYNTHETIC^NO_PATIENT^PHANTOM",
+  "patientId": "SYNTHETIC-NOT-FOR-CLINICAL",
+  "format": "DICOM Part 10 classic single-frame CT/MR; Explicit VR Little Endian for valid files",
+  "studyUID": "2.25.900000000000000000000000000000000011",
+  "implementationUID": "2.25.900000000000000000000000000000000002",
+  "formulas": {
+    "CT": "cube x/y=2..4,z=1..3 => 1200 HU; else (x-7.5)^2+(y-7.5)^2+(2z-5)^2<=25 => 600 HU; else -1000 HU. raw=(HU+1024)/2.",
+    "MR": "GV=100+7*x+11*y+31*z; slope=1,intercept=0; MONOCHROME1 changes display only."
+  },
+  "checks": [
+    {
+      "modality": "CT",
+      "seriesUID": "2.25.900000000000000000000000000000000101",
+      "frameOfReferenceUID": "2.25.900000000000000000000000000000000301",
+      "dims": [
+        16,
+        16,
+        6
+      ],
+      "spacing": [
+        1,
+        1,
+        2
+      ],
+      "sourceEncoding": {
+        "bitsAllocated": 16,
+        "bitsStored": 12,
+        "highBit": 11,
+        "signed": false,
+        "slope": 2,
+        "intercept": -1024,
+        "photometricInterpretation": "MONOCHROME2"
+      },
+      "intensityUnit": "HU",
+      "min": -1000,
+      "max": 1200,
+      "mean": -694.6614583333334,
+      "affineRAS": [
+        [
+          -1,
+          0,
+          0,
+          -10
+        ],
+        [
+          0,
+          -1,
+          0,
+          -20
+        ],
+        [
+          0,
+          0,
+          2,
+          30
+        ]
+      ],
+      "coordinateChecks": [
+        {
+          "voxel": [
+            0,
+            0,
+            0
+          ],
+          "expectedRAS": [
+            -10,
+            -20,
+            30
+          ],
+          "intensity": -1000
+        },
+        {
+          "voxel": [
+            3,
+            3,
+            2
+          ],
+          "expectedRAS": [
+            -13,
+            -23,
+            34
+          ],
+          "intensity": 1200
+        },
+        {
+          "voxel": [
+            8,
+            8,
+            2
+          ],
+          "expectedRAS": [
+            -18,
+            -28,
+            34
+          ],
+          "intensity": 600
+        },
+        {
+          "voxel": [
+            15,
+            15,
+            5
+          ],
+          "expectedRAS": [
+            -25,
+            -35,
+            40
+          ],
+          "intensity": -1000
+        }
+      ],
+      "expectedHUHistogram": {
+        "600": 256,
+        "1200": 27,
+        "-1000": 1253
+      },
+      "allVoxelsMatchFormula": true,
+      "filenameAndInstanceOrderDifferFromPhysical": true
+    },
+    {
+      "modality": "MR",
+      "seriesUID": "2.25.900000000000000000000000000000000201",
+      "frameOfReferenceUID": "2.25.900000000000000000000000000000000401",
+      "dims": [
+        12,
+        10,
+        4
+      ],
+      "spacing": [
+        1.5,
+        2,
+        3
+      ],
+      "sourceEncoding": {
+        "bitsAllocated": 16,
+        "bitsStored": 16,
+        "highBit": 15,
+        "signed": false,
+        "slope": 1,
+        "intercept": 0,
+        "photometricInterpretation": "MONOCHROME1"
+      },
+      "intensityUnit": "GV",
+      "min": 100,
+      "max": 369,
+      "mean": 234.5,
+      "affineRAS": [
+        [
+          0,
+          0,
+          -3,
+          30
+        ],
+        [
+          -1.5,
+          0,
+          0,
+          -40
+        ],
+        [
+          0,
+          2,
+          0,
+          50
+        ]
+      ],
+      "coordinateChecks": [
+        {
+          "voxel": [
+            0,
+            0,
+            0
+          ],
+          "expectedRAS": [
+            30,
+            -40,
+            50
+          ],
+          "intensity": 100
+        },
+        {
+          "voxel": [
+            3,
+            4,
+            2
+          ],
+          "expectedRAS": [
+            24,
+            -44.5,
+            58
+          ],
+          "intensity": 227
+        },
+        {
+          "voxel": [
+            11,
+            9,
+            3
+          ],
+          "expectedRAS": [
+            21,
+            -56.5,
+            68
+          ],
+          "intensity": 369
+        }
+      ],
+      "allVoxelsMatchFormula": true,
+      "filenameAndInstanceOrderDifferFromPhysical": true
+    }
+  ],
+  "refusals": [
+    {
+      "case": "truncated Pixel Data",
+      "code": "TRUNCATED_DATASET",
+      "message": "DICOM 元素数据被截断。"
+    },
+    {
+      "case": "JPEG2000 marker with explicitly fake payload",
+      "code": "UNSUPPORTED_TRANSFER_SYNTAX",
+      "message": "不支持压缩或该传输语法 1.2.840.10008.1.2.4.90。请离线转换为未压缩单帧 CT/MR DICOM 后导入；JPEG/JPEG-LS/JPEG2000/RLE/Deflated 目前未实现。"
+    },
+    {
+      "case": "irregular 30/32/35.5 mm slice positions",
+      "code": "IRREGULAR_SLICE_SPACING",
+      "message": "DICOM 切片间距不规则、包含重复切面或存在缺片；当前不会静默重采样。"
+    }
+  ],
+  "files": [
+    {
+      "path": "valid/CT/CT_040_INSTANCE105.dcm",
+      "bytes": 2248,
+      "sha256": "062afdeb6b4f3002de1fd9665a8f4e3f3b8fb0f05ea28010bcfa995963f4d7d0",
+      "kind": "valid",
+      "modality": "CT",
+      "physicalSliceIndex": 4,
+      "instanceNumber": 105,
+      "imagePositionLPS": [
+        10,
+        20,
+        38
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000101",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.2",
+        "sopInstanceUID": "2.25.900000000000000000000000000000001005",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/CT/CT_010_INSTANCE101.dcm",
+      "bytes": 2248,
+      "sha256": "a2af90cf77e212e90f86c3b35288f90679bddd2517bb7c87ec5e97a26d8592db",
+      "kind": "valid",
+      "modality": "CT",
+      "physicalSliceIndex": 1,
+      "instanceNumber": 101,
+      "imagePositionLPS": [
+        10,
+        20,
+        32
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000101",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.2",
+        "sopInstanceUID": "2.25.900000000000000000000000000000001002",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/CT/CT_030_INSTANCE103.dcm",
+      "bytes": 2248,
+      "sha256": "cc5e9b074857381d905ced0826a1b20157786969688044f7c4bc49628aedc283",
+      "kind": "valid",
+      "modality": "CT",
+      "physicalSliceIndex": 5,
+      "instanceNumber": 103,
+      "imagePositionLPS": [
+        10,
+        20,
+        40
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000101",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.2",
+        "sopInstanceUID": "2.25.900000000000000000000000000000001006",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/CT/CT_050_INSTANCE106.dcm",
+      "bytes": 2248,
+      "sha256": "75e9bf39f0621c2e43c50ac5714e9a10854e0f15f29b53efd4cbae9ecb484d83",
+      "kind": "valid",
+      "modality": "CT",
+      "physicalSliceIndex": 0,
+      "instanceNumber": 106,
+      "imagePositionLPS": [
+        10,
+        20,
+        30
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000101",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.2",
+        "sopInstanceUID": "2.25.900000000000000000000000000000001001",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/CT/CT_020_INSTANCE102.dcm",
+      "bytes": 2248,
+      "sha256": "dcd031447516ed886da308e251b76c405e03b8c058adbf99894ba0066d9173d9",
+      "kind": "valid",
+      "modality": "CT",
+      "physicalSliceIndex": 3,
+      "instanceNumber": 102,
+      "imagePositionLPS": [
+        10,
+        20,
+        36
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000101",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.2",
+        "sopInstanceUID": "2.25.900000000000000000000000000000001004",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/CT/CT_060_INSTANCE104.dcm",
+      "bytes": 2248,
+      "sha256": "b989bed3a119ac765a2976ed8f98faef6513177380c9098cb7ff0839cdf2642d",
+      "kind": "valid",
+      "modality": "CT",
+      "physicalSliceIndex": 2,
+      "instanceNumber": 104,
+      "imagePositionLPS": [
+        10,
+        20,
+        34
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000101",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.2",
+        "sopInstanceUID": "2.25.900000000000000000000000000000001003",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/MR/MR_030_INSTANCE3.dcm",
+      "bytes": 2050,
+      "sha256": "c8f42355f5f9c82b9c082721d5360f2cb130895c2e60fab531ebe4508b16b6a2",
+      "kind": "valid",
+      "modality": "MR",
+      "physicalSliceIndex": 2,
+      "instanceNumber": 3,
+      "imagePositionLPS": [
+        -24,
+        40,
+        50
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000201",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.4",
+        "sopInstanceUID": "2.25.900000000000000000000000000000002003",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/MR/MR_040_INSTANCE7.dcm",
+      "bytes": 2050,
+      "sha256": "7d97e9e10828dd36b847e51abaf2f76bb704f3e155e761749f0ce393b8c0540b",
+      "kind": "valid",
+      "modality": "MR",
+      "physicalSliceIndex": 0,
+      "instanceNumber": 7,
+      "imagePositionLPS": [
+        -30,
+        40,
+        50
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000201",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.4",
+        "sopInstanceUID": "2.25.900000000000000000000000000000002001",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/MR/MR_020_INSTANCE19.dcm",
+      "bytes": 2050,
+      "sha256": "5cd726b0c385512ec9462713574b8202a7c30e64452d008011aa339921277249",
+      "kind": "valid",
+      "modality": "MR",
+      "physicalSliceIndex": 3,
+      "instanceNumber": 19,
+      "imagePositionLPS": [
+        -21,
+        40,
+        50
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000201",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.4",
+        "sopInstanceUID": "2.25.900000000000000000000000000000002004",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "valid/MR/MR_010_INSTANCE41.dcm",
+      "bytes": 2050,
+      "sha256": "51a7eb310b1bd89ba71bff4076bbe80a7857b65dc614ff8426b6b2db3fd47ecc",
+      "kind": "valid",
+      "modality": "MR",
+      "physicalSliceIndex": 1,
+      "instanceNumber": 41,
+      "imagePositionLPS": [
+        -27,
+        40,
+        50
+      ],
+      "seriesUID": "2.25.900000000000000000000000000000000201",
+      "fileMeta": {
+        "groupLength": 222,
+        "datasetOffset": 366,
+        "sopClassUID": "1.2.840.10008.5.1.4.1.1.4",
+        "sopInstanceUID": "2.25.900000000000000000000000000000002002",
+        "transferSyntaxUID": "1.2.840.10008.1.2.1"
+      }
+    },
+    {
+      "path": "invalid/truncated/INVALID_TRUNCATED_PIXEL_DATA.dcm",
+      "bytes": 2231,
+      "sha256": "99708e8e681bf15da59d0a81fa12f4d3961942814fe09453f2ea290c5745ffba",
+      "kind": "invalid",
+      "expectedRefusal": "TRUNCATED_DATASET"
+    },
+    {
+      "path": "unsupported/jpeg2000-marker/UNSUPPORTED_JPEG2000_MARKER_FAKE_PAYLOAD.dcm",
+      "bytes": 1780,
+      "sha256": "5d7359e4340e9d0544b26c7e7eac123013356a579d72d1c8fdae6769da30da26",
+      "kind": "unsupported",
+      "expectedRefusal": "UNSUPPORTED_TRANSFER_SYNTAX",
+      "payload": "deliberately not a JPEG2000 codestream"
+    },
+    {
+      "path": "invalid/irregular-spacing/INVALID_SPACING_30.dcm",
+      "bytes": 2254,
+      "sha256": "c67373b95f2f46c85740d79942f87396cdc0815ab45c00f99bb0252a2caec7f7",
+      "kind": "invalid-series",
+      "physicalZ": 30,
+      "expectedSeriesRefusal": "IRREGULAR_SLICE_SPACING"
+    },
+    {
+      "path": "invalid/irregular-spacing/INVALID_SPACING_10.dcm",
+      "bytes": 2254,
+      "sha256": "bc3537700924f351270e95277d8cc41115c7215a2bdf5be1ec1871170af37c9e",
+      "kind": "invalid-series",
+      "physicalZ": 32,
+      "expectedSeriesRefusal": "IRREGULAR_SLICE_SPACING"
+    },
+    {
+      "path": "invalid/irregular-spacing/INVALID_SPACING_20.dcm",
+      "bytes": 2256,
+      "sha256": "4f37f83b9e66289c75a4b1f3533a3bcdcb4a2a8ca9914414ac3f1fbc463048b3",
+      "kind": "invalid-series",
+      "physicalZ": 35.5,
+      "expectedSeriesRefusal": "IRREGULAR_SLICE_SPACING"
+    }
+  ],
+  "validFileCount": 10,
+  "invalidOrUnsupportedFileCount": 5,
+  "limitations": [
+    "Fixture preparation and CLI validation only; browser folder selection, multi-series chooser and UI refusals remain to be verified.",
+    "No full DICOM IOD/conformance certification or external DICOM validator was run.",
+    "JPEG2000-marked file deliberately contains a non-decodable fake payload and is not a valid compressed image."
+  ]
+}

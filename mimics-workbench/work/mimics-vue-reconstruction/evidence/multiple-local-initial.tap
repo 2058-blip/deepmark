@@ -1,0 +1,52 @@
+✔ three ranges start from the mask default and the middle choice cannot change source metadata (2.0981ms)
+✔ editing either custom range only becomes effective after that range is chosen (0.3935ms)
+✔ invalid local bounds and choices reject atomically and equality or fractional bounds remain valid (0.2573ms)
+✔ mask or stored threshold changes reset custom drafts, while unrelated metadata and voxel edits preserve them (0.3483ms)
+✔ replacing the volume resets drafts even when the active mask and its stored values stay the same (0.1584ms)
+✔ missing stored thresholds use the existing application fallback and no image supplies only a neutral placeholder (0.2516ms)
+✔ multiple/select/deselect share a session direction and preserve completed selection across type and operation changes (15.0842ms)
+✔ displayMasks isolates the active Mask with ephemeral visibility without changing real metadata or history (7.108ms)
+✔ Multiple Slice lasso Select/Deselect applies union/difference only to the temporary mask (7.425ms)
+✔ Multiple Slice livewire Select/Deselect applies union/difference only to the temporary mask (62.6838ms)
+✔ type, Select/Deselect, axis and slice changes cancel only unfinished contours while retaining completed members (24.1039ms)
+✔ changing target clears the old temporary mask and unfinished contour without changing either real Mask (6.0302ms)
+✔ in-flight Multiple Slice LiveWire results cannot revive contours after type, operation, axis, slice or target changes (34.717ms)
+✔ wrong-view editing cannot alter the fixed-axis selection until setSelectionAxis explicitly changes it (5.6986ms)
+✔ nonzero copy uses the fixed session axis, replaces full destination slices and jumps to the clipped last destination (60.5597ms)
+✔ reverse copy clips at the first slice and fixed sagittal copies also use their own axis (114.7978ms)
+✔ zero copy fills all remaining slices in either direction and keeps the current slice (118.2994ms)
+✔ empty, invalid and cancelled copy preserve both selection and crosshair (5.987ms)
+✖ interpolation publishes a separate known preview and blocks editing, copy, repeat interpolation and final Apply until resolved (160.7603ms)
+✔ cancelInterpolation discards only its preview and cancelled/failed computations cannot replace the temporary mask (117.9944ms)
+✔ final temporary add edits only the known ROI in one active-Mask transaction (64.8734ms)
+✔ final temporary remove edits only the known ROI in one active-Mask transaction (54.7089ms)
+✔ final temporary threshold edits only the known ROI in one active-Mask transaction (54.9262ms)
+✔ closeMultipleEdit drops temporary state and interpolation preview, returns to navigation, and leaves active data untouched (55.596ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 23
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1175.5421
+
+✖ failing tests:
+
+test at tests\mimics-multiple-edit.test.ts:142:1
+✖ interpolation publishes a separate known preview and blocks editing, copy, repeat interpolation and final Apply until resolved (160.7603ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(editor.interpolationPreview.value===preview)
+  
+      at file:///C:/Users/wwulli/Desktop/deepmark/tests/mimics-multiple-edit.test.ts:148:78
+      at async withEditor (file:///C:/Users/wwulli/Desktop/deepmark/tests/mimics-multiple-edit.test.ts:52:155)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

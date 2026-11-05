@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: automatic threshold preview applies once and stays committed without a replacement-state watcher reviving its preview
+ok 1 - automatic threshold preview applies once and stays committed without a replacement-state watcher reviving its preview
+  ---
+  duration_ms: 674.4259
+  type: 'test'
+  ...
+# Subtest: multiple/select/deselect share a session direction and preserve completed selection across type and operation changes
+ok 2 - multiple/select/deselect share a session direction and preserve completed selection across type and operation changes
+  ---
+  duration_ms: 17.2206
+  type: 'test'
+  ...
+# Subtest: displayMasks isolates the active Mask with ephemeral visibility without changing real metadata or history
+ok 3 - displayMasks isolates the active Mask with ephemeral visibility without changing real metadata or history
+  ---
+  duration_ms: 9.0972
+  type: 'test'
+  ...
+# Subtest: Multiple Slice lasso Select/Deselect applies union/difference only to the temporary mask
+ok 4 - Multiple Slice lasso Select/Deselect applies union/difference only to the temporary mask
+  ---
+  duration_ms: 7.0622
+  type: 'test'
+  ...
+# Subtest: Multiple Slice livewire Select/Deselect applies union/difference only to the temporary mask
+ok 5 - Multiple Slice livewire Select/Deselect applies union/difference only to the temporary mask
+  ---
+  duration_ms: 65.1784
+  type: 'test'
+  ...
+# Subtest: type, Select/Deselect, axis and slice changes cancel only unfinished contours while retaining completed members
+ok 6 - type, Select/Deselect, axis and slice changes cancel only unfinished contours while retaining completed members
+  ---
+  duration_ms: 23.0153
+  type: 'test'
+  ...
+# Subtest: changing target clears the old temporary mask and unfinished contour without changing either real Mask
+ok 7 - changing target clears the old temporary mask and unfinished contour without changing either real Mask
+  ---
+  duration_ms: 6.084
+  type: 'test'
+  ...
+# Subtest: in-flight Multiple Slice LiveWire results cannot revive contours after type, operation, axis, slice or target changes
+ok 8 - in-flight Multiple Slice LiveWire results cannot revive contours after type, operation, axis, slice or target changes
+  ---
+  duration_ms: 33.246
+  type: 'test'
+  ...
+# Subtest: wrong-view editing cannot alter the fixed-axis selection until setSelectionAxis explicitly changes it
+ok 9 - wrong-view editing cannot alter the fixed-axis selection until setSelectionAxis explicitly changes it
+  ---
+  duration_ms: 5.6255
+  type: 'test'
+  ...
+# Subtest: nonzero copy uses the fixed session axis, replaces full destination slices and jumps to the clipped last destination
+ok 10 - nonzero copy uses the fixed session axis, replaces full destination slices and jumps to the clipped last destination
+  ---
+  duration_ms: 65.4483
+  type: 'test'
+  ...
+# Subtest: reverse copy clips at the first slice and fixed sagittal copies also use their own axis
+ok 11 - reverse copy clips at the first slice and fixed sagittal copies also use their own axis
+  ---
+  duration_ms: 121.0159
+  type: 'test'
+  ...
+# Subtest: zero copy fills all remaining slices in either direction and keeps the current slice
+ok 12 - zero copy fills all remaining slices in either direction and keeps the current slice
+  ---
+  duration_ms: 139.0198
+  type: 'test'
+  ...
+# Subtest: empty, invalid and cancelled copy preserve both selection and crosshair
+ok 13 - empty, invalid and cancelled copy preserve both selection and crosshair
+  ---
+  duration_ms: 6.3643
+  type: 'test'
+  ...
+# Subtest: interpolation publishes a separate known preview and blocks editing, copy, repeat interpolation and final Apply until resolved
+ok 14 - interpolation publishes a separate known preview and blocks editing, copy, repeat interpolation and final Apply until resolved
+  ---
+  duration_ms: 63.3642
+  type: 'test'
+  ...
+# Subtest: cancelInterpolation discards only its preview and cancelled/failed computations cannot replace the temporary mask
+ok 15 - cancelInterpolation discards only its preview and cancelled/failed computations cannot replace the temporary mask
+  ---
+  duration_ms: 125.8115
+  type: 'test'
+  ...
+# Subtest: final temporary add edits only the known ROI in one active-Mask transaction
+ok 16 - final temporary add edits only the known ROI in one active-Mask transaction
+  ---
+  duration_ms: 60.5848
+  type: 'test'
+  ...
+# Subtest: final temporary remove edits only the known ROI in one active-Mask transaction
+ok 17 - final temporary remove edits only the known ROI in one active-Mask transaction
+  ---
+  duration_ms: 65.0819
+  type: 'test'
+  ...
+# Subtest: final temporary threshold edits only the known ROI in one active-Mask transaction
+ok 18 - final temporary threshold edits only the known ROI in one active-Mask transaction
+  ---
+  duration_ms: 63.2304
+  type: 'test'
+  ...
+# Subtest: closeMultipleEdit drops temporary state and interpolation preview, returns to navigation, and leaves active data untouched
+ok 19 - closeMultipleEdit drops temporary state and interpolation preview, returns to navigation, and leaves active data untouched
+  ---
+  duration_ms: 65.1464
+  type: 'test'
+  ...
+# Subtest: same-target rename and final Apply preserve the completed selection instead of restarting its session
+ok 20 - same-target rename and final Apply preserve the completed selection instead of restarting its session
+  ---
+  duration_ms: 60.6291
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1229.5318

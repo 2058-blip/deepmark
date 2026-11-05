@@ -1,0 +1,10 @@
+import { createApp } from 'vue';
+import App from './App.vue';
+import Workbench from './mimics/Workbench.vue';
+import './style.css';
+import './threshold.css';
+import './workspace.css';
+import './review.css';
+import './engineer.css';
+const workspace = new URLSearchParams(window.location.search).get('workspace');
+createApp(workspace === 'collaboration' ? App : Workbench).mount('#root');

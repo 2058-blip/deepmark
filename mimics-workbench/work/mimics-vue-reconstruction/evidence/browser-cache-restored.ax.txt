@@ -1,0 +1,169 @@
+Browser tab: 1501583368, Title: "医学分割标注 · Deepmark", URL: "http://127.0.0.1:5173/".
+0 AXWebArea 医学分割标注 · Deepmark, URL: 127.0.0.1:5173/
+	1 container
+		2 text ◈ Deepmark  Studio
+		3 text 影像 · 分割 · 三维重建
+		37 container
+			38 text 合成练习影像 96 × 96 × 64 · 1.00 / 1.00 / 1.50 mm
+		5 button 本地工程
+		6 button 打开影像 / 工程
+		7 button DICOM 文件夹
+		8 button 保存工程
+		9 link Description: 协作工作台 ↗, Help: 打开原有协作标注工作台, Value: 127.0.0.1:5173/?workspace=collaboration
+		10 button 分割与标注
+		11 button 三维重建
+		12 button 测量与注释
+		13 button 轮廓与中心线
+		14 button (disabled) ↶ 撤销
+		15 button (disabled) ↷ 重做
+		16 text 工程对象 2
+		17 button Mask 1
+		18 button 3D 1
+		19 button 测量 0
+		20 button 曲线 0
+		21 button ＋ 新建
+		22 button 复制
+		23 button 删除
+		39 container
+			40 color well (settable) Description: Mask 1颜色, Value: #48d7ae
+			41 text field (settable) Description: mask-mw2xtwy4-1名称, Value: Mask 1
+			42 text 226 ~ 650 · r2
+			43 button 隐藏Mask
+		44 container
+			45 text 透明度  45%
+			46 slider (settable, float) 透明度 45%, Value: 0.44999998807907104, Details: 0.45
+		47 definition list
+			48 container 体素
+				49 text 体素
+			50 text 32,424
+			51 container 体积
+				52 text 体积
+			53 text 48,636 mm³
+			54 container 灰度均值
+				55 text 灰度均值
+			56 text 650
+		57 button 清空成员，保留阈值
+		25 button 导入 Mask
+		26 button 导出 NIfTI
+		27 text 窗宽窗位
+		28 container
+			29 text 窗位
+			30 stepper (settable, integer) 窗位, Value: 55
+		31 container
+			32 text 窗宽
+			33 stepper (settable, integer) 窗宽, Value: 500
+		34 button 骨窗
+		35 button 软组织
+		36 button 肺窗
+		58 container
+			59 text 轴位
+			60 text 35 / 64
+			61 button 适配, Help: 重置缩放和平移
+			62 image 轴位，滚轮切片，Ctrl滚轮缩放，右键平移
+			63 slider (settable, integer) Description: 轴位切片, Value: 34
+			64 text —
+		65 container
+			66 text 冠状位
+			67 text 49 / 96
+			68 button 适配, Help: 重置缩放和平移
+			69 image 冠状位，滚轮切片，Ctrl滚轮缩放，右键平移
+			70 slider (settable, integer) Description: 冠状位切片, Value: 48
+			71 text —
+		72 container
+			73 text 矢状位
+			74 text 49 / 96
+			75 button 适配, Help: 重置缩放和平移
+			76 image 矢状位，滚轮切片，Ctrl滚轮缩放，右键平移
+			77 slider (settable, integer) Description: 矢状位切片, Value: 48
+			78 text —
+		79 button 表面模型
+		80 button 体绘制
+		81 container 三维 Part 视图
+			82 container
+				83 text 3D / Parts
+				84 button 适配, Help: 显示全部对象 (F)
+				85 button 正面 XY, Help: 从世界 +Z 朝 −Z 观察 XY 平面
+				86 button 顶面 XZ, Help: 从世界 −Y 朝 +Y 观察 XZ 平面
+				87 button 侧面 YZ, Help: 从世界 −X 朝 +X 观察 YZ 平面
+				88 button 等轴
+				89 checkbox (settable, integer) Description: 网格边, Value: 0
+			90 container
+				91 image 拖动旋转，Shift 或右键拖动平移，滚轮缩放，点击表面拾取物理坐标
+				92 image 三维测量与注释覆盖层
+					93 container 世界 XYZ 坐标方向
+						94 text X
+						95 text Y
+						96 text Z
+				97 text 拖动旋转 · Shift / 右键平移 · 滚轮缩放 · 点击表面拾取
+			98 container
+				99 text 1 个可见对象 66,856 个三角形 · mm · 正交投影
+		100 text Calculate 3D
+		101 text 由当前 Mask 生成独立三角表面。
+		102 container
+			103 text 输入 Mask Mask 1
+		104 button Calculate 3D…
+		105 text 表面后处理
+		106 checkbox (settable, integer) Description: 保留原始模型, Value: 1
+		107 container
+			108 text 平滑次数
+			109 stepper (settable, integer) 平滑次数, Value: 3
+		110 container
+			111 text 平滑系数
+			112 stepper (settable, float) 平滑系数, Value: 0.30000001192092896, Details: 0.3
+		113 checkbox (settable, integer) Description: 补偿体积收缩, Value: 1
+		114 button 平滑所选表面
+		115 container
+			116 text 保留三角形比例
+			117 stepper (settable, float) 保留三角形比例, Value: 0.5
+		118 container
+			119 text 容差 mm
+			120 stepper (settable, float) 容差 mm, Value: 0.30000001192092896, Details: 0.3
+		121 container
+			122 text 保边角度 °
+			123 stepper (settable, integer) 保边角度 °, Value: 45
+		124 button 减少三角形
+		125 text Wrap 包络
+		126 container
+			127 text 分辨率 mm
+			128 stepper (settable, integer) 分辨率 mm, Value: 1
+		129 container
+			130 text 闭合距离 mm
+			131 stepper (settable, integer) 闭合距离 mm, Value: 2
+		132 checkbox (settable, integer) Description: 保护薄壁, Value: 1
+		133 button 生成包络表面
+		134 button 从所选3D计算新 Mask
+		135 button 导出 STL
+		136 text 平面切割
+		137 text 当前表面：Mask 1 3D 1。平面采用世界坐标 mm。
+		138 button 平面经过当前十字线
+		139 container
+			140 text X
+			141 stepper (settable, integer) X, Value: 0
+		142 container
+			143 text Y
+			144 stepper (settable, integer) Y, Value: 0
+		145 container
+			146 text Z
+			147 stepper (settable, integer) Z, Value: 0
+		148 container
+			149 text Nx
+			150 stepper (settable, integer) Nx, Value: 0
+		151 container
+			152 text Ny
+			153 stepper (settable, integer) Ny, Value: 0
+		154 container
+			155 text Nz
+			156 stepper (settable, integer) Nz, Value: 1
+		157 checkbox (settable, integer) Description: 封闭切面（保留孔洞）, Value: 1
+		158 checkbox (settable, integer) Description: 保留原模型, Value: 1
+		159 button 切割为平面两侧
+		160 button 按连通壳分离
+		161 text 表面修复
+		162 button 修正方向，保留内部空腔
+		163 container
+			164 text 边界缝合容差 mm
+			165 stepper (settable, float) 边界缝合容差 mm, Value: 0.0010000000474974513, Details: 0.001
+		166 button 缝合邻近开放边
+		167 text 影像已加载 I 48 · J 48 · K 34 本地副本保存中 本地处理 · 就绪
+
+The focused UI element is 0 AXWebArea 医学分割标注 · Deepmark, URL: 127.0.0.1:5173/

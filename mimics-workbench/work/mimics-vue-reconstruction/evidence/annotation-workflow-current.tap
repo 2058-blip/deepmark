@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: 2D annotation anchors open a world-coordinate draft; Cancel does nothing and Apply is exactly one Undo/Redo transaction
+ok 1 - 2D annotation anchors open a world-coordinate draft; Cancel does nothing and Apply is exactly one Undo/Redo transaction
+  ---
+  duration_ms: 14.4835
+  type: 'test'
+  ...
+# Subtest: 3D annotation creation is deferred and never changes the generated Part or its source Mask
+ok 2 - 3D annotation creation is deferred and never changes the generated Part or its source Mask
+  ---
+  duration_ms: 67.0261
+  type: 'test'
+  ...
+# Subtest: workbench properties, duplicate and hide survive real worker ZIP export/restore without modifying masks
+ok 3 - workbench properties, duplicate and hide survive real worker ZIP export/restore without modifying masks
+  ---
+  duration_ms: 69.5223
+  type: 'test'
+  ...
+# Subtest: new-document install and deleting an edited annotation cancel the stale dialog and clear invalid selection IDs
+ok 4 - new-document install and deleting an edited annotation cancel the stale dialog and clear invalid selection IDs
+  ---
+  duration_ms: 9.2273
+  type: 'test'
+  ...
+# Subtest: invalid, hidden, transparent or deleted 3D hits cannot select objects or open annotation drafts
+ok 5 - invalid, hidden, transparent or deleted 3D hits cannot select objects or open annotation drafts
+  ---
+  duration_ms: 64.5153
+  type: 'test'
+  ...
+# Subtest: starting real background work cancels a deferred annotation and ignores additional 3D picks until completion
+ok 6 - starting real background work cancels a deferred annotation and ignores additional 3D picks until completion
+  ---
+  duration_ms: 65.5981
+  type: 'test'
+  ...
+# Subtest: deleting a source Part preserves committed world-coordinate annotation provenance according to the existing orphan policy
+ok 7 - deleting a source Part preserves committed world-coordinate annotation provenance according to the existing orphan policy
+  ---
+  duration_ms: 69.0326
+  type: 'test'
+  ...
+# Subtest: deleting the Part of a pending new 3D annotation cancels creation without changing the old committed-object orphan policy
+ok 8 - deleting the Part of a pending new 3D annotation cancels creation without changing the old committed-object orphan policy
+  ---
+  duration_ms: 61.6997
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 630.6644

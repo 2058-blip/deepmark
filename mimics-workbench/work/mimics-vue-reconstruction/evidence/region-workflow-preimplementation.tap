@@ -1,0 +1,18 @@
+✔ Source/Target are independent of the active visualization Mask and Swap exchanges two existing IDs without history (14.1067ms)
+✔ Target New creates one separate nonempty Mask per click while Source and active selection stay unchanged (62.827ms)
+✔ existing Target receives the selected Source component even when another Mask is active, and repeated copy is a whole-operation no-op (59.9328ms)
+✔ Leave Original off moves into an overlapping existing Target atomically, including when only Source changes (54.4158ms)
+✔ background seeds and same-source targets cannot create empty masks, history or a partial source cut (53.3427ms)
+✔ 6/26 connectivity and Multiple off use explicit source membership and the clicked orthogonal plane (332.6891ms)
+✔ changing Source, Target, connectivity, Multiple or Leave Original discards an in-flight move with no partial commit (26.7843ms)
+✔ cancel and immediate rerun retain the independent Source and publish only the newer region request (54.1494ms)
+✔ deleting Source/Target and opening another document do not leave stale workflow IDs (11.8931ms)
+✔ legacy direct runMask region uses active Source when its separate source ID is absent (57.9578ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 909.8502

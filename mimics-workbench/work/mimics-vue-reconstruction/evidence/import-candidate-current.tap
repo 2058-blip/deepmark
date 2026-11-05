@@ -1,0 +1,34 @@
+✔ a new file request clears old series and replacement candidates without discarding committed dirty work (9.3348ms)
+✔ cancelling the file chooser keeps the existing candidate and committed state (5.7086ms)
+✔ an obsolete cache-before-replacement success cannot publish over a newer import or reset its busy state (6.9362ms)
+✔ an obsolete cache-before-replacement failure cannot publish over a newer import or reset its busy state (6.0974ms)
+✔ failed image/project import preserves committed data, dirty state, history and location (5.2986ms)
+✔ cancelled image import cannot replace a subsequently loaded image (5.7524ms)
+✔ an obsolete import finally cannot clear busy or progress owned by the next import (6.9507ms)
+✔ late Mask and STL imports cannot attach objects to a replacement project (6.3803ms)
+✔ same-sized Mask with different physical geometry is rejected without altering the project (4.891ms)
+✔ cancelled brush followed by end never commits and leaves no ghost draft (4.966ms)
+✔ changing target during a brush cannot overwrite the new target (5.0955ms)
+✔ successive brush strokes commit independently and selection is cleared on image replacement (6.3484ms)
+✔ cancelling a parsed replacement preserves the dirty project, selection, history and view (5.0816ms)
+✔ seed collection is exclusive and changing tools clears its uncommitted constraints (4.8542ms)
+✔ worker failure and invalid region target leave data atomic and permit retry (56.2632ms)
+✔ changing threshold cleanup parameters invalidates the in-flight preview before Apply (54.5197ms)
+✔ Part geometry and provenance remain historical after source edits and ZIP restore (59.8163ms)
+✔ worker project export and controller ZIP restore retain the saved working position and selected annotation (62.4839ms)
+✔ save cancellation, write failure and unconfirmed download preserve dirty data and history (57.2568ms)
+✔ cache-before-replacement failure preserves the dirty document, then successful retry restores its data and view (7.923ms)
+✔ missing or corrupt cached projects cannot replace a valid current document (5.046ms)
+✔ unknown image units block 3D until explicit metre/mm/micron confirmation establishes one consistent millimetre grid (327.9143ms)
+✔ two-label NIfTI import creates independent masks in one reversible controller transaction (5.0789ms)
+✔ Mask import accepts physically equivalent metre and micron headers into a millimetre controller project (4.7099ms)
+✔ Calculate 3D batches two overlapping masks into one reversible transaction and keeps Calculate separate from Close (58.4786ms)
+✔ Calculate 3D publishes no partial batch when a later empty Mask fails and permits a valid retry (56.5729ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1032.2075

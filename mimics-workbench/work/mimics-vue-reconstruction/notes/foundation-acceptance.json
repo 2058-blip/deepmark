@@ -1,0 +1,1379 @@
+{
+  "schema": "deepmark-foundation-acceptance-v1",
+  "audit_date": "2026-11-05",
+  "latest_integration": {
+    "tests": 572,
+    "pass": 572,
+    "fail": 0,
+    "production_build": "pass",
+    "regression_artifact": "work/mimics-vue-reconstruction/evidence/reslice-gizmo-regression.log",
+    "build_artifact": "work/mimics-vue-reconstruction/evidence/reslice-gizmo-build.log",
+    "bundle": "index-yJct2Maa.js",
+    "scope": "Full project suites include collaboration/server; not 572 native tools or full browser acceptance.",
+    "new_evidence": [
+      "tests/mimics-reslice-gizmo.test.ts:12",
+      "tests/mimics-part-reslice.test.ts:13",
+      "tests/mimics-reslice-gizmo-workflow-audit.test.ts:6",
+      "tests/mimics-viewport.test.ts: compiled Workbench RP props/actions routes",
+      "work/mimics-vue-reconstruction/notes/foundation-reslice-gizmo-integration.md"
+    ]
+  },
+  "scope": "先使影像导入→独立Mask→标注编辑→3D→测量/导出→保存恢复的基础链路完整；不据此认证高级算法或原版数值等价。",
+  "evidence_rules": {
+    "source_review": "源码表明存在控制流，不代表运行验收。",
+    "kernel_test": "纯函数合成测试，不能证明UI接线、浏览器、指针或文件流。",
+    "controller_real_worker": "Vue composable加实际operations.worker.ts，经过Node worker_threads与structured clone；不执行浏览器。",
+    "browser_acceptance": "须实际执行所列UI操作并记录输入、参数、输出和可检查断言；截图只能支持其可见部分。",
+    "original_comparison": "需要相同输入和参数的原Mimics输出oracle；本次没有。",
+    "controller_storage_double": "实际useWorkbench与WorkspaceSaveQueue，外部WorkspaceRepository为受控内存存储test double。检查控制器调用、失败原子性和恢复，不证明IndexedDB、quota、新会话或浏览器。",
+    "independent_format_parser": "Python标准库独立解码真实导出文件，人工解析夹具校验，不调用app读写核；证明所列文件格式/同源定量一致，不证明浏览器文件流或原版算法等价。",
+    "controller_controlled_geometry": "实际useAdvancedTools更新回调接收受控字面量mesh，实际ProjectHistory/ZIP验证；证明对象构建与来源，不执行几何Worker。"
+  },
+  "executed_runs": [
+    {
+      "id": "foundation-baseline",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-foundation.test.ts",
+      "result": {
+        "tests": 12,
+        "pass": 5,
+        "fail": 7
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/foundation-baseline.tap",
+      "meaning": "修复前稳定小夹具审查基线；之后代码变更须重跑，不能把基线当最终状态。"
+    },
+    {
+      "id": "foundation-existing-baseline",
+      "command": "node --experimental-strip-types --test --test-reporter=spec tests/mimics-project.test.ts tests/mimics-workbench.test.ts tests/mimics-segmentation.test.ts tests/mimics-dicom.test.ts tests/mimics-measurements.test.ts",
+      "result": {
+        "tests": 55,
+        "pass": 55,
+        "fail": 0
+      },
+      "meaning": "本轮实际执行，含并行完成的project view schema新增测试；不包含geometry suite，不是浏览器验收。"
+    },
+    {
+      "id": "foundation-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-foundation.test.ts",
+      "result": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0
+      },
+      "meaning": "root基础补丁后实际运行，包含pending cancel/discard、真实Worker项目导出与工作位置恢复、保存回执边界；不执行浏览器。",
+      "superseded_by": "foundation-expanded-current"
+    },
+    {
+      "id": "foundation-expanded-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-foundation.test.ts",
+      "result": {
+        "tests": 20,
+        "pass": 20,
+        "fail": 0
+      },
+      "meaning": "新增cache失败/成功恢复/损坏缓存、无单位阻止3D及明确单位后真实网格几何、多标签与物理等价单位Mask导入控制器链路；受控内存仓库不是IndexedDB验收。",
+      "superseded_by": "foundation-batch-current"
+    },
+    {
+      "id": "foundation-batch-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-foundation.test.ts",
+      "result": {
+        "tests": 22,
+        "pass": 22,
+        "fail": 0
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/foundation-current.tap",
+      "meaning": "新增实际Worker Calculate3D两重叠Mask批量成功/失败原子性，验证一次Undo/Redo、Calculate保留窗口、Close独立。"
+    },
+    {
+      "id": "editmasks-controller-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-editmasks-controller.test.ts",
+      "result": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/editmasks-controller-current.tap",
+      "meaning": "普通Lasso/LiveWire add/remove/threshold直接活动Mask事务、无变化/非法轮廓、变参/切片/目标取消、非measurement白名单；实际Worker不等于浏览器或原版LiveWire数值认证。"
+    },
+    {
+      "id": "multiple-edit-baseline",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-multiple-edit.test.ts",
+      "result": {
+        "tests": 18,
+        "pass": 17,
+        "fail": 1
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/multiple-edit-baseline.tap",
+      "meaning": "修复前插值预览被selectionType watcher清除，写入屏障失效；现已修复。"
+    },
+    {
+      "id": "multiple-edit-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-multiple-edit.test.ts",
+      "result": {
+        "tests": 18,
+        "pass": 18,
+        "fail": 0
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/multiple-edit-current.tap",
+      "meaning": "实际controller/worker的多片session、Lasso/LiveWire临时并差、方向复制、插值预览屏障、local Threshold与最终单次事务；非浏览器验收。"
+    },
+    {
+      "id": "multiple-preview-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-multiple-edit.test.ts tests/mimics-auto-preview.test.ts",
+      "result": {
+        "tests": 20,
+        "pass": 20,
+        "fail": 0
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/multiple-preview-current.tap",
+      "meaning": "multiple19项加自动阈值预览1项；同目标rename/Apply保留selection引用，Apply后450ms无后台preview/status复活。"
+    },
+    {
+      "id": "region-properties-current",
+      "executed_by": "root",
+      "audit_verification": "read_existing_log_only",
+      "command": "joint Node regression: region10 + properties9 + foundation26 + ordinary10 + state5",
+      "result": {
+        "tests": 60,
+        "pass": 60,
+        "fail": 0
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/region-properties-current.tap",
+      "meaning": "root实现Source/Target后联跑通过；审查未重复60项。"
+    },
+    {
+      "id": "annotation-workflow-baseline",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-annotation-workflow.test.ts",
+      "result": {
+        "tests": 8,
+        "pass": 7,
+        "fail": 1
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/annotation-workflow-baseline.tap",
+      "meaning": "当前唯一失败是pending新3D annotation在来源Part删除时未取消；root已确认新creation安全策略，等待模块补丁。"
+    },
+    {
+      "id": "annotation-workflow-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-annotation-workflow.test.ts",
+      "result": {
+        "tests": 8,
+        "pass": 8,
+        "fail": 0
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/annotation-workflow-current.tap",
+      "meaning": "新creation来源Part删除取消与旧已提交orphan可编辑分别通过；真实workbench/worker的注释完整接入。"
+    },
+    {
+      "id": "measurement-workflow-current",
+      "command": "node --experimental-strip-types --test --test-reporter=tap tests/mimics-measurement-workflow.test.ts",
+      "result": {
+        "tests": 17,
+        "pass": 17,
+        "fail": 0
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/measurement-workflow-current.tap",
+      "meaning": "完整affine手算几何/密度详情、current-slice ROI、geometry批量与拒绝、旧手势失效、跨Part逐点refs、PartToMask source、实际Worker ZIP；非浏览器验收。"
+    },
+    {
+      "id": "measurement-roi-final-integration",
+      "command": "npm test then npm run build",
+      "result": {
+        "tests": 390,
+        "pass": 390,
+        "fail": 0,
+        "build": "pass"
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/measurement-roi-regression.log",
+      "meaning": "Final integration after ROI, structured details, per-point attachments, frozen gestures and current-plane rejection; no new browser result."
+    },
+    {
+      "id": "measurement-native-final-integration",
+      "command": "npm test then npm run build",
+      "result": {
+        "tests": 436,
+        "pass": 436,
+        "fail": 0,
+        "build": "pass"
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/measurement-native-regression.log",
+      "meaning": "Area/Ellipse specialized editing, world label storage, readonly live metrics and 2D/3D staged creation integrated. No new browser or original equivalence result."
+    },
+    {
+      "id": "mpr-final-integration",
+      "command": "npm test then npm run build (process TEMP/TMP within workspace after system temp removal failure)",
+      "result": {
+        "tests": 489,
+        "pass": 489,
+        "fail": 0,
+        "build": "pass"
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/mpr-regression.log",
+      "meaning": "True arbitrary-plane 3-view MPR, measurements/ROI, world persistence and pose isolation. No new browser/original result. Initial temp failure preserved in mpr-build-first.log."
+    },
+    {
+      "id": "mpr-interactive-pre-pause",
+      "command": "npm test then npm run build",
+      "result": {
+        "tests": 541,
+        "pass": 541,
+        "fail": 0,
+        "build": "pass"
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/mpr-interactive-regression.log",
+      "meaning": "Stable pre-pause RP object/blue-frame/shared-worker phase, now documented."
+    },
+    {
+      "id": "reslice-gizmo-final-integration",
+      "command": "npm test then npm run build with process workspace TEMP/TMP",
+      "result": {
+        "tests": 572,
+        "pass": 572,
+        "fail": 0,
+        "build": "pass"
+      },
+      "artifact": "work/mimics-vue-reconstruction/evidence/reslice-gizmo-regression.log",
+      "meaning": "RP 3D visual/modify integration and strict runtime epoch/mode validation; initial approval review deadline expired before process creation, permitted one retry succeeded."
+    }
+  ],
+  "browser_session": {
+    "performed_by_this_audit": false,
+    "owner": "root",
+    "status": "root_partially_verified_region_measurements_annotations_recovery",
+    "root_attempt_artifact": "work/mimics-vue-reconstruction/notes/foundation-browser-2026-11-05.md",
+    "historical_screenshots": [
+      "browser-loaded.jpg",
+      "browser-surface.jpg",
+      "browser-volume.jpg"
+    ],
+    "historical_screenshot_limit": "现存截图未由本审查重现，不证明取消、指针、保存恢复或完整工具链。",
+    "root_current_artifact": "work/mimics-vue-reconstruction/notes/foundation-browser-multiple-2026-11-05.md",
+    "current_screenshots": [
+      "browser-region-stale-part.jpg",
+      "browser-annotation-properties.jpg",
+      "browser-annotations-2d-3d.jpg",
+      "browser-annotation-restored-properties.jpg",
+      "browser-annotations-restored.jpg"
+    ],
+    "current_ax": [
+      "browser-annotation-restored.ax.txt",
+      "browser-annotations-restored.ax.txt"
+    ],
+    "root_latest_attempt_artifact": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md",
+    "root_last_success_artifact": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md"
+  },
+  "flows": [
+    {
+      "id": "F01",
+      "name": "NIfTI导入",
+      "input": "小型已知值NIfTI，metre/mm/micron、大/小端、旋转/剪切affine；另有gzip与损坏文件。",
+      "operations": [
+        "打开影像",
+        "查看三正交视图和影像元数据",
+        "用已知体素导出后回读"
+      ],
+      "expected": [
+        "仅成功完成解析后替换当前工程",
+        "物理坐标与原始值正确",
+        "gzip失败明确且原工程保留"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: imageFile + failed image import",
+          "result": "pass"
+        },
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-project.test.ts: native metre/micron and big endian",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "independent_format_parser",
+          "ref": "evidence/exchange-sample/final-independent-validation.json",
+          "result": "NIfTI_mask_header_units_affine_and_929_exact_members_pass"
+        }
+      ],
+      "gaps": [
+        "浏览器文件选择和gzip实际解压未验收。",
+        "未知空间单位控制器已明确阻止毫米3D并提供显式确认；单位选择UI待浏览器验证。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F02",
+      "name": "DICOM系列选择与拒绝",
+      "input": "两系列未压缩合成DICOM，乱文件名/实例号，MONOCHROME1，损坏、压缩、多帧、不规则切面。",
+      "operations": [
+        "选择文件夹",
+        "选择系列",
+        "加载系列",
+        "尝试不支持系列"
+      ],
+      "expected": [
+        "按UID分组和物理位置排序",
+        "强度重标度/方向/窗位正确",
+        "失败保留原工程，允许重选"
+      ],
+      "current_evidence": [
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-dicom.test.ts",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "source_review",
+          "ref": "useWorkbench.openFiles/loadSeries",
+          "result": "series_selection_present"
+        },
+        {
+          "level": "kernel_test",
+          "ref": "fixtures/dicom/generation.json",
+          "result": "10_valid_files_all_voxels_world_coordinates_and_5_refusals_pass"
+        }
+      ],
+      "gaps": [
+        "实际文件夹/多系列UI、错误呈现和文件选择仍未验收。",
+        "压缩/Enhanced/4D仍不是当前已支持的基础输入；压缩标记坏例不等于合法压缩样本解码。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F03",
+      "name": "未保存工程替换保护",
+      "input": "存在已修改Mask和未保存dirty的工程；新影像或工程ZIP。",
+      "operations": [
+        "打开新影像",
+        "选择保留当前或明确丢弃",
+        "取消文件选择",
+        "新影像解析失败"
+      ],
+      "expected": [
+        "用户在可审查的替换节点选择保留/丢弃",
+        "保留或失败不丢数据",
+        "beforeunload提示与应用内替换保护均有效"
+      ],
+      "current_evidence": [
+        {
+          "level": "source_review",
+          "ref": "useWorkbench.beforeUnload/install/openFiles baseline",
+          "result": "baseline_only_beforeunload_guard"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: pending replacement discard + cancel preserves project/history/view",
+          "result": "pass_2026-11-05_foundation-current"
+        },
+        {
+          "level": "controller_storage_double",
+          "ref": "tests/mimics-foundation.test.ts: cache-before-replacement failure then successful retry and old document restore",
+          "result": "pass_2026-11-05_foundation-expanded-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: obsolete cache success/failure vs newer import",
+          "result": "pass_import-candidate-current_26"
+        }
+      ],
+      "gaps": [
+        "cancel/discard/cache控制器分支均有测试；原生替换对话框以及真实IndexedDB保存再替换待浏览器验证。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F04",
+      "name": "导入失败原子性",
+      "input": "已有笔画、dirty、undo和非中心位置；broken.nii/.zip/.dcm。",
+      "operations": [
+        "依次导入三类损坏文件",
+        "检查原对象、影像、dirty、undo、point和busy"
+      ],
+      "expected": [
+        "失败只更新错误信息",
+        "原数据/历史/位置不变",
+        "busy复位可重试"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: failed image/project import",
+          "result": "pass"
+        }
+      ],
+      "gaps": [
+        "浏览器错误呈现、文件输入重复选择未验收"
+      ],
+      "status": "controller_verified"
+    },
+    {
+      "id": "F05",
+      "name": "旧影像导入隔离",
+      "input": "延迟arrayBuffer的旧NIfTI与已成功打开的新NIfTI。",
+      "operations": [
+        "启动旧导入",
+        "取消",
+        "打开新工程",
+        "释放旧文件读取"
+      ],
+      "expected": [
+        "旧返回不能替换新volume/state",
+        "错误和finally均不能覆盖新状态"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: cancelled image import",
+          "result": "fail_baseline_old_import_replaces_new"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: cancelled image import",
+          "result": "pass_2026-11-05_foundation-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: new request clears old series/pending; chooser cancel preserves candidate",
+          "result": "pass_import-candidate-current_26"
+        }
+      ],
+      "gaps": [
+        "浏览器慢文件读取/取消尚未验收。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F06",
+      "name": "旧Mask/STL导入隔离",
+      "input": "延迟Mask/STL读取，期间替换为另一个工程；同尺寸但不同affine的Mask。",
+      "operations": [
+        "启动附加导入",
+        "取消并换工程",
+        "释放旧读取",
+        "导入平移不同的同尺寸Mask"
+      ],
+      "expected": [
+        "旧对象不能附加到新工程",
+        "几何不一致明确拒绝",
+        "失败不改变当前对象和dirty"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: late Mask and STL imports",
+          "result": "fail_baseline_old_mask_attaches"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: same-sized Mask different physical geometry",
+          "result": "pass"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: valid nonempty late Mask + valid STL discarded; affine mismatch rejected",
+          "result": "pass_2026-11-05_foundation-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: equivalent metre/micron label Mask import into mm project",
+          "result": "pass_2026-11-05_foundation-expanded-current"
+        }
+      ],
+      "gaps": [
+        "浏览器Mask/STL选择文件和导入反馈尚未验收。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F07",
+      "name": "忙碌/进度请求归属",
+      "input": "两个延迟文件读取；第一个已取消，第二个仍在读取。",
+      "operations": [
+        "旧导入开始",
+        "取消后立即启动新导入",
+        "旧导入返回",
+        "新导入返回"
+      ],
+      "expected": [
+        "旧finally不清除新请求的busy/progress",
+        "当前请求完成后才清理其忙碌状态"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: obsolete import finally",
+          "result": "fail_baseline_old_finally_clears_busy"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: obsolete import finally preserves current busy/progress",
+          "result": "pass_2026-11-05_foundation-current"
+        }
+      ],
+      "gaps": [
+        "浏览器取消按钮、慢文件和进度可见性待验收。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F08",
+      "name": "三视图导航与物理显示",
+      "input": "各向异性、旋转和剪切仿射的合成体。",
+      "operations": [
+        "点击十字线",
+        "滚轮及滑条切片",
+        "平移缩放与适配",
+        "检查方向和世界坐标"
+      ],
+      "expected": [
+        "三视图point联动且在边界内",
+        "物理长宽比与方向标签可解释",
+        "采样与显示反转不改变数值"
+      ],
+      "current_evidence": [
+        {
+          "level": "source_review",
+          "ref": "ImageViewport.geometry/locate/slice + Workbench point wiring",
+          "result": "implemented"
+        },
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-measurements.test.ts: full inverse affine",
+          "result": "pass_2026-11-05_existing-baseline"
+        }
+      ],
+      "gaps": [
+        "三视图事件与完整剪切屏幕映射仍待浏览器验收。",
+        "源码已使用完整平面仿射；属于原始IJK切片显示，不等于标准斜切MPR重采样。"
+      ],
+      "status": "implemented_unverified_browser"
+    },
+    {
+      "id": "F09",
+      "name": "独立Mask对象",
+      "input": "两份重叠Mask及一个空Mask。",
+      "operations": [
+        "新建/复制/选择/删除",
+        "修改名称颜色显隐透明度",
+        "清空再撤销"
+      ],
+      "expected": [
+        "成员可重叠且相互独立",
+        "复制后编辑不改源",
+        "每次对象更改可撤销",
+        "选择不混入metadata历史"
+      ],
+      "current_evidence": [
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-project.test.ts: overlapping masks + snapshots",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "source_review",
+          "ref": "useWorkbench Mask CRUD",
+          "result": "implemented"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: two-label independent buffers and one transaction Undo",
+          "result": "pass_2026-11-05_foundation-expanded-current"
+        }
+      ],
+      "gaps": [
+        "完整对象UI生命周期与事件冒泡须浏览器验收",
+        "忙碌期间所有程序入口的metadata修改一致性需审查"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F10",
+      "name": "阈值预览/应用",
+      "input": "已知100值的4体素连通块及1体素孤岛。",
+      "operations": [
+        "设lower=upper=100",
+        "预览",
+        "取消或应用",
+        "Undo/Redo",
+        "切换目标"
+      ],
+      "expected": [
+        "包含上下限，预览不改源",
+        "应用仅目标一次事务",
+        "取消逐字节不变",
+        "目标变化使预览失效"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-workbench.test.ts: preview to surface",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: worker failure + valid retry",
+          "result": "pass"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-auto-preview.test.ts: explicit six-voxel automatic preview and 450ms stable post-Apply state",
+          "result": "pass_2026-11-05_multiple-preview-current"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-multiple-2026-11-05.md",
+          "result": "partial_pass_2026-11-05_root"
+        }
+      ],
+      "gaps": [
+        "完整灰度参数变化、取消与清理开关的浏览器链路仍待补齐；合成阈值226-650实际Apply已验证。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F11",
+      "name": "阈值参数与旧预览一致性",
+      "input": "计算时keepLargest=false，返回前改为true；另含fillHoles与上下限。",
+      "operations": [
+        "启动预览",
+        "改参数",
+        "等待旧返回",
+        "尝试Apply",
+        "按新参数重算"
+      ],
+      "expected": [
+        "所有影响结果的参数均纳入有效性检查",
+        "旧预览不可Apply",
+        "新预览恰好4体素"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: threshold cleanup invalidation",
+          "result": "fail_baseline_old_flags_preview_published"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: threshold cleanup parameter invalidation and rerun",
+          "result": "pass_2026-11-05_foundation-current"
+        }
+      ],
+      "gaps": [
+        "浏览器参数控件、预览画面与Apply反馈待验收。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F12",
+      "name": "连续笔画事务",
+      "input": "1mm直径画笔和两个分离整数体素。",
+      "operations": [
+        "一次down/stroke/up",
+        "第二次down/stroke/up",
+        "撤销两次",
+        "重做"
+      ],
+      "expected": [
+        "两笔分别提交",
+        "首次撤销仅移除第二笔",
+        "没有跨笔残留draft或strokeState"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: successive brush strokes",
+          "result": "pass"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-editmasks-controller.test.ts: 10 contour transaction and cancellation cases",
+          "result": "pass_2026-11-05_editmasks-controller-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-multiple-edit.test.ts: 18 session/copy/interpolation/final-Apply cases",
+          "result": "pass_2026-11-05_multiple-edit-current"
+        },
+        {
+          "level": "sfc_controller_integration",
+          "ref": "tests/mimics-viewport.test.ts; notes/foundation-viewport.md",
+          "result": "pass_width_height_shear_sweep_coalesced_and_bounded_large_brush"
+        }
+      ],
+      "gaps": [
+        "新宽高/Ctrl resize/Shift navigation、聚合轨迹和复杂长笔画需要真实浏览器验证。",
+        "连续sweep、物理正交宽高、Ctrl增益和33,554,432候选扫描预算是明确独立约定，未认证原版等价或所有规模均可即时处理。"
+      ],
+      "status": "controller_verified"
+    },
+    {
+      "id": "F13",
+      "name": "画笔取消与目标锁定",
+      "input": "正在绘制的draft，另一个空Mask，工具切换/Escape/pointercancel。",
+      "operations": [
+        "绘制但不提交",
+        "取消或换Mask/工具",
+        "旧pointerup/lostcapture到达"
+      ],
+      "expected": [
+        "取消不新增历史/dirty",
+        "draft清空",
+        "旧end不写入新Mask或改成另一工具语义"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: cancelled brush + changing target",
+          "result": "fail_baseline"
+        },
+        {
+          "level": "source_review",
+          "ref": "ImageViewport.cancelPointer baseline calls end()",
+          "result": "pointercancel_commits_baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: cancelled brush and target change + ImageViewport cancel wiring",
+          "result": "pass_2026-11-05_foundation-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-editmasks-controller.test.ts: 10 contour transaction and cancellation cases",
+          "result": "pass_2026-11-05_editmasks-controller-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-multiple-edit.test.ts: 18 session/copy/interpolation/final-Apply cases",
+          "result": "pass_2026-11-05_multiple-edit-current"
+        },
+        {
+          "level": "sfc_controller_integration",
+          "ref": "tests/mimics-viewport.test.ts: buttons primary-loss/capture/target/slice/resize cancellation",
+          "result": "pass"
+        }
+      ],
+      "gaps": [
+        "真实Escape/pointercancel/lostpointercapture事件次序待浏览器验证。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F14",
+      "name": "种子模式互斥",
+      "input": "含可拖测量端点的影像；region/dynamic/cavity/centerline工具。",
+      "operations": [
+        "在测量端点附近点种子",
+        "切工具",
+        "Escape",
+        "开始新种子集合"
+      ],
+      "expected": [
+        "种子点击不先进入测量拖动",
+        "不会混入测量draftPoints",
+        "取消和退出工具清理临时seed"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: seed collection exclusive",
+          "result": "fail_baseline_seeds_persist"
+        },
+        {
+          "level": "source_review",
+          "ref": "ImageViewport.down baseline measurement hit test before seed dispatch",
+          "result": "mode_conflict_baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: exclusive seed collection cleared on tool change and cancel",
+          "result": "pass_2026-11-05_foundation-current"
+        }
+      ],
+      "gaps": [
+        "组件源码只在测量工具下命中测量端点；屏幕种子与拖点互斥待浏览器验证。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F15",
+      "name": "区域生长源/目标原子性",
+      "input": "4+1体素的阈值Mask，seed位于4体素连通块。",
+      "operations": [
+        "源=目标且Leave Original=false，要求失败",
+        "目标=new并cut",
+        "Undo一次",
+        "再测copy及已有目标累加"
+      ],
+      "expected": [
+        "非法目标不先清源",
+        "cut后源1目标4体素",
+        "一次Undo同时恢复源和删除目标",
+        "copy保留源"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: invalid region target and valid cut",
+          "result": "pass"
+        },
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-segmentation.test.ts: grow connectivity and plane",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-region-workflow.test.ts: all ten workflows passed in root saved 60-test log",
+          "result": "pass_2026-11-05_region-properties-current"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md",
+          "result": "partial_pass_copy_new_target_move_existing_swap_nonactive_source_and_Undo"
+        }
+      ],
+      "gaps": [
+        "6/26及三轴单层、背景种子、在途参数取消等仍需浏览器逐项验证。",
+        "New持续保持New、整体no-op和新目标阈值继承为明确应用约定；原版完整flag/默认映射尚未确认。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F16",
+      "name": "临时选区与跨影像隔离",
+      "input": "select/deselect画笔、闭合轮廓和两种尺寸影像。",
+      "operations": [
+        "画临时选区",
+        "复制层/插值",
+        "add/remove/local-threshold Apply",
+        "换影像",
+        "MSE Lasso/LiveWire Select/Deselect临时并差",
+        "固定selectionAxis复制、非0跳裁剪目的层、0复制到边界不跳",
+        "插值后台预览→Apply或Cancel；预览期间禁止其他写入",
+        "独立localThreshold最终作用活动Mask并一次Undo/Redo"
+      ],
+      "expected": [
+        "Apply前Mask不变",
+        "Apply仅一次事务",
+        "换影像清selection/draft/points",
+        "选择属于当前影像而非旧Mask缓冲",
+        "普通Lasso/LiveWire闭合按add/remove/threshold直接修改活动Mask，不改变Multiple Slice Edit的temporary selection。",
+        "completed temporary selection在Type/Select/Deselect切换间保留，目标或退出清理；displayMasks临时显隐不修改metadata",
+        "插值预览不修改selection，ApplyInterpolation只提交临时Mask；最终Apply才修改活动Mask"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-workbench.test.ts: temporary brush selection",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: successive strokes + replacement",
+          "result": "pass"
+        },
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-segmentation.test.ts: selection/copy/polygon/interpolate",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-editmasks-controller.test.ts: 10 contour transaction and cancellation cases",
+          "result": "pass_2026-11-05_editmasks-controller-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-multiple-edit.test.ts: 18 session/copy/interpolation/final-Apply cases",
+          "result": "pass_2026-11-05_multiple-edit-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-multiple-edit.test.ts: same-ID rename and final Apply preserve completed selection and one Undo restores renamed project",
+          "result": "pass_2026-11-05_multiple-preview-current"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-multiple-2026-11-05.md",
+          "result": "partial_pass_2026-11-05_root"
+        }
+      ],
+      "gaps": [
+        "本轮实际验证临时画笔/三色/复制两层跳片/最终Erase及Undo-Redo；自由手绘Lasso、LiveWire锚点、插值预览的浏览器链路、所有方向与复杂形状仍待验收。",
+        "Flood-fill及部分原生笔刷参数尚未实现，不宣称全Edit Masks完成。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F17",
+      "name": "Worker取消/旧结果/错误恢复",
+      "input": "真实operations.worker任务、NaN参数、已有进行中计算。",
+      "operations": [
+        "运行",
+        "取消并立即重跑",
+        "源revision变化",
+        "触发错误后重试"
+      ],
+      "expected": [
+        "旧任务不提交且不清新busy",
+        "structured clone不会传Vue proxy",
+        "错误只留error，重试可成功",
+        "输入buffer不被detached或原地改写"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-workbench.test.ts: cancel and rerun + proxy ROI",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: worker failure and retry",
+          "result": "pass"
+        },
+        {
+          "level": "source_review",
+          "ref": "OperationClient pending/serial/cancel + useWorkbench jobGeneration/revision",
+          "result": "present"
+        }
+      ],
+      "gaps": [
+        "浏览器worker termination和主线程响应性未验收",
+        "同一revision内切目标需绑定对象ID或取消任务"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F18",
+      "name": "空间单位/仿射一致性",
+      "input": "metre/mm/micron和反射/旋转/剪切grid；相同物理空间但native单位不同的Mask。",
+      "operations": [
+        "导入",
+        "绘制/测量/统计",
+        "计算3D",
+        "导出NIfTI/STL",
+        "回读"
+      ],
+      "expected": [
+        "工作grid统一mm，保存仍保留native NIfTI头",
+        "体积使用affine行列式",
+        "测量和网格使用完整affine",
+        "物理匹配不依赖native单位巧合"
+      ],
+      "current_evidence": [
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-project.test.ts + mimics-geometry.test.ts affine + mimics-measurements.test.ts",
+          "result": "existing_tests_not_rerun_by_audit"
+        },
+        {
+          "level": "source_review",
+          "ref": "project.volumeGrid + segmentation.maskStatistics",
+          "result": "mm_affine_and_determinant_present"
+        },
+        {
+          "level": "source_review",
+          "ref": "viewportGeometry.ts affine slicePlaneGeometry/brushFootprint + segmentationImport.sameImageGeometry",
+          "result": "full_shear_metric_and_mm_geometry_matching_present_not_executed_by_audit"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: unknown units prevent 3D; metre/mm/micron confirmation produces the known mm bounds and consistent affine/spacing",
+          "result": "pass_2026-11-05_foundation-expanded-current"
+        }
+      ],
+      "gaps": [
+        "空间单位选择及3D阻止/解锁的真实UI待浏览器验收。",
+        "完整剪切平面和画笔屏幕映射仍由视口专项及root浏览器证据补齐。"
+      ],
+      "status": "controller_verified_browser_pending"
+    },
+    {
+      "id": "F19",
+      "name": "Mask到3D与陈旧来源",
+      "input": "非空Mask及空Mask，已生成Part后修改/删除来源Mask。",
+      "operations": [
+        "计算3D",
+        "检查源Mask未改",
+        "清空源",
+        "查看陈旧提示",
+        "保存恢复",
+        "Undo/Redo",
+        "打开Calculate 3D选择两个重叠Mask批量计算；Calculate后窗口保持打开；Close单独关闭；混入空Mask触发整批失败"
+      ],
+      "expected": [
+        "非空产生独立三角表面；空结果明确失败",
+        "Part记录sourceMaskId/sourceRevision",
+        "编辑源不伪称自动更新Part",
+        "陈旧几何及来源保留",
+        "批量全部成功才一次commit，失败不发布先完成的Part；一次Undo/Redo覆盖整批"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: Part provenance after edit and ZIP",
+          "result": "pass"
+        },
+        {
+          "level": "source_review",
+          "ref": "Workbench.vue stale Part warning",
+          "result": "present"
+        },
+        {
+          "level": "source_review",
+          "ref": "useWorkbench.runPart postprocessing preserves sourceMaskId/sourceRevision",
+          "result": "present"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: overlapping-mask Calculate3D batch transaction + later empty-mask failure and valid retry",
+          "result": "pass_2026-11-05_foundation-batch-current"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-multiple-2026-11-05.md",
+          "result": "partial_pass_2026-11-05_root"
+        },
+        {
+          "level": "controller_controlled_geometry",
+          "ref": "notes/foundation-provenance-review.md",
+          "result": "cut_split_repair_inherit_historical_source_revision_through_history_and_ZIP"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md",
+          "result": "partial_pass_source_changed_warning_and_old_mesh_retained_after_region_move"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-measurement-workflow.test.ts: PartToMask six known voxels and sourcePartId with original mask/Part unchanged",
+          "result": "pass_2026-11-05_measurement-workflow-current"
+        }
+      ],
+      "gaps": [
+        "单Mask Optimal重建及Calculate/Close实际验证；批量、取消、陈旧来源提示与全部后处理的浏览器验收仍待补齐。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F20",
+      "name": "3D交互及测量拾取",
+      "input": "两个不同位置Part，遮挡表面与测量端点。",
+      "operations": [
+        "旋转/平移/缩放/适配",
+        "显隐/透明度/选择",
+        "点击最近表面",
+        "拖动测量端点并取消"
+      ],
+      "expected": [
+        "相机变化后拾取仍是正确世界坐标",
+        "隐藏Part不参与拾取",
+        "测量拖动一次事务且取消复位"
+      ],
+      "current_evidence": [
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-geometry.test.ts: BVH picking",
+          "result": "existing_test_not_rerun_by_audit"
+        },
+        {
+          "level": "source_review",
+          "ref": "PartViewport renderer/picker/measurement handles",
+          "result": "implemented"
+        },
+        {
+          "level": "source_review",
+          "ref": "Workbench PartViewport :allow-edit=!busy + PartViewport edit guards",
+          "result": "present"
+        }
+      ],
+      "gaps": [
+        "浏览器WebGL、屏幕射线和测量拖点取消必须实际验收。",
+        "busy时相机、选择、拾取的最终交互需浏览器验证。"
+      ],
+      "status": "implemented_unverified_browser"
+    },
+    {
+      "id": "F21",
+      "name": "STL导出回读",
+      "input": "已知Part和损坏STL。",
+      "operations": [
+        "导出binary STL",
+        "检查facet长度",
+        "独立回读并比较坐标/拓扑/体积",
+        "再导入"
+      ],
+      "expected": [
+        "二进制长度84+50×facets，坐标mm",
+        "错误不改工程",
+        "格式不承诺保存颜色/注释"
+      ],
+      "current_evidence": [
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-workbench.test.ts: STL chain",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-geometry.test.ts: binary/ASCII/invalid STL",
+          "result": "existing_test_not_rerun_by_audit"
+        },
+        {
+          "level": "independent_format_parser",
+          "ref": "evidence/exchange-sample/final-independent-validation.json",
+          "result": "pass_1384_exact_triangle_coordinates_winding_area_closed_volume_and_welded_edges"
+        }
+      ],
+      "gaps": [
+        "浏览器STL保存实际落地与UI回读仍待验收。",
+        "独立解析只证实该合成文件同源格式/几何一致；精确焊接边拓扑不证明无自交或临床有效实体。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F22",
+      "name": "距离/角度/密度/文字标注",
+      "input": "已知毫米端点、退化点、多边形ROI和文字。",
+      "operations": [
+        "在2D/3D放点",
+        "完成/取消",
+        "拖点",
+        "Locate",
+        "删除/撤销",
+        "改窗宽窗位后检查密度"
+      ],
+      "expected": [
+        "几何量有明确单位且退化不显示假零",
+        "文字/锚点保存",
+        "HU/GV不受显示样式影响",
+        "Locate返回有效切片"
+      ],
+      "current_evidence": [
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-measurements.test.ts",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "source_review",
+          "ref": "useWorkbench measurement and ImageViewport/PartViewport wiring",
+          "result": "implemented"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md",
+          "result": "partial_pass_distance_34.04_to44.25_Undo_annotation_2D_3D_properties_clone_hide_and_surface_drag"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-measurement-workflow.test.ts: 18 analytic geometry/current-ROI/point-source/lifecycle cases; annotation workflow 8",
+          "result": "pass_2026-11-05_measurement-workflow-current"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-measurement-editing.test.ts + mimics-measurement-editing-audit.test.ts: 15 cases",
+          "result": "pass_2026-11-05_measurement-native"
+        },
+        {
+          "level": "source_review",
+          "ref": "tests/mimics-viewport.test.ts + mimics-part-ellipse.test.ts: synthetic SFC handlers, not browser",
+          "result": "47_viewport_and14_Part_cases_pass_2026-11-05"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-mpr-workflow.test.ts:9 analytic world-plane, density, source, editing and Worker ZIP cases",
+          "result": "pass_2026-11-05_mpr_integration"
+        },
+        {
+          "level": "source_review",
+          "ref": "tests/mimics-mpr-viewport.test.ts and compiled Workbench VNodes",
+          "result": "synthetic_SFC_world_routes_and_interruptions_pass_not_browser"
+        }
+      ],
+      "gaps": [
+        "角度/直径/椭圆/面积/密度及所有取消/遮挡/跨对象端点关联仍缺完整浏览器证据。",
+        "Arrow/rotation/alignment、字体估算、长文阈值及工具mode互斥为应用支持约定，原版全枚举/数值尚未恢复。",
+        "Ellipse正文D1最大/D2最小与示例截图轴顺序相反，本实现按正文排序，不认证截图编号等价。",
+        "像素centre inclusive、std=N、P积分、凹polygon弦策略等为明确独立数值约定；没有原Mimics runtime oracle。",
+        "Area/Ellipse point menus and specialized edits are synthetic-tested, but arbitrary MPR, all real browser pointer paths and original runtime numerical/interaction parity remain unverified.",
+        "Arbitrary-plane MPR measurement now has synthetic controller/SFC evidence; complete native Ctrl MPR gestures and actual browser/original equivalence remain open."
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F23",
+      "name": "工程ZIP对象保存恢复",
+      "input": "原图、重叠Mask、Part normals、测量文字、零透明度、历史来源引用。",
+      "operations": [
+        "保存ZIP",
+        "新会话打开",
+        "逐数组/metadata比较",
+        "再次保存恢复",
+        "导入损坏ZIP"
+      ],
+      "expected": [
+        "所有对象及引用保真，buffers独立",
+        "损坏资源/CRC/路径/NaN拒绝",
+        "恢复失败保留当前工程"
+      ],
+      "current_evidence": [
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-project.test.ts: roundtrip/limits/corruption",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: Part ZIP + failed ZIP import",
+          "result": "pass"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: worker ZIP restore + cancelled/failed/download-started save preserve dirty",
+          "result": "pass_2026-11-05_foundation-current"
+        },
+        {
+          "level": "independent_format_parser",
+          "ref": "evidence/exchange-sample/final-independent-validation.json",
+          "result": "pass_synthetic_project_ZIP_CRC_buffers_references_and_export_correspondence"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-annotation-workflow.test.ts; tests/mimics-measurement-properties.test.ts",
+          "result": "annotation_style_and_attachments_actual_Worker_ZIP_roundtrip_pass"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "annotation + measurement workflow real Worker exports retain annotationStyle and pointPartIds/sourcePartId",
+          "result": "pass_2026-11-05_measurement-workflow-current"
+        }
+      ],
+      "gaps": [
+        "浏览器原生picker及written回执实际写入待验收。",
+        "完整下载→关闭→新会话恢复真实ZIP待验收。",
+        "撤销回已保存快照的dirty策略尚未通过专门覆盖。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F24",
+      "name": "恢复工作位置和显示状态",
+      "input": "非中心point、活动axis、窗位、选中测量、tab、renderMode与3D相机。",
+      "operations": [
+        "改变工作位置/显示",
+        "保存",
+        "关闭恢复",
+        "检查定位和显示"
+      ],
+      "expected": [
+        "持久化已承诺的视图字段并验证范围",
+        "旧版工程有清晰默认值",
+        "不把对象恢复冒称工作位置恢复"
+      ],
+      "current_evidence": [
+        {
+          "level": "source_review",
+          "ref": "ProjectState baseline + useWorkbench.install + Workbench.renderMode",
+          "result": "baseline_view_not_serialized"
+        },
+        {
+          "level": "kernel_test",
+          "ref": "tests/mimics-project.test.ts: optional v1 view state + invalid view + public validator",
+          "result": "pass_2026-11-05_existing-baseline"
+        },
+        {
+          "level": "controller_real_worker",
+          "ref": "tests/mimics-foundation.test.ts: worker project export and controller ZIP restore working position",
+          "result": "pass_2026-11-05_foundation-current"
+        },
+        {
+          "level": "controller_storage_double",
+          "ref": "tests/mimics-foundation.test.ts: old cache document restores point/axis/window/renderMode/tool/tab/selectedMeasurementId",
+          "result": "pass_2026-11-05_foundation-expanded-current"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-multiple-2026-11-05.md",
+          "result": "partial_pass_2026-11-05_root"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md",
+          "result": "partial_pass_new_page_keeps_measurements_text_style_visibility_and_Locate"
+        }
+      ],
+      "gaps": [
+        "本轮实际验证IJK、窗宽窗位、三维重建tab与表面显示恢复；测量选择、其他工具、renderMode切换的浏览器恢复仍待补齐。",
+        "3D相机及各视图pan/zoom未纳入承诺的viewState。"
+      ],
+      "status": "partially_verified"
+    },
+    {
+      "id": "F25",
+      "name": "本地恢复/缓存隔离",
+      "input": "两个工程、本地缓存失败或空间不足、损坏缓存条目。",
+      "operations": [
+        "缓存当前工程",
+        "刷新恢复",
+        "切工程",
+        "清缓存",
+        "故障后恢复"
+      ],
+      "expected": [
+        "明确何时缓存和恢复的工程",
+        "旧异步写入不覆盖新工程",
+        "缓存失败不丢内存工作",
+        "损坏缓存可继续打开文件"
+      ],
+      "current_evidence": [
+        {
+          "level": "source_review",
+          "ref": "root-owned cache work",
+          "result": "outside_current_baseline"
+        },
+        {
+          "level": "source_review",
+          "ref": "useWorkbench cache queue/flush/restore + IndexedDBWorkspaceRepository",
+          "result": "implementation_present_not_executed_by_audit"
+        },
+        {
+          "level": "controller_storage_double",
+          "ref": "tests/mimics-foundation.test.ts: cache failure preserves dirty/pending/state; successful cache restores old document; missing/corrupt cache cannot install",
+          "result": "pass_2026-11-05_foundation-expanded-current"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-multiple-2026-11-05.md",
+          "result": "partial_pass_2026-11-05_root"
+        },
+        {
+          "level": "browser_acceptance",
+          "ref": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md",
+          "result": "partial_pass_real_IndexedDB_new_page_annotation_properties_restoration"
+        }
+      ],
+      "gaps": [
+        "真实IndexedDB新页面和reload后恢复已验证；quota失败、损坏记录与新浏览器进程恢复未验收。",
+        "跨标签同时编辑同一工程的冲突处理未验收；本轮仅顺序写入和读取。"
+      ],
+      "status": "partially_verified"
+    }
+  ],
+  "release_gate": {
+    "foundation_complete": false,
+    "reason": "572/572 and production build passed, including RP 3D controls and shared MPR Worker. MPR Mask writing, complete native handles/rotation mapping, curve/new-project reslice, actual files, full browser/WebGL and original numeric/UI comparison remain incomplete; resumed CUA observation timed out.",
+    "required_before_higher_level_completion_claim": [
+      "修复后foundation与既有mimics相关测试全部通过",
+      "浏览器完成导入→预览/Apply→连续画笔/取消→区域cut/copy→3D→测量/导出→保存关闭恢复",
+      "记录错误/取消/换工程/陈旧来源的浏览器结果",
+      "保留明确不支持格式与数值算法边界"
+    ]
+  },
+  "independent_format_verification": {
+    "self_test_passed": 27,
+    "ok": true,
+    "artifact": "work/mimics-vue-reconstruction/evidence/exchange-sample/final-independent-validation.json",
+    "origin": "Node operations.worker.ts exported samples; not browser files",
+    "mask_members": 929,
+    "triangles": 1384
+  }
+}

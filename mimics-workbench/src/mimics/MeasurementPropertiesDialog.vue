@@ -1,0 +1,34 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue';
+import type { MeasurementObject } from './types.ts';
+import { DEFAULT_ANNOTATION_STYLE, type AnnotationStyle } from './annotationLayout.ts';
+type Properties={name:string;color:string;visible:boolean;text?:string;annotationStyle?:AnnotationStyle};
+const props=defineProps<{measurement:MeasurementObject;editingId?:string;busy?:boolean}>();
+const emit=defineEmits<{apply:[properties:Properties];cancel:[]}>();
+const dialog=ref<HTMLElement>(),name=ref(''),color=ref('#ffdf7a'),visible=ref(true),text=ref(''),arrow=ref<AnnotationStyle['arrow']>('arrow'),rotation=ref(0),align=ref<AnnotationStyle['align']>('left'),error=ref('');
+const annotation=computed(()=>props.measurement.kind==='annotation');
+watch(()=>props.measurement,measurement=>{name.value=measurement.name;color.value=measurement.color;visible.value=measurement.visible;text.value=measurement.text??'';const style={...DEFAULT_ANNOTATION_STYLE,...measurement.annotationStyle};arrow.value=style.arrow;rotation.value=style.rotation;align.value=style.align;error.value='';},{immediate:true});
+function apply(){
+  if(props.busy)return;error.value='';
+  if(!name.value.trim()){error.value='请输入名称。';return;}
+  if(!/^#[0-9a-f]{6}$/i.test(color.value)){error.value='请选择有效的六位颜色。';return;}
+  const result:Properties={name:name.value.trim(),color:color.value,visible:visible.value};
+  if(annotation.value){if(!text.value.trim()){error.value='请输入注释文字。';return;}if(!Number.isFinite(rotation.value)||rotation.value < -360||rotation.value > 360||!['none','arrow','dot'].includes(arrow.value)||!['left','center','right'].includes(align.value)){error.value='注释样式或旋转角度无效；角度须在 -360° 到 360° 之间。';return;}result.text=text.value;result.annotationStyle={arrow:arrow.value,rotation:rotation.value,align:align.value};}
+  emit('apply',result);
+}
+function cancel(){if(!props.busy)emit('cancel');}
+function key(event:KeyboardEvent){if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancel();return;}if(event.key!=='Tab'||!dialog.value)return;const controls=[...dialog.value.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled])')].filter(element=>element.getClientRects().length);const first=controls[0],last=controls.at(-1);if(!first||!last)return;if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialog.value)){event.preventDefault();last.focus();}else if(!event.shiftKey&&(document.activeElement===last||document.activeElement===dialog.value)){event.preventDefault();first.focus();}}
+onMounted(()=>dialog.value?.focus());
+</script>
+<template>
+  <div class="measurement-properties-backdrop"><section ref="dialog" role="dialog" aria-modal="true" aria-labelledby="measurement-properties-title" tabindex="-1" class="measurement-properties" @keydown="key">
+    <header><h2 id="measurement-properties-title">{{annotation?'Annotation Properties':'Measurement Properties'}}</h2><button type="button" aria-label="取消属性编辑" :disabled="busy" @click="cancel">×</button></header>
+    <div class="properties-body"><label>Name · 名称<input v-model="name" type="text" :disabled="busy" maxlength="512"></label><div class="properties-common"><label>Color · 颜色<input v-model="color" type="color" :disabled="busy"></label><label class="visible-choice"><input v-model="visible" type="checkbox" :disabled="busy">Visible · 显示</label></div>
+      <template v-if="annotation"><label>Arrow Style<select v-model="arrow" :disabled="busy"><option value="none">None · 无端点</option><option value="arrow">Arrow · 箭头</option><option value="dot">Dot · 圆点</option></select></label><div class="properties-columns"><label>Text Rotation (°)<input v-model.number="rotation" type="number" min="-360" max="360" step="1" :disabled="busy"></label><label>Text alignment<select v-model="align" :disabled="busy"><option value="left">Left · 左对齐</option><option value="center">Center · 居中</option><option value="right">Right · 右对齐</option></select></label></div><label>Text · 注释<textarea v-model="text" rows="5" :disabled="busy"/></label><small>长文字、换行或超出标签宽度时显示 ...；悬停查看全文，双击文字编辑。</small></template>
+      <p v-if="error" role="alert">{{error}}</p>
+    </div><footer><button type="button" :disabled="busy" @click="apply">Apply · 应用</button><button type="button" :disabled="busy" @click="cancel">Cancel · 取消</button></footer>
+  </section></div>
+</template>
+<style scoped>
+.measurement-properties-backdrop{position:fixed;inset:0;z-index:1100;background:#0610208c;display:flex;justify-content:center;align-items:center;padding:22px}.measurement-properties{width:460px;max-width:100%;max-height:90vh;overflow:auto;border:1px solid #7891aa;border-radius:5px;background:#eff1f4;color:#172a3b;box-shadow:0 16px 50px #0008;font:12px 'Segoe UI','Microsoft YaHei',sans-serif;outline:none}.measurement-properties header{display:flex;justify-content:space-between;align-items:center;padding:6px 8px 6px 12px;background:linear-gradient(#dae7f5,#b7cde4);border-bottom:1px solid #98afc4}.measurement-properties h2{font-size:13px;font-weight:500;margin:0}.measurement-properties button{font:inherit;border:1px solid #98aaba;border-radius:3px;padding:5px 14px;min-width:80px;background:linear-gradient(#fff,#dfe5ed);color:#193348;cursor:pointer}.measurement-properties header button{min-width:28px;padding:0 6px;font-size:18px}.properties-body{display:flex;flex-direction:column;gap:11px;padding:14px}.measurement-properties label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#304b63}.measurement-properties input:not([type=checkbox]):not([type=color]),.measurement-properties select,.measurement-properties textarea{width:100%;box-sizing:border-box;font:12px 'Segoe UI','Microsoft YaHei',sans-serif;background:#fff;color:#162c40;border:1px solid #9eacba;border-radius:2px;padding:5px;min-width:0}.properties-common{display:flex;gap:22px;align-items:center}.properties-common .visible-choice{display:flex;flex-direction:row;align-items:center;gap:5px}.properties-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px}.measurement-properties input[type=color]{width:48px;height:27px;padding:0;border:1px solid #9aabba}.measurement-properties textarea{resize:vertical;min-height:90px}.measurement-properties small{font-size:10px;line-height:1.7;color:#5c7286}.measurement-properties p{margin:0;padding:7px;background:#ffede9;border:1px solid #d9a79e;color:#9c3027;font-size:11px}.measurement-properties footer{display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #b1bfcb;padding:10px 14px}.measurement-properties :disabled{opacity:.55;cursor:default}.measurement-properties input:focus-visible,.measurement-properties select:focus-visible,.measurement-properties textarea:focus-visible,.measurement-properties button:focus-visible{outline:2px solid #3e8ec5;outline-offset:1px}
+</style>

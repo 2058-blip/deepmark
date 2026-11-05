@@ -1,0 +1,148 @@
+Browser tab: 1501583374, Title: "医学分割标注 · Deepmark", URL: "http://127.0.0.1:5173/".
+0 AXWebArea 医学分割标注 · Deepmark, URL: 127.0.0.1:5173/
+	1 container
+		2 text ◈ Deepmark  Studio
+		3 text 影像 · 分割 · 三维重建
+		37 container
+			38 text 合成练习影像 96 × 96 × 64 · 1.00 / 1.00 / 1.50 mm
+		5 button 本地工程
+		6 button 打开影像 / 工程
+		7 button DICOM 文件夹
+		8 button 保存工程
+		9 link Description: 协作工作台 ↗, Help: 打开原有协作标注工作台, Value: 127.0.0.1:5173/?workspace=collaboration
+		10 button 分割与标注
+		11 button 三维重建
+		12 button 测量与注释
+		13 button 轮廓与中心线
+		14 button (disabled) ↶ 撤销
+		15 button (disabled) ↷ 重做
+		16 text 工程对象 6
+		17 button Mask 1
+		18 button 3D 1
+		19 button 测量 4
+		20 button 曲线 0
+		39 container
+			40 text distance 1 34.04 mm
+			41 button Properties · 属性
+			42 button Duplicate · 复制
+			43 button Hide · 隐藏
+			44 button Locate · 定位
+			45 button Delete · 删除
+		46 container
+			47 text 二维核验注释
+			48 text ...
+			49 button Properties · 属性
+			50 button Duplicate · 复制
+			51 button Hide · 隐藏
+			52 button Locate · 定位
+			53 button Delete · 删除
+		54 container
+			55 text 二维核验注释 副本
+			56 text ...
+			57 button Properties · 属性
+			58 button Duplicate · 复制
+			59 button Show · 显示
+			60 button Locate · 定位
+			61 button Delete · 删除
+		62 container
+			63 text 三维核验注释 三维表面附着注释
+			64 button Properties · 属性
+			65 button Duplicate · 复制
+			66 button Hide · 隐藏
+			67 button Locate · 定位
+			68 button Delete · 删除
+		27 text 窗宽窗位
+		28 container
+			29 text 窗位
+			30 stepper (settable, integer) 窗位, Value: 55
+		31 container
+			32 text 窗宽
+			33 stepper (settable, integer) 窗宽, Value: 500
+		34 button 骨窗
+		35 button 软组织
+		36 button 肺窗
+		69 container
+			70 text 轴位
+			152 text 35 / 64
+			72 button 适配, Help: 重置缩放和平移
+			73 image 轴位，滚轮切片，Shift左键定位，Ctrl滚轮缩放，Ctrl左键拖动调整笔刷，右键平移
+			74 slider (settable, integer) Description: 轴位切片, Value: 34
+			75 text —
+		76 container
+			77 text 冠状位
+			153 text 39 / 96
+			79 button 适配, Help: 重置缩放和平移
+			80 image 冠状位，滚轮切片，Shift左键定位，Ctrl滚轮缩放，Ctrl左键拖动调整笔刷，右键平移
+			81 slider (settable, integer) Description: 冠状位切片, Value: 38
+			82 text —
+		83 container
+			84 text 矢状位
+			154 text 41 / 96
+			86 button 适配, Help: 重置缩放和平移
+			87 image 矢状位，滚轮切片，Shift左键定位，Ctrl滚轮缩放，Ctrl左键拖动调整笔刷，右键平移
+			88 slider (settable, integer) Description: 矢状位切片, Value: 40
+			89 text —
+		90 button 表面模型
+		91 button 体绘制
+		92 container 三维 Part 视图
+			93 container
+				94 text 3D / Parts
+				95 button 适配, Help: 显示全部对象 (F)
+				96 button 正面 XY, Help: 从世界 +Z 朝 −Z 观察 XY 平面
+				97 button 顶面 XZ, Help: 从世界 −Y 朝 +Y 观察 XZ 平面
+				98 button 侧面 YZ, Help: 从世界 −X 朝 +X 观察 YZ 平面
+				99 button 等轴
+				100 checkbox (settable, integer) Description: 网格边, Value: 0
+			101 container
+				102 image 拖动旋转，Shift 或右键拖动平移，滚轮缩放，点击表面拾取物理坐标
+				103 image 三维测量与注释覆盖层
+					104 container 世界 XYZ 坐标方向
+						105 text X
+						106 text Y
+						107 text Z
+					108 button Description: 34.04 mm，控制点 1, Help: 34.04 mm · 点 1
+					109 button Description: 34.04 mm，控制点 2, Help: 34.04 mm · 点 2
+					110 button 34.04 mm
+						111 text 34.04 mm
+					112 button Description: 这是用于验证 Mimics 标注属性、旋转对齐与工程恢复的合成长注释。 第二行用于核对省略显示和完整文本保存，不包含患者信息。（已编辑），控制点 1, Help: 这是用于验证 Mimics 标注属性、旋转对齐与工程恢复的合成长注释。 第二行用于核对省略显示和完整文本保存，不包含患者信息。（已编辑） · 点 1
+					113 button 这是用于验证 Mimics 标注属性、旋转对齐与工程恢复的合成长注释。 第二行用于核对省略显示和完整文本保存，不包含患者信息。（已编辑）
+						114 text ...
+					115 button Description: 三维表面附着注释，控制点 1，拖拽可沿 Part 表面移动，Esc 取消, Help: 三维表面附着注释 · 点 1 · 拖拽沿表面移动 / Esc 取消
+					116 button 三维表面附着注释
+						117 text 三维表面附着注释
+				118 text 拖动旋转 · Shift / 右键平移 · 滚轮缩放 · 点击表面拾取
+			119 container
+				120 text 1 个可见对象 66,856 个三角形 · mm · 正交投影
+		121 text 测量工具
+		122 button ↔ 距离
+			123 text ↔
+			124 text 距离
+		125 button ∠ 角度
+			126 text ∠
+			127 text 角度
+		128 button ⌀ 三点直径
+			129 text ⌀
+			130 text 三点直径
+		131 button ⬭ 椭圆
+			132 text ⬭
+			133 text 椭圆
+		134 button ⬠ 多边形面积
+			135 text ⬠
+			136 text 多边形面积
+		137 button ▭ 矩形密度
+			138 text ▭
+			139 text 矩形密度
+		140 button ◯ 椭圆密度
+			141 text ◯
+			142 text 椭圆密度
+		143 button T 文字标注
+			144 text T
+			145 text 文字标注
+		146 button ⌁ 曲面路径
+			147 text ⌁
+			148 text 曲面路径
+		149 text 文字标注
+		150 text 点击切片或三维对象放置锚点，随后在 Annotation Properties 中编辑并应用；Cancel 不创建注释。
+		151 text 影像已加载 I 40 · J 38 · K 34 本地副本已保存 本地处理 · 就绪
+
+The focused UI element is 52 button Locate · 定位

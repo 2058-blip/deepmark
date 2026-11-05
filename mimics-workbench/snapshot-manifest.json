@@ -1,0 +1,2120 @@
+{
+  "capturedAt": "2026-11-05T12:47:40.138Z",
+  "destination": "2058-blip/deepmark",
+  "module": "mimics-workbench",
+  "sourceFiles": 416,
+  "sourceBytes": 9963368,
+  "note": "files[].sha256 records captured source bytes. publicationAdjustments describes the two publication-only edits. Generated publication metadata/logs are added separately.",
+  "excluded": [
+    "proprietary executables/libraries/plugins",
+    "extracted help archive",
+    "IDA databases and raw decompilations",
+    "node_modules/dist/caches",
+    "backups and integration worktrees",
+    "chat transcripts",
+    "runtime databases and server datasets"
+  ],
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 178,
+      "sha256": "9fe902da952b89fe65aecd2b41aae9c2946e22bc7136f890996e7f67848c75e0"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7949,
+      "sha256": "b89a862ad68f0126eadda85fe914a002aedb127cdf24be10bb0257bbd02ea0f4"
+    },
+    {
+      "path": "docs/2026-11-04_reverse-Mimics17-report.md",
+      "bytes": 2038,
+      "sha256": "dcdaf4683e74233db05e1206d27477b9d9c9bc3456178cb96d9ff0bcb2970dc4"
+    },
+    {
+      "path": "docs/collaboration-architecture.md",
+      "bytes": 2858,
+      "sha256": "af72e7dcc4cc3bd4618d2306809a4c26ab3309fc7d42951e8cbeef83c25acc49"
+    },
+    {
+      "path": "docs/lan-testing.md",
+      "bytes": 4019,
+      "sha256": "9a0a1045bdc9755ceeb8787f4f0919112573d6b52dea3ec9206dcfa367f7ce82"
+    },
+    {
+      "path": "docs/mimics-reconstruction-progress.md",
+      "bytes": 18231,
+      "sha256": "adc32bdb87302da93924132b5bb380d44bb40106e8ffdff6dbe993d9b9d245d8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 325,
+      "sha256": "3f84688f824aaab6144660b4b851501f874b398ef1272de94cc4fe92b4678e77"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 53707,
+      "sha256": "3735eb3371f5b1c636a0e2576d3779c601d13de2d89d494126844e9c5346540e"
+    },
+    {
+      "path": "package.json",
+      "bytes": 732,
+      "sha256": "c247ee6cf80072d98b024856a0a6745a5e1fdb84f1b10e90a43e0603d3c68fe1"
+    },
+    {
+      "path": "scripts/create-foundation-fixtures.mjs",
+      "bytes": 1917,
+      "sha256": "76836fd4600a55223a8db804224326b3a92e615836e386f7e482b568ea94620f"
+    },
+    {
+      "path": "scripts/create-mimics-dicom-fixtures.mjs",
+      "bytes": 19637,
+      "sha256": "2bf6d566ab62a2e8658c0d472668a99336ea1a783dea8c50b8c4d22e79618ae2"
+    },
+    {
+      "path": "scripts/create-mimics-exchange-sample.mjs",
+      "bytes": 3420,
+      "sha256": "9abd4876d661aab3fd810066ac0a6754f398cc938ed2e66c9bdfef6f1ae3f40c"
+    },
+    {
+      "path": "scripts/create-sample.mjs",
+      "bytes": 775,
+      "sha256": "6c99b0c530c85d1dc293bb7af5613a03143c894ee6c29789ae654865ec74ebe6"
+    },
+    {
+      "path": "scripts/dev.mjs",
+      "bytes": 905,
+      "sha256": "4c7098354536db967808adfd2df97719a83376ee05bd5ec69a4e351e88e0cc01"
+    },
+    {
+      "path": "scripts/verify-mimics-browser-exports.py",
+      "bytes": 54911,
+      "sha256": "9674972c8d912bbd0425f2cb949ed8ee284c57459c8a2bf17d46527bb25abd7e"
+    },
+    {
+      "path": "scripts/verify-mimics-reslice-browser.py",
+      "bytes": 17325,
+      "sha256": "01c7bd8e0df3cbb392d2ff3679aab7d3887f1f3e8a7002d6e8706b40648e931c"
+    },
+    {
+      "path": "server-data/datasets/.gitkeep",
+      "bytes": 2,
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
+    },
+    {
+      "path": "server/collaboration.mjs",
+      "bytes": 25486,
+      "sha256": "ffdd6a2fa1289554239c448314d410b99664eb0783a4acb1450a3ce9ce2a9091"
+    },
+    {
+      "path": "server/server.mjs",
+      "bytes": 7787,
+      "sha256": "7995b9ce0f9b0f7016ac16bee0cfa707bc253a0a6d4c5017bc1482826c07859f"
+    },
+    {
+      "path": "server/sharedModel.mjs",
+      "bytes": 5511,
+      "sha256": "32721fb715241c13571628529b19dd0ea00deeae68739c221b015d9e29ef2c5a"
+    },
+    {
+      "path": "src/App.vue",
+      "bytes": 17653,
+      "sha256": "cfcf9982fe40696082f82c5f679694c69a7b51bde6b9f3cb39c0db60d225f04a"
+    },
+    {
+      "path": "src/CollaborationPanel.vue",
+      "bytes": 5818,
+      "sha256": "d1afd4c097626e40c4c8bd92e0ea4a55d94593187234064804a7c5c6136c2bbf"
+    },
+    {
+      "path": "src/DatasetBrowser.vue",
+      "bytes": 5834,
+      "sha256": "19e7d33cfbecdbd3d46982a4635398963c4a59629ff35d046b3f1b2608719d1a"
+    },
+    {
+      "path": "src/LocalDrafts.vue",
+      "bytes": 1951,
+      "sha256": "dd64cdf5450a0b2fa87c45cd63ca192d27c750c494901acc24b922c99526a229"
+    },
+    {
+      "path": "src/SliceView.vue",
+      "bytes": 11396,
+      "sha256": "14cc28010c10e385e81f6eebb8db56c2a07fb5edb54684c01662066f81e0236d"
+    },
+    {
+      "path": "src/UiIcon.vue",
+      "bytes": 2350,
+      "sha256": "c9cb5a6a55109f2e26840986b22628079c8044f7909fea3f4c8c7cbd4bfaab09"
+    },
+    {
+      "path": "src/collaboration.css",
+      "bytes": 3351,
+      "sha256": "86cab8cc37592315609253c08f90b4fa8941e85be31d8c34353b2f30c41cb0d0"
+    },
+    {
+      "path": "src/collaborationTypes.ts",
+      "bytes": 1514,
+      "sha256": "c4f2912b148509bb2b8e3aa6e8fb91795d8d4d3df92b5c73d9123836283f897f"
+    },
+    {
+      "path": "src/core.ts",
+      "bytes": 10642,
+      "sha256": "af5afc386d8e7b17ec012e65884ee209f33944c0d15d82b385f00a425905bd3a"
+    },
+    {
+      "path": "src/datasets.css",
+      "bytes": 3912,
+      "sha256": "9085a77f402d42df1879a252c717557185afcd1a23f3835586d9f318dde90bda"
+    },
+    {
+      "path": "src/engineer.css",
+      "bytes": 1304,
+      "sha256": "135af06a788e8108964bc3199dd4fb1036ec1361f1bcd47c2b844a68ea53bbc4"
+    },
+    {
+      "path": "src/exportArchive.ts",
+      "bytes": 2140,
+      "sha256": "e28470f56771b182ac68fee94fea44323fbce3c2c52f34ccb8c7c2d498e2867c"
+    },
+    {
+      "path": "src/grayRegion.worker.ts",
+      "bytes": 2670,
+      "sha256": "d4e3257d25777922716c483b19d1bee65af5dab763cdd17037ef1e9381dfde59"
+    },
+    {
+      "path": "src/grayRegionClient.ts",
+      "bytes": 2275,
+      "sha256": "e770acab8dd3786517559ea7c5d89cf1611eb833864be40e1f05170d4f548a76"
+    },
+    {
+      "path": "src/grayRegions.ts",
+      "bytes": 3564,
+      "sha256": "26e8f507bc4f647ec436aa45e3f2a1d5b5a32f5898b329513e0a8b5a03163f92"
+    },
+    {
+      "path": "src/localCache.ts",
+      "bytes": 5128,
+      "sha256": "eb700e17376b7784ab6ef934be0ed5dab1b3eec55d974d3c63590f7385feb56c"
+    },
+    {
+      "path": "src/main.ts",
+      "bytes": 397,
+      "sha256": "e209e888dc24593e44e49ecd5a2eb8944bebb273a7559326ed68447cbfacedb4"
+    },
+    {
+      "path": "src/mimics/AdvancedPanel.vue",
+      "bytes": 11131,
+      "sha256": "abe8f88dd14c299589a458e7bba1dbafe4a7bb9230dcd132a42ad8836c39cc7d"
+    },
+    {
+      "path": "src/mimics/Calculate3DDialog.vue",
+      "bytes": 18423,
+      "sha256": "186488e1708941093eef23ee6c68a01e4d68d0c5499cdc089ff71204564f7385"
+    },
+    {
+      "path": "src/mimics/ImageViewport.vue",
+      "bytes": 54425,
+      "sha256": "dd14e30e1c70efc5b9106158f724bb227fc3e1b8d7a92080d4f734d3031ddd46"
+    },
+    {
+      "path": "src/mimics/LocalProjectsDialog.vue",
+      "bytes": 1398,
+      "sha256": "08240905c71c5058bd3a47586f81db2fadffb7843981a254540ba4c39fc55183"
+    },
+    {
+      "path": "src/mimics/LocalThresholdControls.vue",
+      "bytes": 4019,
+      "sha256": "8d5feb35e1003f7bf5b9791ed8f11e2c5426c84b58daed0ba6e3553f93dc0598"
+    },
+    {
+      "path": "src/mimics/MeasurementPropertiesDialog.vue",
+      "bytes": 7120,
+      "sha256": "81beba32c786c6da5e13da16e139b81b1fd38cbe122cd6bc56cfc2fc694d0f50"
+    },
+    {
+      "path": "src/mimics/MprViewport.vue",
+      "bytes": 59818,
+      "sha256": "8fd8ccc6a439ab1d95c57eb1c459a6c8a50d1a5a5b0283f63bd086781320a934"
+    },
+    {
+      "path": "src/mimics/PartViewport.vue",
+      "bytes": 73515,
+      "sha256": "9a31fd98b59fd525d104351bf54b9b273be36a7aacdbf824f51381d8ad6dbe29"
+    },
+    {
+      "path": "src/mimics/ReplacementDialog.vue",
+      "bytes": 1094,
+      "sha256": "e38af8e09c62c3212bc3159e360ae2c8e2a7bad3c607ccc98d4f7031d54e5535"
+    },
+    {
+      "path": "src/mimics/ResliceProjectDialog.vue",
+      "bytes": 14544,
+      "sha256": "755437c35c53ea77e67d702542524deee0de3a1bc73e2b70560c0ae66ea9e5d1"
+    },
+    {
+      "path": "src/mimics/ReslicePropertiesDialog.vue",
+      "bytes": 6269,
+      "sha256": "3babbba96f91b69e5996a6dc41401705df2fad03d0a8b2495364eef06856c1f8"
+    },
+    {
+      "path": "src/mimics/STLCoordinateControls.vue",
+      "bytes": 1242,
+      "sha256": "b59817b7671d254bc72ebc3a70babf871ca9929466d1531b7d9e0f5a8533ab65"
+    },
+    {
+      "path": "src/mimics/VolumeViewport.vue",
+      "bytes": 26639,
+      "sha256": "9b700820c174f69eaabe70000683da7a5fcb0577d38fcf8637a30e560a4731ce"
+    },
+    {
+      "path": "src/mimics/Workbench.vue",
+      "bytes": 61224,
+      "sha256": "b0b18afd842eba6c2f866a9f0576acb068552acc9a4ffbe223b178363071f05a"
+    },
+    {
+      "path": "src/mimics/affineDensityROI.ts",
+      "bytes": 3550,
+      "sha256": "bc8689c82cb4558e4fdbfbaaafeffb396527106a93f76380abb58c58833f76ff"
+    },
+    {
+      "path": "src/mimics/affinePlane.ts",
+      "bytes": 7147,
+      "sha256": "14ac77dad1063bc0cd40dac7936d24eaa28a283fa3d30bc3493f5cbd4f9e84d6"
+    },
+    {
+      "path": "src/mimics/annotationLayout.ts",
+      "bytes": 4924,
+      "sha256": "96e5c297166a59320f6359ea10ad9551a3e8412420a48aa51131dfe22354ec17"
+    },
+    {
+      "path": "src/mimics/centerline.ts",
+      "bytes": 39981,
+      "sha256": "532c25526a522731f5d5d43abbbd8fa73458a8d075da650a07771ef4bb9378a0"
+    },
+    {
+      "path": "src/mimics/contours.ts",
+      "bytes": 22150,
+      "sha256": "72a1cfb656bb5f3573edb7cca2b13a638f2f50ed9f2a5ee645a7d97ef6ca2bb2"
+    },
+    {
+      "path": "src/mimics/demo.ts",
+      "bytes": 1597,
+      "sha256": "c4bd4a6bf13f92706ee9ad0f2d33e2b30f86ba020a95c85d5cd88eaae177376e"
+    },
+    {
+      "path": "src/mimics/dicom.ts",
+      "bytes": 20157,
+      "sha256": "f98a438c1b9fb5e2399dee94a28b43a3dd29f339baff2826445e8f6d0f587010"
+    },
+    {
+      "path": "src/mimics/ellipseGeometry.ts",
+      "bytes": 5239,
+      "sha256": "e67c00e91225cea5a421a4ce7dda447e5923fcd6967aabf3a0285de7fdc7205e"
+    },
+    {
+      "path": "src/mimics/fileTransfer.ts",
+      "bytes": 2151,
+      "sha256": "8b93b24a8103e308d1f6dfa6ec466af4c8e42aa4d6fd9085e749d79dea37710c"
+    },
+    {
+      "path": "src/mimics/geometry.ts",
+      "bytes": 50948,
+      "sha256": "475c18c6e11ec1f88eccb6c3cb8ed1e540d90110cc3f7b721dc53615c180cb24"
+    },
+    {
+      "path": "src/mimics/livewire.ts",
+      "bytes": 13964,
+      "sha256": "c8d7d03504d428a22b05af451565758fdac379aba560efd21032aa98fa6b5f0c"
+    },
+    {
+      "path": "src/mimics/marchingTables.ts",
+      "bytes": 9161,
+      "sha256": "230e84417fe0026c28d4701bd8bbde6b4e38c1ce7def8e47674b5cf66748253f"
+    },
+    {
+      "path": "src/mimics/measurementAttachments.ts",
+      "bytes": 1020,
+      "sha256": "4b0e4cdcde4141fcb93a4d4171559d5cd5714580aba36faaf2362d69ee5b3735"
+    },
+    {
+      "path": "src/mimics/measurements.ts",
+      "bytes": 19649,
+      "sha256": "9aac35074f5f6a0e82244775910e32607d75be1e5d43d33ac10c0a429b4b8a91"
+    },
+    {
+      "path": "src/mimics/meshExchange.ts",
+      "bytes": 3800,
+      "sha256": "202cb24baba522ede03a66e3bdce904c4cc0564e988d54ed041fe53f8007e067"
+    },
+    {
+      "path": "src/mimics/meshTools.ts",
+      "bytes": 31677,
+      "sha256": "b1e187f069587bac69aba874261c1092ffe4ebbcc83d71f12e24414e9cb5a6ef"
+    },
+    {
+      "path": "src/mimics/mpr.ts",
+      "bytes": 13541,
+      "sha256": "fe35dcd17c32c4c651cba0042e892156c5827666322024d67def65b9c6d9420d"
+    },
+    {
+      "path": "src/mimics/mprBrush.ts",
+      "bytes": 10564,
+      "sha256": "a075497a7e62661931331f4eef2b12549dcf4cdf1e50f4cdd8068eeb8dc9a6bc"
+    },
+    {
+      "path": "src/mimics/mprBrushPreview.ts",
+      "bytes": 2509,
+      "sha256": "d929abc1177a1c25609e6437ef52b95d526a533717257224dcd5fa50cb5d6f91"
+    },
+    {
+      "path": "src/mimics/mprContour.ts",
+      "bytes": 8695,
+      "sha256": "e405cad30e81915a05bd7477b29542936f4bff407d87341721d5e96f4f02764b"
+    },
+    {
+      "path": "src/mimics/mprContourSession.ts",
+      "bytes": 705,
+      "sha256": "1d3d10b01cd154afc194cbdf0c5e10ec08022f37c9285dac0708370743b31871"
+    },
+    {
+      "path": "src/mimics/mprInteraction.ts",
+      "bytes": 3752,
+      "sha256": "1775d5472f424513796ecdc6ae9eeafcbd9206c388774c14e175e0b3daf43dbb"
+    },
+    {
+      "path": "src/mimics/mprLivewire.ts",
+      "bytes": 4119,
+      "sha256": "43cf281894c70eb672139b2b9270c8320ede61aa21c594613adb85aceea30ac3"
+    },
+    {
+      "path": "src/mimics/mprSampling.worker.ts",
+      "bytes": 2187,
+      "sha256": "15b5e2060e57a2fbdbb11573826f9802e8314e80059107489eef62e2553a4613"
+    },
+    {
+      "path": "src/mimics/mprSamplingClient.ts",
+      "bytes": 7081,
+      "sha256": "78c0c22b8110ccbc02b7fb822edf60e8119ff12ec20c37502fc87442d9ce395a"
+    },
+    {
+      "path": "src/mimics/niftiReference.ts",
+      "bytes": 8901,
+      "sha256": "11801d51be6fd27d0f35611f8abe1e8b7bffbeb7bb74cbde05494eedc2edfdea"
+    },
+    {
+      "path": "src/mimics/operationClient.ts",
+      "bytes": 2623,
+      "sha256": "3fd7f420ae5ad699aef6fd364d98561da2e6a3ff4d71a9782ab9468e238885ac"
+    },
+    {
+      "path": "src/mimics/operations.worker.ts",
+      "bytes": 8439,
+      "sha256": "2b340949de6f5a9fda0fd5144af7dbbe4c5b6285bc8c3f7580513220bd2c8e12"
+    },
+    {
+      "path": "src/mimics/partProvenance.ts",
+      "bytes": 983,
+      "sha256": "ec5f3a7bd03036382413bcfb5621eebe6308a04147164b981e4b297f40907c0d"
+    },
+    {
+      "path": "src/mimics/physicalContours.ts",
+      "bytes": 20945,
+      "sha256": "82d832fe17fe4f774e6fc8053369ac3f1e06e4ed708af605e082105549153847"
+    },
+    {
+      "path": "src/mimics/project.ts",
+      "bytes": 54385,
+      "sha256": "fb9ba442e3943e2e49885609b19b28d39d3c2bbde7ae57ffde08d83c5779c7ee"
+    },
+    {
+      "path": "src/mimics/resliceGizmo.ts",
+      "bytes": 6906,
+      "sha256": "642f9301f9db1dd782c56c2c5608180a075cd9969dfd67991dca82ff7fc1853b"
+    },
+    {
+      "path": "src/mimics/resliceProjectData.ts",
+      "bytes": 19527,
+      "sha256": "42a811a4c06abb5fda1878f526cb2a725666a739ec2400a9a0e292199c7f64d0"
+    },
+    {
+      "path": "src/mimics/resliceProjectGeometry.ts",
+      "bytes": 15452,
+      "sha256": "c9a84164c2b8b67804ec25fb27e017a71d3f8342cc9f91dc445e10b8b0a14ddc"
+    },
+    {
+      "path": "src/mimics/resliceProjectOverlay.ts",
+      "bytes": 2822,
+      "sha256": "97324daab6398620c521b24c24ca5cdadcc085b5ca26f86c60c4f7e938b437a3"
+    },
+    {
+      "path": "src/mimics/resliceProjectTypes.ts",
+      "bytes": 1019,
+      "sha256": "2c297b023016d50edc4a35df38c033ee1bcfa57266dfba87f8917d69baeeb532"
+    },
+    {
+      "path": "src/mimics/roiGeometry.ts",
+      "bytes": 5739,
+      "sha256": "b54d814603ee7ee0e6820eacb1a60569ac8c403e45ddf44d8e7fbd6459f13dc9"
+    },
+    {
+      "path": "src/mimics/segmentation.ts",
+      "bytes": 29193,
+      "sha256": "3a69d6e0a0ac3b549f91d57b4979bbe3cbb1e07a1c3cd643c994ae4055b3c5f3"
+    },
+    {
+      "path": "src/mimics/segmentationImport.ts",
+      "bytes": 2017,
+      "sha256": "84f2dcfddb4cda1e13c87bb30c2f1b416b4c6f841946aa2941ac2ee76ea1a5d6"
+    },
+    {
+      "path": "src/mimics/smartExpand.ts",
+      "bytes": 12908,
+      "sha256": "17bf15d63a2d0c743714cd9c00c6398e0fedb76aed734c49c762abebfb98a9b3"
+    },
+    {
+      "path": "src/mimics/temporal.ts",
+      "bytes": 42969,
+      "sha256": "95c91b0471c4694c2df3701abc5320e00e5a608bac766d657af08f2dcaf0117d"
+    },
+    {
+      "path": "src/mimics/temporalIO.ts",
+      "bytes": 7951,
+      "sha256": "74138df8f1d8c855d17d769c9034a9111932be00031415d09fa31ae382eba1e4"
+    },
+    {
+      "path": "src/mimics/types.ts",
+      "bytes": 4476,
+      "sha256": "1f824ea5ecb56485ca7e8681574e8163bb6873035828350c8cd5ea42d1c1bdd3"
+    },
+    {
+      "path": "src/mimics/useAdvancedTools.ts",
+      "bytes": 18545,
+      "sha256": "bffc0698da52ca00c12b2ec20772bec98bbbdc1bce949555c505efc87bac8f9a"
+    },
+    {
+      "path": "src/mimics/useLocalThreshold.ts",
+      "bytes": 2831,
+      "sha256": "92a02a5821bc6d847299f94a100069e169e9e5d66cf627aa2d76399ff13c4393"
+    },
+    {
+      "path": "src/mimics/useMeasurementProperties.ts",
+      "bytes": 8821,
+      "sha256": "1284119644bd467bd34b505a0201e785aeeaf5a2936a1489fd565617e9eea55c"
+    },
+    {
+      "path": "src/mimics/useMprBrush.ts",
+      "bytes": 7688,
+      "sha256": "219d6c81f3ea2f696173f4bfff6055c900fd412e347008b1481d7843fa90a04f"
+    },
+    {
+      "path": "src/mimics/useMprContour.ts",
+      "bytes": 11528,
+      "sha256": "265e18752ab3ef157e8e830723123421a9e112ac71742586253bdb0165cf97c7"
+    },
+    {
+      "path": "src/mimics/useMprSampling.ts",
+      "bytes": 4112,
+      "sha256": "91459a36552de47b4a31e542b5a8577819d89850e87661d4e6b41cada6a2f551"
+    },
+    {
+      "path": "src/mimics/useMprView.ts",
+      "bytes": 8328,
+      "sha256": "2c4c2612cb8f08d3554dbb8c5189f9519e0ac84afbc45d5a8e025f5979148dca"
+    },
+    {
+      "path": "src/mimics/useResliceObjects.ts",
+      "bytes": 11053,
+      "sha256": "4b34270fa8b03a87a61e88f7d0003a0c707a3b8fe5a09bbb91095df94097fa27"
+    },
+    {
+      "path": "src/mimics/useResliceProject.ts",
+      "bytes": 15929,
+      "sha256": "e830d06755a7ce95d596bcfd50dea93471475947d9011177dbcaac184a6ba967"
+    },
+    {
+      "path": "src/mimics/useWorkbench.ts",
+      "bytes": 104859,
+      "sha256": "e705baf983018802536c2d4064864f0c8e823ee22eb24cbb76b376ec44dac0ed"
+    },
+    {
+      "path": "src/mimics/viewportGeometry.ts",
+      "bytes": 12730,
+      "sha256": "68779a69f0125b7b4f772270dbbdc89dedae5fea23ce8e7825b93bb2546c065c"
+    },
+    {
+      "path": "src/mimics/volumeMesh.ts",
+      "bytes": 42626,
+      "sha256": "9d456de9ceaf8b84b5b7f831849e7de783d22deafd1889bbc9a8b2a6aeb545fa"
+    },
+    {
+      "path": "src/mimics/volumeRendering.ts",
+      "bytes": 12239,
+      "sha256": "2f735dfc915f220601f8c89627f904fbd30915ce1a0b5c5408b5a957caf3ada1"
+    },
+    {
+      "path": "src/mimics/workbench.css",
+      "bytes": 12400,
+      "sha256": "84fc2cb7ea82d9a1a5157a7209576abd989a21ae65caec196afb94e73020ddf2"
+    },
+    {
+      "path": "src/mimics/workspaceRepository.ts",
+      "bytes": 5519,
+      "sha256": "99ecb386e9fc68be5f0dcb45d4d8cb59eea66cf70f7bfa80c1f5ae61f0b81c1b"
+    },
+    {
+      "path": "src/operationId.ts",
+      "bytes": 501,
+      "sha256": "0295f54e943b547a2091b27ce05ddc33afac2356097bd2bc93209ee469169f77"
+    },
+    {
+      "path": "src/review.css",
+      "bytes": 1674,
+      "sha256": "b623eef3f93cbe3c9f061b5337dc3a1bd529a722f3ebc9b935f9608a4615d587"
+    },
+    {
+      "path": "src/sliceData.ts",
+      "bytes": 2159,
+      "sha256": "5479944984096fe1e9a1631e80113f9206883dd0350f5aac9698ab551d160f56"
+    },
+    {
+      "path": "src/sliceRenderer.ts",
+      "bytes": 5621,
+      "sha256": "fc61cde94e708cf812aa3543f2ec4ee766e37c1deccd298a48efc2840186661b"
+    },
+    {
+      "path": "src/style.css",
+      "bytes": 21363,
+      "sha256": "6332b85c16001cc341e7259922ddb16237972102f6c2094e959f31cf0c5eb3d2"
+    },
+    {
+      "path": "src/threshold.css",
+      "bytes": 935,
+      "sha256": "c1ac87e6ab67066b4edfa0097ee24952a467df591f315f1d1c4ab2730a2c252a"
+    },
+    {
+      "path": "src/useCollaboration.ts",
+      "bytes": 23264,
+      "sha256": "075bce21788cb692443e76688dbc2c9e077ee06d4e4957bc300588089ae48b4a"
+    },
+    {
+      "path": "src/useEditor.ts",
+      "bytes": 10533,
+      "sha256": "559f85974369dabc98256703b40d0b678752619076c6d0fbef72dff5b8fc4048"
+    },
+    {
+      "path": "src/view.ts",
+      "bytes": 3487,
+      "sha256": "11b8723ba204d32ab34af35abfa15bd2ddb0ed9c98542789d9c5e58eb2d4e3e5"
+    },
+    {
+      "path": "src/workspace.css",
+      "bytes": 637,
+      "sha256": "84de04454f20c91558ec2ac34f40c855921b52a8fc9bdd2ad204d1e805100fd8"
+    },
+    {
+      "path": "tests/browser-smoke.mjs",
+      "bytes": 6290,
+      "sha256": "78b9ecfae3b9581f1b5a899cc5a1046d05866465484758c5c33073dafa7868e9"
+    },
+    {
+      "path": "tests/collaboration-browser.mjs",
+      "bytes": 6521,
+      "sha256": "aff925d1feae8600a32539d58f6442f0a9598e2ee0e58f1cd7d30e5a4910fd52"
+    },
+    {
+      "path": "tests/collaboration-http.test.ts",
+      "bytes": 6881,
+      "sha256": "7386a2c95eaf13b9256ff034b8584dc2983c4e074a774d29a4d3b6053638feb2"
+    },
+    {
+      "path": "tests/collaboration.test.ts",
+      "bytes": 9312,
+      "sha256": "330a903cc044382e40334ed1e90ab77a197d555695627b1819fa723a8e36cb9d"
+    },
+    {
+      "path": "tests/core.test.ts",
+      "bytes": 5909,
+      "sha256": "b9af2fde8a271508e2289c95a169380e95604802a56f5a288792c0aa83d141bf"
+    },
+    {
+      "path": "tests/engineer-browser.mjs",
+      "bytes": 6803,
+      "sha256": "7bde2ce9da52092486294dcc8bc4345d41bc59d01587830d4e46ea7296f14362"
+    },
+    {
+      "path": "tests/engineer.test.ts",
+      "bytes": 3459,
+      "sha256": "bce0154e7a5de1ea23a4fc04c7a452676288e1618139ab57ff65d1b245c14a52"
+    },
+    {
+      "path": "tests/export.test.ts",
+      "bytes": 1395,
+      "sha256": "0176dabcd5447d55b452702c5b572e511faaa9f30fb838990bd9c7433f59c057"
+    },
+    {
+      "path": "tests/mimics-affine-density-viewport.test.ts",
+      "bytes": 16238,
+      "sha256": "8d600c0508b4f9ca39410e514df54a054fe0d089c4f94cf9b229539a44fd575d"
+    },
+    {
+      "path": "tests/mimics-affine-plane.test.ts",
+      "bytes": 3986,
+      "sha256": "11f650da2e444a4f674d63a69b272d8be8cdd2cb3b8939d8face8b10d40d1b7e"
+    },
+    {
+      "path": "tests/mimics-annotation-workflow.test.ts",
+      "bytes": 16026,
+      "sha256": "f447200d46fa536b737118c26da495727f60fc3730d99cae32db11f3188625e7"
+    },
+    {
+      "path": "tests/mimics-auto-preview.test.ts",
+      "bytes": 4130,
+      "sha256": "bfdfb0eb2c2085f41d1e199a343eb44edf777fffc0933362c9add6d496df24d4"
+    },
+    {
+      "path": "tests/mimics-centerline.test.ts",
+      "bytes": 13186,
+      "sha256": "2de2e77f1c49197f3f404a4bccc9b833510e007f393e7c30a35f06a4fed9b1ff"
+    },
+    {
+      "path": "tests/mimics-contours.test.ts",
+      "bytes": 11330,
+      "sha256": "acd29e1e6ddab7fd57aaf0291f03227b2aad1dde3c3e7aca2f417d624428965d"
+    },
+    {
+      "path": "tests/mimics-dicom.test.ts",
+      "bytes": 7939,
+      "sha256": "5ebd266af0d10e991cc379c1372fcfea4182c3b92e60cdc882a6077851917761"
+    },
+    {
+      "path": "tests/mimics-direction-labels.test.ts",
+      "bytes": 8615,
+      "sha256": "bbc9a7786db951e47b3e6f07aa96e1af85ff9c95aed6a5021439f37191a9e642"
+    },
+    {
+      "path": "tests/mimics-editmasks-controller.test.ts",
+      "bytes": 13790,
+      "sha256": "3d20f22826b26f1dd5e7f53892a9bccdb2627bda74dccf0f57d49f3cae67a82c"
+    },
+    {
+      "path": "tests/mimics-ellipse-geometry.test.ts",
+      "bytes": 3948,
+      "sha256": "69f45d8738d0c06c2b13d4ff65fca4e0d4fedc684ef452a4245b4016e69e8fac"
+    },
+    {
+      "path": "tests/mimics-foundation-state.test.ts",
+      "bytes": 10320,
+      "sha256": "d44b6076de2093ecb6a87c2f03aba0ff81d49ca0e382334b7f90cd7b926c5d0d"
+    },
+    {
+      "path": "tests/mimics-foundation.test.ts",
+      "bytes": 35069,
+      "sha256": "9ec7b99a6f6c1fa5d8612357456b4aca7c892398634fbadd4426b2dabaa0ad9a"
+    },
+    {
+      "path": "tests/mimics-geometry.test.ts",
+      "bytes": 17973,
+      "sha256": "8daf110b303c8970d4af48f85868b5e0d05d9247bf97f65be39ac14a369a9fec"
+    },
+    {
+      "path": "tests/mimics-livewire.test.ts",
+      "bytes": 8387,
+      "sha256": "c8b316a1bc3e9b7cf821727f30e8c3e8cec66a7eace7c1b7f40258ceba491735"
+    },
+    {
+      "path": "tests/mimics-local-threshold-controller.test.ts",
+      "bytes": 11163,
+      "sha256": "e0c392447e160100475f6c7b2b20c95df90ea1cc407086701e1a5438a8b3532c"
+    },
+    {
+      "path": "tests/mimics-local-threshold.test.ts",
+      "bytes": 6519,
+      "sha256": "dfe8a3e541055ab722e1267cbfc9cd9ac6dfcb21356507255a7061783ec98e4b"
+    },
+    {
+      "path": "tests/mimics-measurement-attachments.test.ts",
+      "bytes": 13727,
+      "sha256": "bf03b4071c169b11617d7a01a5975f95c27272824ef90425e8ba6aea8809d6e7"
+    },
+    {
+      "path": "tests/mimics-measurement-editing-audit.test.ts",
+      "bytes": 7942,
+      "sha256": "69f77822ec0f4551a9b0c38f8aef73812e3e7a03d8a5677c08fb9b4a8c54a741"
+    },
+    {
+      "path": "tests/mimics-measurement-editing.test.ts",
+      "bytes": 14325,
+      "sha256": "0c410af3fcaad93fdc3ded6066fedfddfbd47cd12ab35b8d73df33bd346db914"
+    },
+    {
+      "path": "tests/mimics-measurement-label-offset.test.ts",
+      "bytes": 11212,
+      "sha256": "21c475b2564a99a68cc9455d8d473c4e43855ee0233a07fb94a1e8f301cf7304"
+    },
+    {
+      "path": "tests/mimics-measurement-properties.test.ts",
+      "bytes": 15419,
+      "sha256": "1f73b7307d508b6b3e991584f4458d5eb47debd3475a1a0bb09b993c988bf548"
+    },
+    {
+      "path": "tests/mimics-measurement-workflow.test.ts",
+      "bytes": 26330,
+      "sha256": "df9a841167ef46cf1aa5ef0465bab5b4807ff831b2ff1ce2ef90fab37297ab34"
+    },
+    {
+      "path": "tests/mimics-measurements.test.ts",
+      "bytes": 7542,
+      "sha256": "655ae602fd21f309198b0157733824f71aa4eee3c5f5afe3682f869e1ac258d6"
+    },
+    {
+      "path": "tests/mimics-mesh-exchange.test.ts",
+      "bytes": 10482,
+      "sha256": "7c40a3afc404f8972fdea7663dc79a5c73fb3f155d70a6188d31c9d543b7590a"
+    },
+    {
+      "path": "tests/mimics-mesh-tools.test.ts",
+      "bytes": 10875,
+      "sha256": "afccb6f0bb002ec9eaef6e052353cf9f64243b3f608e79b82708d27858203f66"
+    },
+    {
+      "path": "tests/mimics-mpr-brush-workflow.test.ts",
+      "bytes": 20731,
+      "sha256": "3850fd8440dffadd432f9788495caabf7fc351b4003cff5ab4ffc3ccbce4ec1d"
+    },
+    {
+      "path": "tests/mimics-mpr-brush.test.ts",
+      "bytes": 10727,
+      "sha256": "cdf86b5110ab9d79712f20ba3b26ef195c0c72577f75219cb91e3f147d80b8db"
+    },
+    {
+      "path": "tests/mimics-mpr-contour-root-audit.test.ts",
+      "bytes": 7871,
+      "sha256": "b92cf7bff1c719e8514ddb7932c8b948034ce6b8dc3411e30d052ac2c7cc2587"
+    },
+    {
+      "path": "tests/mimics-mpr-contour-workflow.test.ts",
+      "bytes": 23878,
+      "sha256": "e6f13830fcee739fe0df800b7d9f0f5b71acd72624d7df21829da0ebf4363cf2"
+    },
+    {
+      "path": "tests/mimics-mpr-contour.test.ts",
+      "bytes": 13729,
+      "sha256": "a78e6d2c058229fdb6f358314dbe415ae03066b379b5ac810c8fdc26acad0baf"
+    },
+    {
+      "path": "tests/mimics-mpr-interaction.test.ts",
+      "bytes": 3094,
+      "sha256": "3cdd7bc863d2a794db3f8a993f409470f321f09bfc6e365316a20a4dc6ea4b4b"
+    },
+    {
+      "path": "tests/mimics-mpr-livewire.test.ts",
+      "bytes": 11724,
+      "sha256": "b43fcbc66a01942262a54edadf77fcaf81913f70415b2636bf8b8ef6d8da0c1c"
+    },
+    {
+      "path": "tests/mimics-mpr-project.test.ts",
+      "bytes": 15733,
+      "sha256": "795ccdfd192279192abb551d90fec8c7b799f3dab74d86894f73917ab1c2ffd3"
+    },
+    {
+      "path": "tests/mimics-mpr-sampling.test.ts",
+      "bytes": 19260,
+      "sha256": "e0525abdc5a6598d0132a2f65975f1118b0771123cf483d103cf4209e12a314d"
+    },
+    {
+      "path": "tests/mimics-mpr-viewport.test.ts",
+      "bytes": 59460,
+      "sha256": "523edf0c679b0ece30fb16e713afc70d28abd33439dc708e62d26ba3c5fc719e"
+    },
+    {
+      "path": "tests/mimics-mpr-workflow.test.ts",
+      "bytes": 25200,
+      "sha256": "950af2fd90c4134c076e5720d54fcb764b590c01733ed0aac8dbfb8b00104789"
+    },
+    {
+      "path": "tests/mimics-mpr.test.ts",
+      "bytes": 13676,
+      "sha256": "9ee39257c004537e62c38907fca113a768c8951ca50883d90f9dba04b240f993"
+    },
+    {
+      "path": "tests/mimics-multiple-edit.test.ts",
+      "bytes": 24133,
+      "sha256": "89767bb3ea906ee0201579743c1d005c0ce67044f8f0515e9523823002a5451a"
+    },
+    {
+      "path": "tests/mimics-nifti-reference.test.ts",
+      "bytes": 17575,
+      "sha256": "1bab5c1d9dc6d63563f68901faf568874c81613b79172c3ab7cfcf40e726d426"
+    },
+    {
+      "path": "tests/mimics-part-ellipse.test.ts",
+      "bytes": 19919,
+      "sha256": "1c16bccc884631666f1728b99194bcca6bb246f564f817a9b4432df20a04226d"
+    },
+    {
+      "path": "tests/mimics-part-provenance.test.ts",
+      "bytes": 8961,
+      "sha256": "4f0db6f23febfd30215722a22cdfe0266dad3e2db752b56a084caa8ec55a04b5"
+    },
+    {
+      "path": "tests/mimics-part-reslice.test.ts",
+      "bytes": 16119,
+      "sha256": "a4843d693fc275bd7c3bcf4aa5f635cfe06d57f6c204d4c706875b3980d75ee1"
+    },
+    {
+      "path": "tests/mimics-physical-advanced-panel.test.ts",
+      "bytes": 6835,
+      "sha256": "0f6fe5aa56ed7ae229c4040a85dafbc360c909a9f3395d584cb4f3f1e0ac696c"
+    },
+    {
+      "path": "tests/mimics-physical-contours.test.ts",
+      "bytes": 8251,
+      "sha256": "937693b131f11dc6f97041b119aa4bc64aca0a2cbc38d1099fe77e0079abd1aa"
+    },
+    {
+      "path": "tests/mimics-physical-migration-workflow.test.ts",
+      "bytes": 18537,
+      "sha256": "3bb41995f4e40a757166d6f6dbef615053a43646903f70e3d2d36c20774ab43f"
+    },
+    {
+      "path": "tests/mimics-physical-project-schema.test.ts",
+      "bytes": 16095,
+      "sha256": "d0f1a3ebb04f02693ab35f374dadf42719d3a3a2b728aaa801b642d4d6f9590f"
+    },
+    {
+      "path": "tests/mimics-project.test.ts",
+      "bytes": 27463,
+      "sha256": "8a23581d45ede3baa9eb47f7b662930c69e79a669ba3df0a9475e95b267d0ac3"
+    },
+    {
+      "path": "tests/mimics-region-workflow.test.ts",
+      "bytes": 15180,
+      "sha256": "b1d57e753c7e64e43b06a7b78f274222ef17e4bfa0f17c8a9022ef82c8e93d07"
+    },
+    {
+      "path": "tests/mimics-reslice-gizmo-workflow-audit.test.ts",
+      "bytes": 17730,
+      "sha256": "2b30914d85775d520a41241b47ac8b6a34a194350e06ad06d7aef16f42facc9c"
+    },
+    {
+      "path": "tests/mimics-reslice-gizmo.test.ts",
+      "bytes": 10058,
+      "sha256": "357adacb6dcb2110fe67400d497968b6d8c45bcbc405fb0c0d672938622d3515"
+    },
+    {
+      "path": "tests/mimics-reslice-integration-audit.test.ts",
+      "bytes": 9631,
+      "sha256": "7c9e72a91cb9de8e4c0124257d98dce877592f2add3ec882558891f55002ff53"
+    },
+    {
+      "path": "tests/mimics-reslice-objects.test.ts",
+      "bytes": 27895,
+      "sha256": "d9ddef684ffa2dfc61cf25d463d5a5afbaf82cbc1b43efd61363f3776cbf6813"
+    },
+    {
+      "path": "tests/mimics-reslice-project-data.test.ts",
+      "bytes": 22559,
+      "sha256": "a5317235ee0484b5ce1650ae26bdb8261638925bed7a8c489a01c6e2ff725d34"
+    },
+    {
+      "path": "tests/mimics-reslice-project-dialog.test.ts",
+      "bytes": 19954,
+      "sha256": "8fb47dc3782beb4a431f7a20049fd86d1750766caee85b2cfa84a1327158af5c"
+    },
+    {
+      "path": "tests/mimics-reslice-project-geometry.test.ts",
+      "bytes": 16914,
+      "sha256": "a5b53b794a9ddf953fcf7bc9192edf28f8c4871aa09140613de115b9bcf1f967"
+    },
+    {
+      "path": "tests/mimics-reslice-project-workflow.test.ts",
+      "bytes": 24419,
+      "sha256": "4b188af7c4944d75688aef15b046c81137f227bbf76850c61701b48e15aa9393"
+    },
+    {
+      "path": "tests/mimics-reslice-workflow.test.ts",
+      "bytes": 12018,
+      "sha256": "2ab51c3d0fd1433442ffb37fca25d3cf59cb5d290943eca320a189a2b08cb119"
+    },
+    {
+      "path": "tests/mimics-segmentation.test.ts",
+      "bytes": 15238,
+      "sha256": "674b0b337dc60e91ab6de2441d098e72b470800d00b8e5868ef255177dd50737"
+    },
+    {
+      "path": "tests/mimics-smart-expand.test.ts",
+      "bytes": 6063,
+      "sha256": "1789bc0f3030f990792c517775b35e85cf8e19e06271db49642aee6aef9403ce"
+    },
+    {
+      "path": "tests/mimics-storage-transfer.test.ts",
+      "bytes": 16954,
+      "sha256": "a80c4b9e782a874387135c233aa633eaa4e41161d4cc86f3ed6e043f81228f0c"
+    },
+    {
+      "path": "tests/mimics-temporal-io.test.ts",
+      "bytes": 7857,
+      "sha256": "a4a1491d06eb6da3dc45fbb94a555a6fa0b435b6c387da0a5d2e75db92612fb8"
+    },
+    {
+      "path": "tests/mimics-temporal.test.ts",
+      "bytes": 11232,
+      "sha256": "3769767ea1f361b2424c47e67568cf156fdc24deea389fa23256070ee291c211"
+    },
+    {
+      "path": "tests/mimics-use-mpr-view.test.ts",
+      "bytes": 11935,
+      "sha256": "a2d98563cb51ddf18c694450a5468354079ec0982d5f6229ac68089f6b61f078"
+    },
+    {
+      "path": "tests/mimics-viewport.test.ts",
+      "bytes": 146445,
+      "sha256": "9822421cc5843574c345a552b7ec29e6d6997a8fb9ed49d937fa65699fffe6f6"
+    },
+    {
+      "path": "tests/mimics-volume-mesh.test.ts",
+      "bytes": 11900,
+      "sha256": "7fdfb9e4dd8988e060c6e09d2755a104910d47c3fd2fd0961474193f17ddd140"
+    },
+    {
+      "path": "tests/mimics-volume-rendering.test.ts",
+      "bytes": 8847,
+      "sha256": "af96d0bbd4f14a386ef5098661a31a1868df8a64ced6c31fed0d4fa3e333bc5b"
+    },
+    {
+      "path": "tests/mimics-workbench.test.ts",
+      "bytes": 8434,
+      "sha256": "71a48c317d63eb0174af81e66398814f435501e37a502abfcc8adcb0ee3a5132"
+    },
+    {
+      "path": "tests/server.test.ts",
+      "bytes": 5115,
+      "sha256": "8f862529ccfccbe0b653bff459c84f1a86de499e7772bc0ec59148e44292019c"
+    },
+    {
+      "path": "tests/workspace-browser.mjs",
+      "bytes": 7579,
+      "sha256": "8e5ffdf489ff666c6e4b577f3046a74df3e449a46e12dc30d78fca6ddb91f40e"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 304,
+      "sha256": "395be041fc8f0033139a81dd453fd4cc2a56e8fa69ee06f81d789564c3e02e9c"
+    },
+    {
+      "path": "vite.config.mjs",
+      "bytes": 415,
+      "sha256": "be023a45900c2998ceff13010ce2ca712029e950dafa1eecdf8456825868b3e7"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/Mimics17-完整分析报告.html",
+      "bytes": 268828,
+      "sha256": "2e81dcfe545080f9917bb66bfada7db64be4e250d708996aa39410599b520e75"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/Mimics17-完整分析报告.md",
+      "bytes": 198288,
+      "sha256": "380180df32677416ce429cc00436eddc26e9af35f65911c00af64b18a7b29ff1"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/assets/Calculate3D_common.png",
+      "bytes": 10488,
+      "sha256": "0d46d4a6d7db17c00ae7dff207e55ea26cbcc3e8bf6ec1702241867204fec5b7"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/assets/MultipleSliceEdit.png",
+      "bytes": 9419,
+      "sha256": "1dc13661fd6b5e775c4921f075449380f78e9508836575fea39348deffb666a7"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/assets/Thresholding.png",
+      "bytes": 7675,
+      "sha256": "bfbb495ce88d3fadcfe40063422af9f00eb3232e15873754d9f4776682a388a3"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/assets/pipeline-source.svg",
+      "bytes": 4491,
+      "sha256": "10bb0f7282829489d1ba9e7e5b89925e6c903cc3f806e18e5a573642a41203d8"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/assets/pipeline.svg",
+      "bytes": 4491,
+      "sha256": "10bb0f7282829489d1ba9e7e5b89925e6c903cc3f806e18e5a573642a41203d8"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/modules/annotation/annotation.md",
+      "bytes": 43528,
+      "sha256": "d62c2998db6bde216ebc4bc60c9e2288a445bca3ade6f03728c9940092cc4977"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/modules/measurement/measurement.md",
+      "bytes": 17471,
+      "sha256": "9ed7afaf2b7bd2ea9813c7c4be51b673d3c2501bd490a1d0c016a0b96662b4ae"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/modules/reconstruction/reconstruction.md",
+      "bytes": 34957,
+      "sha256": "b878e9518707d529efbe9d980115734ee2d0dae6514ae32b0447b4d4909eeb77"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/modules/workflow/README.md",
+      "bytes": 366,
+      "sha256": "2d79a0b793f70653bbb95a1bc38a4857a399afdb0c2dee8d056aa61505797f84"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/modules/workflow/catalog.json",
+      "bytes": 121122,
+      "sha256": "5f3a8b73c46493031bedec34d6c3a9adc32683f3b09f1a251b844aa105bc41df"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/modules/workflow/official-help-workflows.zh-CN.md",
+      "bytes": 137,
+      "sha256": "e3b231af1417a9bd1374fb9584b788736edc7690c101dbe518a3df828cca399c"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/modules/workflow/workflows.md",
+      "bytes": 78637,
+      "sha256": "a9a6bd5f4042596d59d3dd325eee175fc823811c9154897173b0b9e5646fc98b"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/overview.md",
+      "bytes": 16449,
+      "sha256": "ba11a70b7e2fac50224a2464a94d555cb2395356df96844bd93f098c3e9961dc"
+    },
+    {
+      "path": "work/mimics-17-analysis/report/traceability.md",
+      "bytes": 6863,
+      "sha256": "03724bbe0ba6fec06d874ca0292428a5828348625c557f7ca8fe5e6d6f77e01f"
+    },
+    {
+      "path": "work/mimics-tool-guides/assets/livewire-mpr.jpg",
+      "bytes": 126894,
+      "sha256": "d0a0af2a5b8f256827d720d25196849cf79c4b48a9fd25943ab2bd1e2c1c03f6"
+    },
+    {
+      "path": "work/mimics-tool-guides/assets/multiple-selection.jpg",
+      "bytes": 111026,
+      "sha256": "234a84f2c0ad4549ae8ad0cb71638fc11ad7399d2564becd63660050ecb1eb31"
+    },
+    {
+      "path": "work/mimics-tool-guides/分割工具操作指南.html",
+      "bytes": 355816,
+      "sha256": "06b342c9d79b6fa5bc871ce424babe97d7653e2b7c6dae1747841ebb82f6fb15"
+    },
+    {
+      "path": "work/mimics-tool-guides/分割工具操作指南.md",
+      "bytes": 28247,
+      "sha256": "28a2171d5ecd30467b527386f3371267fb09fa027c8930edd96e8e9a98398a04"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/README.md",
+      "bytes": 426,
+      "sha256": "575b811aeee72e2d0a8a9106b0b0ea56401c32fdc2bb45a9a71e675896fe1419"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/annotation-region-current.tap",
+      "bytes": 3573,
+      "sha256": "08c343bb9b150926212a6fe2a7ba4657305bc5257ab9d05116ed79ee1e247fa7"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/annotation-workflow-baseline.tap",
+      "bytes": 3864,
+      "sha256": "74f6a3639e52db6c761ec51c05b743b70cb445f34f8ee891d61500155d7d262d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/annotation-workflow-current.tap",
+      "bytes": 2468,
+      "sha256": "6d28b2b9d801b6cec079e3109751394da53a97c3bb64ebd29622a960cdb8cd3c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-annotation-properties.jpg",
+      "bytes": 94126,
+      "sha256": "5aa87f086e58c2aca62caaec5dd9d12cfd68db41e324acc20d5ae32dcd5ccc1f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-annotation-restored-properties.jpg",
+      "bytes": 99332,
+      "sha256": "d86e404b607e2b524e9e0bd609163b04d4151a3fdcdb20f2283d67c06b51c9de"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-annotation-restored.ax.txt",
+      "bytes": 7507,
+      "sha256": "2a8eae6b083f9123a14b5fbd1703fe741c26325c3b6d33421053a72c0f62a4d4"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-annotations-2d-3d.jpg",
+      "bytes": 112725,
+      "sha256": "4da171acd4d697c76575ecc505f3ce96336ce996b613088a382cff3b8c21203f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-annotations-restored.ax.txt",
+      "bytes": 5881,
+      "sha256": "1a2bc4f589f99293b7e947c81d675951560a8717fa76a9b1f36466bf811e8bdf"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-annotations-restored.jpg",
+      "bytes": 113837,
+      "sha256": "aff37e5028e664ea9e261c2f8da1642753bcb5e85e38c3e1f224818be9d16243"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-cache-restored.ax.txt",
+      "bytes": 6134,
+      "sha256": "91d217dd2ef5f86b341d65118878bed003b2793f5065017b7df013391ba819e2"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-cache-restored.jpg",
+      "bytes": 109497,
+      "sha256": "fa07af9dc32020c110c5245b9d12f29b160726eb316c56043af200070ec4ed30"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/README.md",
+      "bytes": 2107,
+      "sha256": "d00593d13d66f986b48c6c740db4265670c167728fce96e2bc91d7cbe21604cd"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/download-manifest.json",
+      "bytes": 2061,
+      "sha256": "b4137e6d545baaf1e0cdd9ff3170c4febd36975f1077d66b0ec5f5e839d5c551"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/identity-independent-validation.json",
+      "bytes": 12832,
+      "sha256": "f2bd2a909237ad78e29e491b5a26f563ea8b6b4564bc1a0779ee37fa39574383"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/identity-vs-source.json",
+      "bytes": 4919,
+      "sha256": "5fea6d64883ce731dbeb32d412ddf3eeb595db823506aff80318e41022bff71d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/identity.deepmark.zip",
+      "bytes": 94546,
+      "sha256": "ffdfdccc434a288ad90b86da1c12dc1a64af8995f04143b35ce0df9280284add"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/oblique-format-validation.json",
+      "bytes": 8123,
+      "sha256": "e42917af4703fe5c120f362a1a12cd7e3bfd6684bb174bc0ba9fe84c06e333ba"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/oblique-independent-validation.json",
+      "bytes": 7108,
+      "sha256": "7be71319795db875622bba664358eda3d27303bb30ede67b1e92b4b7245354b7"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/oblique-oracle-self-test.json",
+      "bytes": 672,
+      "sha256": "d9c262226b3fee1f9af853a474e6672b9cde3380d9623fcb9f2b7423113aa4cf"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/oblique.deepmark.zip",
+      "bytes": 81869,
+      "sha256": "f1af6625a1aba9985f9635bbeb16110a00de3ec41c6076b8a651cce904dd105c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/oracle-reslice-self-test.json",
+      "bytes": 2651,
+      "sha256": "f53056d76e38db0ce7b0c2c5c7f8444018b2d2b69489bf8571e38727cc26f748"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/source-independent-validation.json",
+      "bytes": 11189,
+      "sha256": "b7710f1b71adbf08a51cf811c830231f46456bdd3e873526afb7a04c006b9bad"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/source-mask.nii",
+      "bytes": 1180000,
+      "sha256": "d9e5a96883d824b178cef835ecce3c904e98ea0b44773e652632537f8a7cd60d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/source.deepmark.zip",
+      "bytes": 93644,
+      "sha256": "6c67ea04c749027ef94d62a17d0ed82d3863854d01c17c9fd0af56ba988289b1"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-file-exchange/source.stl",
+      "bytes": 14284,
+      "sha256": "838de42bf97c83f18bb541ee62ea2c638f4986980c9fe8a7f782bceeb3eeabe8"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-loaded.jpg",
+      "bytes": 66669,
+      "sha256": "48fbf7f61066e85c0fb6a860f169772c5c518876bb4484b186e2be577b8b4bed"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-contour-restored.ax.txt",
+      "bytes": 8156,
+      "sha256": "78f9036d752b05114c9676f0aa1eaee9838618deed9b000f787c0d6b09e17361"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-contour-restored.jpg",
+      "bytes": 126034,
+      "sha256": "d67e103c544f8ed58c5516756fe536f887c618edb0b533f078cec0727f328f46"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-contour-surface.ax.txt",
+      "bytes": 8266,
+      "sha256": "c53fecc6c0cd154f50912685ee7203613cd3d81dd01e026e48b02bb7e28ab979"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-contour-surface.jpg",
+      "bytes": 90578,
+      "sha256": "0d74508a4510fe0a4145ba27e3a6fef73d86a1569ac9ab972deab0f1afa2ccc3"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-livewire-draw.ax.txt",
+      "bytes": 8018,
+      "sha256": "95c648ecc428141db1e935b0605e3fd31a8d254ddaf4e49a82203f69aa34b5be"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-livewire-draw.jpg",
+      "bytes": 126894,
+      "sha256": "d0a0af2a5b8f256827d720d25196849cf79c4b48a9fd25943ab2bd1e2c1c03f6"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-livewire-erase.ax.txt",
+      "bytes": 8207,
+      "sha256": "edd0bbab9270eef4a3cbdbd740da7032831f8698647d271c4463ffab742a3595"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-mpr-livewire-threshold.ax.txt",
+      "bytes": 9676,
+      "sha256": "fec41ebfc0f66bd83796ff84221a021a8f9374f8f72f6d68d4fdb0c0acc93343"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-multiple-colors.jpg",
+      "bytes": 111026,
+      "sha256": "234a84f2c0ad4549ae8ad0cb71638fc11ad7399d2564becd63660050ecb1eb31"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-multiple-to-3d.jpg",
+      "bytes": 109535,
+      "sha256": "b9d8068c09bf1a0af94ceb039b4edeef0c8d64f84a4a602ba33a7fed42d60f39"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-refresh-restored.ax.txt",
+      "bytes": 6136,
+      "sha256": "9cc1cf1dddc8063e2baa316bef0b30aa6561fddfe86a7432642d0860be6e9c93"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-region-stale-part.jpg",
+      "bytes": 126929,
+      "sha256": "9f99a055c707bc2a9a6c1b54cd85b4150e43f02054ebd5fb3d854ba734323928"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-reslice-project-copies.ax.txt",
+      "bytes": 4870,
+      "sha256": "ac22fdba75aa37c8edc4b0c4ed5a938e7328ba5f0768ffeba4f773d0430c4b62"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-reslice-project-generated.ax.txt",
+      "bytes": 13227,
+      "sha256": "3c009b1947826c761da19c9b53e5e02cfc2849331b165ac07cbd88fdc3c16177"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-reslice-project-generated.jpg",
+      "bytes": 157008,
+      "sha256": "2d5ddb5e1dc69e4ed6ac33f566e04fc5b950b2fad7334580dcbd5a47c091dc9b"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-reslice-project-line.ax.txt",
+      "bytes": 12978,
+      "sha256": "d3ee6ae086c8e821926e552c2809df0517b2e368dac5878faafc78e7276b86e6"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-reslice-project-opened.ax.txt",
+      "bytes": 8322,
+      "sha256": "1f987a79e117b2a2fd7c96be4b0ba174fe1b04e24e1f8fc5495651facf102769"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-reslice-project-restored.ax.txt",
+      "bytes": 8343,
+      "sha256": "2469b980b379737cd94c08c66cba882d4200d99683109843a576f334e7fca21b"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-reslice-project-restored.jpg",
+      "bytes": 127155,
+      "sha256": "db7c91d261cc44630a04d71f6c4fa3dec3c0d3566ff09410b38f6e1abe77166a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-surface.jpg",
+      "bytes": 111397,
+      "sha256": "82aa21f0aa835ac9073b7d0a78d2076bf583c6deab7bd7b2f0ba40b71c98ac96"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-volume-bone.jpg",
+      "bytes": 96855,
+      "sha256": "075e95d9b2503a06d0d96e1d340f572d52cc3d62b0edf101f67f5e407a316475"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/browser-volume.jpg",
+      "bytes": 97927,
+      "sha256": "968bfc0cc4f7260714a037481d394983e796fc3c8b23077947976549d0eb05d2"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/brush-existing-current.tap",
+      "bytes": 7584,
+      "sha256": "5ac82986627f575e183cad357119871ae0a549191c77f694a26ecea05ce010a2"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/brush-file-build.log",
+      "bytes": 575,
+      "sha256": "f0a42a4940aabcea013bf253975f60abe58737425afbb07a518c5aa793012680"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/brush-file-regression.log",
+      "bytes": 35757,
+      "sha256": "57155d331eb6ace23cfa159d755164184c1679719e6204af8b17ef386d8f9cd0"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/build-current.log",
+      "bytes": 575,
+      "sha256": "8323b29bf9477172e041e5225e7462e6682ffa45625eeca9a9ed43ba889e7f5c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/editmasks-controller-current.tap",
+      "bytes": 2908,
+      "sha256": "ea3903cf422acf13dbde63237f1b73c7a382767547de9d199722347e80b7d3f8"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-independent.log",
+      "bytes": 259,
+      "sha256": "82bae5bc68674c1f9e045b9ceee1c365e40bf07808562f416666d560662c5ffc"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/README.md",
+      "bytes": 1389,
+      "sha256": "ab86b2d6ac4a58c8f0b6956a268755db5f13aa4125686f3eb971ce35a16369df"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/final-independent-validation.json",
+      "bytes": 1657,
+      "sha256": "869811f7289dbd054718dd3b420de87ea0e03a8fe43ef05579cd1b30fa18373a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/generation.json",
+      "bytes": 456,
+      "sha256": "5e238a33763b5cce891b36f934e3a4665657852a237436e030d32e6f2b4a3561"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/independent-validation.json",
+      "bytes": 11153,
+      "sha256": "16f5afc6b7d4f80c43c26c2ecfe4ed63a39c1ed3985a21c755da7fa7a49aed27"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/oracle-self-test.json",
+      "bytes": 1657,
+      "sha256": "869811f7289dbd054718dd3b420de87ea0e03a8fe43ef05579cd1b30fa18373a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/sample-mask.nii",
+      "bytes": 28000,
+      "sha256": "00a9037b725d75dbd01dbf405fe36da9424102cc7b7e1d5e6926bc16a1a450de"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/sample.deepmark.zip",
+      "bytes": 11222,
+      "sha256": "d7516b9e1931a67fb6698063217aa638bf1e8d9f26775735a5a01a9827ef9801"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/exchange-sample/sample.stl",
+      "bytes": 69284,
+      "sha256": "fa72b7b8228dfc8a1fa7bb16d41af96ba291cddd63f37a1fa59ffcceab8143c7"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/foundation-baseline.tap",
+      "bytes": 11365,
+      "sha256": "619f02854f3d37b08fc5f3952f736d7a3e5b14c488693c768e21c4f42c680b2a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/foundation-build.log",
+      "bytes": 575,
+      "sha256": "aeeaae9157b4cd6fde779eed5121e4bd00177eef7520a2ba66adecf069dfcb4d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/foundation-current.tap",
+      "bytes": 5649,
+      "sha256": "3798aca468bc7801527e141cbdd2ef0b998b637692365220270693515e3fe57f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/foundation-editmask-build.log",
+      "bytes": 575,
+      "sha256": "31d74a46586c8f0a0982a1aa3271bb3957a005fd541518bff333822291df0d10"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/foundation-editmask-regression.log",
+      "bytes": 29935,
+      "sha256": "0c1490680d26ce8f2ee6c8b2f62e0ce6082547cbc5f5e76a8f5766b9879ac2fe"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/foundation-regression.log",
+      "bytes": 27686,
+      "sha256": "a503fd8ef87c99f28bcad847cb83f73200545659eefa9996e8a60df5922dfa37"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/import-candidate-current.tap",
+      "bytes": 2880,
+      "sha256": "4a987faf31586f8c172421f4c0420c3433a32aabcb23ed80696b4b896f9f8e90"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/measurement-native-build.log",
+      "bytes": 575,
+      "sha256": "511c550cac6a86bbb5071030a228f5dfca9d0e9c449ea54f391219bae980571b"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/measurement-native-regression.log",
+      "bytes": 50157,
+      "sha256": "55f65e344ac067323aa2b741e7196cb5e87d2de6f98e962526613b495f78f227"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/measurement-roi-build.log",
+      "bytes": 575,
+      "sha256": "1047f3c146584ce3e710aac5797045b2fc5b6816bfcd3bda21fd9e1008a20e1a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/measurement-roi-first-regression.log",
+      "bytes": 44854,
+      "sha256": "9dd7bc877ea0b3fecfa7998dd21b617cb21ac537876b13289b287d8a162bf78b"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/measurement-roi-regression.log",
+      "bytes": 44456,
+      "sha256": "99db70fe071d5e9871fecfdc87743cfd64c4b248d7d21f3dcd45ebb1f7a83d22"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/measurement-workflow-current.tap",
+      "bytes": 5344,
+      "sha256": "79ec57765f05f7b341f811e7b48c1463cd4e86222be571bd36b7330b8e083962"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-brush-build.log",
+      "bytes": 973,
+      "sha256": "2d0f157cc36ea98696393e5c8d12bd22f4eaa3c0cbb82034e6bf645bd53e4bf7"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-brush-regression.log",
+      "bytes": 71003,
+      "sha256": "493eff9c4045586c95595e56c83b9ff8ca3876da864cc0e0b53a244dc03ea993"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-build-first.log",
+      "bytes": 1093,
+      "sha256": "86f0ef71293b202ed9cef2f3d4b8a645fe63b5cf89983281537e701c02f27081"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-build.log",
+      "bytes": 912,
+      "sha256": "02c32fd328e12c78701bbb7d97131a7e77c561133694298ea15d3878976e842f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-contour-build.log",
+      "bytes": 973,
+      "sha256": "6e5a2abd24dc24178bb6255eba54f1a91dd34739fb9a9a2ec2a51caf99b1d405"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-contour-regression.log",
+      "bytes": 77653,
+      "sha256": "2002157be6c34996f37c467a0642428dcf4c4575f3335b275751309353874d28"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-controller-current.log",
+      "bytes": 4813,
+      "sha256": "e4f7b41700e35135df69793e38c691c52c653ad013b32655c948a0cd1d9940f3"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-interactive-build.log",
+      "bytes": 973,
+      "sha256": "335d830270770f2959ec75908ad1375fda03cb21233abc6e542960557a38daf3"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-interactive-regression.log",
+      "bytes": 63017,
+      "sha256": "f0a71a8b5ca4007be4a8cb1620fe8cde43ca623440fc5cb6388f6429220ebab8"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-preview-http.json",
+      "bytes": 279,
+      "sha256": "0c5d47cfebfd4709d089d879473b31c5a5bb473f0a1ac244539555e5dbd0b94f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/mpr-regression.log",
+      "bytes": 56588,
+      "sha256": "2f176a60fe71a332fcd539c7fadab659af523d3412c9d5e09f3ad1751623bb50"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-edit-baseline.tap",
+      "bytes": 5789,
+      "sha256": "9a45a0acd3ae27fdc732df902b7c0cb51e53029e6713001f0eb46c2fcf2e3f25"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-edit-build.log",
+      "bytes": 575,
+      "sha256": "c1430c5e0acec243ced2a7a5e52512678e12822c109170125ea0d58e3f7a02bc"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-edit-current.tap",
+      "bytes": 5073,
+      "sha256": "c3d130e49621f0ecc7d9788ff55cf64b7fb5d5b79fda851f845e11adc07a6676"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-edit-regression.log",
+      "bytes": 34044,
+      "sha256": "d17bf6066e360fb0f828b13346326fea962ed16780445083e47f8273d6b78ff0"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-existing-current.tap",
+      "bytes": 4189,
+      "sha256": "94d024f1e8a2a6507ea5a023e32db5ffc86aadbc5efe1fd14b88727a298e9899"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-local-current.tap",
+      "bytes": 2911,
+      "sha256": "8d52dc9a0eb53896ea0b21b453d74141e8cb40a938f54d6f65879e42aa438154"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-local-initial.tap",
+      "bytes": 3775,
+      "sha256": "329a91da1c417ad663fb3f824239b45c34cb95eb7cd23e38bf0370923c4d52b0"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/multiple-preview-current.tap",
+      "bytes": 5665,
+      "sha256": "c1a4632bdcf0ecbc55f1efe7b2237db9beb6b96e91954104659470755bea6471"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/region-annotation-existing.tap",
+      "bytes": 5394,
+      "sha256": "a671383e2b2cf173a3711c3c900c40a0bbd1fe2ff4c087e81d63ecb2cd49d347"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/region-properties-build.log",
+      "bytes": 575,
+      "sha256": "bf8feb802be1e1e06e1d527e2e755ef73b1d98636364ccbb30afe63cf97333b0"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/region-properties-current.tap",
+      "bytes": 6972,
+      "sha256": "2e75689616523bb61e05e21caf271976d2db570479d7e4c85c5a93c366797b5f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/region-properties-regression.log",
+      "bytes": 40594,
+      "sha256": "faaf3965ec7b9b78f1170eb88285c56fa90dcae748192005eb118c9159ec3c0c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/region-workflow-preimplementation.tap",
+      "bytes": 1339,
+      "sha256": "2e7072708c92f97441653754cfa794219cadbd6f0d9ffff6d44fe68af118037d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/reslice-gizmo-build.log",
+      "bytes": 973,
+      "sha256": "368739110154d9ba04e532eafe272a7fcd317ed16635918a849ccb7a6d1b04f7"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/reslice-gizmo-regression.log",
+      "bytes": 66782,
+      "sha256": "44a4a223d625f2b19d4a09c930d1ca5312f6a887bdf79d037f2af55603afec4e"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/reslice-project-build.log",
+      "bytes": 973,
+      "sha256": "0a3592cf034ee292003ae3522a4d990a7efb3150aa960dbe8833ae2d0bb4c41e"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/reslice-project-regression.log",
+      "bytes": 84661,
+      "sha256": "78d53239e97aec803adf09ae42461281dc278e209c28dbbb6e54b981c374637a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/evidence/tests-current.log",
+      "bytes": 12841,
+      "sha256": "2f882deea698aa1fcf550b022b2aceede754d0872d6f96b58584c3bdabede04f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/README.txt",
+      "bytes": 183,
+      "sha256": "e31014cc0f8d0e0e5c4dc94b74c9fcedf4646979ef012fe574adf7af833d07f4"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/README.md",
+      "bytes": 2970,
+      "sha256": "5e8e4cb5390632d6e33e55af55311bddc190985065ac5c08b5a5d8ef38edd124"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/generation.json",
+      "bytes": 13686,
+      "sha256": "95af6ae3729a98af356c158cdcb4a8b6212da604b98426370bd4affc922230eb"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/invalid/irregular-spacing/INVALID_SPACING_10.dcm",
+      "bytes": 2254,
+      "sha256": "bc3537700924f351270e95277d8cc41115c7215a2bdf5be1ec1871170af37c9e"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/invalid/irregular-spacing/INVALID_SPACING_20.dcm",
+      "bytes": 2256,
+      "sha256": "4f37f83b9e66289c75a4b1f3533a3bcdcb4a2a8ca9914414ac3f1fbc463048b3"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/invalid/irregular-spacing/INVALID_SPACING_30.dcm",
+      "bytes": 2254,
+      "sha256": "c67373b95f2f46c85740d79942f87396cdc0815ab45c00f99bb0252a2caec7f7"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/invalid/truncated/INVALID_TRUNCATED_PIXEL_DATA.dcm",
+      "bytes": 2231,
+      "sha256": "99708e8e681bf15da59d0a81fa12f4d3961942814fe09453f2ea290c5745ffba"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/unsupported/jpeg2000-marker/UNSUPPORTED_JPEG2000_MARKER_FAKE_PAYLOAD.dcm",
+      "bytes": 1780,
+      "sha256": "5d7359e4340e9d0544b26c7e7eac123013356a579d72d1c8fdae6769da30da26"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/CT/CT_010_INSTANCE101.dcm",
+      "bytes": 2248,
+      "sha256": "a2af90cf77e212e90f86c3b35288f90679bddd2517bb7c87ec5e97a26d8592db"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/CT/CT_020_INSTANCE102.dcm",
+      "bytes": 2248,
+      "sha256": "dcd031447516ed886da308e251b76c405e03b8c058adbf99894ba0066d9173d9"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/CT/CT_030_INSTANCE103.dcm",
+      "bytes": 2248,
+      "sha256": "cc5e9b074857381d905ced0826a1b20157786969688044f7c4bc49628aedc283"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/CT/CT_040_INSTANCE105.dcm",
+      "bytes": 2248,
+      "sha256": "062afdeb6b4f3002de1fd9665a8f4e3f3b8fb0f05ea28010bcfa995963f4d7d0"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/CT/CT_050_INSTANCE106.dcm",
+      "bytes": 2248,
+      "sha256": "75e9bf39f0621c2e43c50ac5714e9a10854e0f15f29b53efd4cbae9ecb484d83"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/CT/CT_060_INSTANCE104.dcm",
+      "bytes": 2248,
+      "sha256": "b989bed3a119ac765a2976ed8f98faef6513177380c9098cb7ff0839cdf2642d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/MR/MR_010_INSTANCE41.dcm",
+      "bytes": 2050,
+      "sha256": "51a7eb310b1bd89ba71bff4076bbe80a7857b65dc614ff8426b6b2db3fd47ecc"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/MR/MR_020_INSTANCE19.dcm",
+      "bytes": 2050,
+      "sha256": "5cd726b0c385512ec9462713574b8202a7c30e64452d008011aa339921277249"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/MR/MR_030_INSTANCE3.dcm",
+      "bytes": 2050,
+      "sha256": "c8f42355f5f9c82b9c082721d5360f2cb130895c2e60fab531ebe4508b16b6a2"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/dicom/valid/MR/MR_040_INSTANCE7.dcm",
+      "bytes": 2050,
+      "sha256": "7d97e9e10828dd36b847e51abaf2f76bb704f3e155e761749f0ce393b8c0540b"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/foundation-labels.nii",
+      "bytes": 28000,
+      "sha256": "da5a93617801ea4470d386ca5c46c6fdf0c726e2253c1e5c2b47bfd3b9ccc2c4"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/foundation-sphere.nii",
+      "bytes": 55648,
+      "sha256": "bad0054012f32f8864f0d620d839c55fe44384f3d291adf1054dc6b73784112a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/foundation-sphere.stl",
+      "bytes": 69284,
+      "sha256": "fa72b7b8228dfc8a1fa7bb16d41af96ba291cddd63f37a1fa59ffcceab8143c7"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/foundation-unknown-units.nii",
+      "bytes": 55648,
+      "sha256": "23b397f00225c242a3b3b414fc1b241fbd49cd94f544a6d38112adf87e1bc625"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/fixtures/invalid.nii",
+      "bytes": 4,
+      "sha256": "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/acceptance.md",
+      "bytes": 9401,
+      "sha256": "2988c10d328b5f9ee238958552216a34767a517215e1878be44d62cf5d4b7a26"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/centerline.md",
+      "bytes": 10372,
+      "sha256": "ed9789a8a11a93ff3c88b9201cdfcb7f1a12c0097b9a1b54cd6f97b2c2846519"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/continuation.md",
+      "bytes": 36605,
+      "sha256": "96dd669c8d3bf526b6e9b640c5baf552fa44026761fb75a38e98de4ef782ca6f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/contours-depth.md",
+      "bytes": 17963,
+      "sha256": "93acaa3edf05758e787c357c2baace46c204ffdee0517c27074222f74c404640"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-acceptance.json",
+      "bytes": 57654,
+      "sha256": "eddc958309b52188ef8be133f27730fae7c0274178fc928195596255e76090e5"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-annotation-workflow.md",
+      "bytes": 4234,
+      "sha256": "2d8ee24bfcdee406916b302521aa38d2650d999b852a6d5ec06eca583f253292"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-audit.md",
+      "bytes": 15060,
+      "sha256": "1bd02ecb222f9646228fb1f38cbd42997be67fc76e4454aada63b6d9cd1545cd"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-browser-2026-11-05.md",
+      "bytes": 1889,
+      "sha256": "f016d4907b88308b30ce64a4afd6a061e13c19ca9245856a10050cc3538b92e5"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-browser-mpr-contour-2026-11-05.md",
+      "bytes": 4702,
+      "sha256": "aaefff39017a43491e48bb2bb417ad5c4eb4eee72f7aedbce942a160aed2cc9b"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-browser-multiple-2026-11-05.md",
+      "bytes": 3862,
+      "sha256": "d972316e34c42c183c56f495676e045661c94fd431cb3060f9ee83f2b34edb72"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-browser-region-annotations-2026-11-05.md",
+      "bytes": 5002,
+      "sha256": "e4c5e8f23e5fafd5f9a214461ca416e040768ac2707afd934a9796f04cae9db8"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-browser-reslice-independent-oracle-2026-11-05.md",
+      "bytes": 8733,
+      "sha256": "7457384917c455f469be321baed50cdf169110cf6ef245e01af12490ca331b4a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-browser-reslice-project-2026-11-05.md",
+      "bytes": 5510,
+      "sha256": "b48d6fbdbf4f90e42c9a2f6a2faa9d36b60799ace61921c730d38d96954f6784"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-brush-review.md",
+      "bytes": 9682,
+      "sha256": "8cdfc625e0fb7b7e4538c5c159ebc1927a17383d5cbe8444e06b91f674798314"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-editmask-review.md",
+      "bytes": 12220,
+      "sha256": "566573d95b84efd1f41692475c48d545d91c3c191c29f21d1788e2d627ad403c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-export-oracle.md",
+      "bytes": 4695,
+      "sha256": "5681e5da28a29f84f0dc51e34a4247c2ff72a5318e192b8e052e43d63b0b583d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-file-attempt-2026-11-05.md",
+      "bytes": 3047,
+      "sha256": "4f88fbc07108a0a11160ed1c455acdfea06529fcc9e091cf051a4ea26cd3b80f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-floodfill-analysis.md",
+      "bytes": 11918,
+      "sha256": "e5ad5b9438a775ed1a2e13a2a8f2ba4bdde577ec12e2c8cdce3de536e1172e2c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-import-state.md",
+      "bytes": 2275,
+      "sha256": "d26debabb100d95908fb0e0f6699382942e456f7676cf9a2460721eb604ba069"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-local-threshold.md",
+      "bytes": 3993,
+      "sha256": "fa12e5787860f202552fc88dc67b387257995cee7558724c8645b4240ea85803"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-attachments.md",
+      "bytes": 3806,
+      "sha256": "cc6f9f289affecde7fa7526e3e51239cc23f493053dc666df0cc355ed5a81f53"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-contract.md",
+      "bytes": 7396,
+      "sha256": "0f0dc4a08c4e57918e9aabc9ce9ab0bab685aba1fd5fa5d774979d528b9a372a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-editing-audit.md",
+      "bytes": 3626,
+      "sha256": "fe14b5e469c8e1308583e24f2a8fd478f10b3bd776bef3b36ade8be4c22327e1"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-interaction-gaps.md",
+      "bytes": 10113,
+      "sha256": "628adba3e91ce9bcf4aaa9fb77dba795da5c3677fcdf88b8387f634b470027b9"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-label-offset.md",
+      "bytes": 2218,
+      "sha256": "d8adb17b3d19d09ed6a8b9809504cd911792fa1ac3a317bfeb595b47c2096d95"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-native-editing.md",
+      "bytes": 7647,
+      "sha256": "a7577df9d28d96fb705c9dd3fe38be3c3e483fd1c07bce9902568ae66b97f2c5"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-properties.md",
+      "bytes": 3924,
+      "sha256": "fe5b728180762fb79c4c2e48eef716190ce8d85e7b00886e9d8776d661a8cd35"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-measurement-review-2026-11-05.md",
+      "bytes": 5059,
+      "sha256": "582c31e87ea3143f727234531f47f58a7b67ddd4af8ff2c4d96dddcee691c214"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-brush-geometry.md",
+      "bytes": 4702,
+      "sha256": "976f23f301775bb5e87609504e9f21b1a4a453419b10abef8fc3a8467329cf8b"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-brush-integration.md",
+      "bytes": 4620,
+      "sha256": "139a0fa236c79f9ef8189a97588f9412ced1d5acebf5bd265f4fd79c360c7331"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-brush-native-boundary-audit.md",
+      "bytes": 11886,
+      "sha256": "7dc52ae793f6cef3f31f1c3945b699a3c97e4c0d14a2d705e10181b02c4ed7a0"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-contour-geometry.md",
+      "bytes": 8616,
+      "sha256": "88fdde67d195036d05ee978b78c3d81849a4f51610bcc2d03a97709d532e82a2"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-contour-integration.md",
+      "bytes": 5062,
+      "sha256": "7cee5119284e7101c6b38aeffa0b99cad44a411fc1726e1df3810204b369caa8"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-contour-native-boundary-audit.md",
+      "bytes": 14790,
+      "sha256": "894ecb0b1660af10f0bf411f4965915c83817082fe86b6d6bca1dfed3bf6c515"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-geometry.md",
+      "bytes": 13491,
+      "sha256": "a840f19486be1cdcc2fbc66a937040f554cd9903fbd43b89533c3e1aa6a605a2"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-integration.md",
+      "bytes": 7353,
+      "sha256": "ad44afb31d46b98a728cdae1aea9057354a8ef237347c7f13190bee33acfd403"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-interactive-integration.md",
+      "bytes": 4241,
+      "sha256": "cd449d7319f49633b21b60c53cb5504d2344bdf9ecdee860c7acd946eb34cdc8"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-livewire-geometry.md",
+      "bytes": 4792,
+      "sha256": "005b0eccbd1f83f381fe7c314da0ed0e8905b812a42a54a08c4a6dd146a5ba39"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-project.md",
+      "bytes": 3801,
+      "sha256": "2a08f888744e388d43deb90c938113697947cd0977d772ebc9659e3d7b7bae2e"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-mpr-viewport.md",
+      "bytes": 11825,
+      "sha256": "390f8317bfea6c91a98a876da117838508945d4058f43ab983f81afe47e39c9f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-multiple-edit-review.md",
+      "bytes": 6926,
+      "sha256": "b06d86169bf8a5eb7f1895f75cb2aa293972ab391ba1b92a9a2b7ce15ef0abfa"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-nifti-reference-frames.md",
+      "bytes": 7468,
+      "sha256": "ea36090411de822cf10e00d1e8ed0fb12df1c16c11c24211fd8b59404e74c260"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-physical-contours-geometry.md",
+      "bytes": 7773,
+      "sha256": "33c71c467ca60ed696d6b1f742230f1582b9aa2bde1a032c3f9ad73f5b009387"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-physical-migration-workflow-audit.md",
+      "bytes": 6830,
+      "sha256": "100c9ef5627af81723a15349f61329c080e10a324dafd2253431c056d03e25f6"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-physical-project-schema.md",
+      "bytes": 7799,
+      "sha256": "a80de8435285c75898432c13039830b11cda634652a149ed6a668c845792a306"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-project.md",
+      "bytes": 5345,
+      "sha256": "cf13929db76df1baba9ae38c3d12698c9ed68da3378f77c17445e7ed6f44a2e5"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-provenance-review.md",
+      "bytes": 4868,
+      "sha256": "cb07b06d01994ceb4a4caf7640ce7183171791643c7cdc7b0da7b3d4c9429c3f"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-region-workflow.md",
+      "bytes": 5065,
+      "sha256": "883d0f0a21620b1371f772167253d54fcdd905f674326aa36120d4bd75691dc0"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-gizmo-geometry.md",
+      "bytes": 3179,
+      "sha256": "4c4d512b45f785813cd65cd9e7fb1835d252fb2f486970e71af30021acf7219c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-gizmo-integration.md",
+      "bytes": 4891,
+      "sha256": "18cea30d4ffbc71c5f5cf455e6ec96c245f7620f876e3f1cc52ff1bef70660da"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-gizmo-workflow-audit.md",
+      "bytes": 5995,
+      "sha256": "340ce8bdd561915f250bb65e9be13c800bf777f74a98a2674549e89a986b71eb"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-integration-audit.md",
+      "bytes": 3543,
+      "sha256": "a97b2207fe8134477e125bbb7ad58a943ec58d42b637bde1e0a3f258dee89f73"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-objects.md",
+      "bytes": 6464,
+      "sha256": "e2b7303f2a41efa157605a1203facd06a7b7aff0cf3c3a2e5037cd5ea1414cee"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-part-viewport.md",
+      "bytes": 4304,
+      "sha256": "a398ecd3063dd3523a5738ceab5aa6660a7e31aff22404bd8f8c2571c6f85455"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-project-geometry.md",
+      "bytes": 8057,
+      "sha256": "8d0cf6354123fd1e96bfb269b6e8c878cb7417efbffa62fd75f48a12998ad445"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-project-integration.md",
+      "bytes": 6374,
+      "sha256": "ba520a837875d13933c3d69e38e3b7b7aedf438e0502d416002b0b1e36e3eeaf"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-project-native-audit.md",
+      "bytes": 20743,
+      "sha256": "c4c914c75b05beb3c55059a95e0c6225956dde1390406f8694956fed5e34eeb5"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-reslice-project-workflow-audit.md",
+      "bytes": 6948,
+      "sha256": "60afba7a51c70b71dfba04cff4135a46bcdefb84dee43673d864820f1285ef5d"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-state.md",
+      "bytes": 1951,
+      "sha256": "74f4539e68fdc946372334a686dd341af1750567b3fbca5c797943e6086174a6"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-storage.md",
+      "bytes": 3792,
+      "sha256": "d5effb20b66e023f5bce3154b92e942feef80461278f6984baef7a08058ec70a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/foundation-viewport.md",
+      "bytes": 31566,
+      "sha256": "d107c58d0ecad9ea2ce093d5fe45c905746fe6cdeaa3c583df5ced72998689a9"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/geometry.md",
+      "bytes": 12527,
+      "sha256": "2978d1ab5dc0c5ad0a4f302872a736b56da95f77700c2d047807541199d944d1"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/io-measurements.md",
+      "bytes": 8917,
+      "sha256": "ab6ee2cdfd58d46beee3a0ccb2ae860469fd973360beed1935ade461fb5516fb"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/mesh-tools.md",
+      "bytes": 12310,
+      "sha256": "ad89f09e438ad2746c167c2e0c9d2f41bdc83401afc1240c714bbdc8604c7b40"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/native-geometry-depth.md",
+      "bytes": 10772,
+      "sha256": "a5f2b961c789519a29a03648fb1d72019d605372849a8126787c0d84fb2cd87c"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/native-segmentation-depth.md",
+      "bytes": 18565,
+      "sha256": "1051b5db98d298a52150709144ad41a08e337579bffc02b0abc52c10722a5a7e"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/project.md",
+      "bytes": 5789,
+      "sha256": "a647d56aa1a1ee3482cbdbe0f59f8091a76f4387fa326780d42def383443d0ea"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/segmentation.md",
+      "bytes": 12380,
+      "sha256": "330d02ae4d2a7b09e6a7e2d13a794d7e6ae8d365b26ef9432e7f8bd18868ee35"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/notes/volume-rendering.md",
+      "bytes": 7574,
+      "sha256": "1723895ae2db042e5d028d452f103759eb946e671347c6a629f650d0a88a038a"
+    },
+    {
+      "path": "work/mimics-vue-reconstruction/requirements.json",
+      "bytes": 451636,
+      "sha256": "a58e5628cb5df56c989786fb1092aea137f9fba6fbd9cda8663d393b451203d9"
+    }
+  ],
+  "publicationAdjustments": [
+    {
+      "path": "tests/mimics-viewport.test.ts",
+      "reason": "Add new child component to existing SFC test stub list",
+      "publishedSha256": "7613fb0ea0de1b542bded51bb3385cb60e4873800f2334f239c20331aef0f85b"
+    },
+    {
+      "path": ".gitignore",
+      "reason": "Ignore dependency link and publication temporary files",
+      "publishedSha256": "0e93102597b29a1904b184d3cebc33cdbda14af99ef52a6247caf7d43dfa4a9a"
+    }
+  ],
+  "validation": {
+    "tests": 797,
+    "passed": 797,
+    "failed": 0,
+    "typecheck": "passed",
+    "build": "passed",
+    "bundle": "index-B8dulRLO.js",
+    "newBrowserAcceptance": false
+  }
+}

@@ -1,0 +1,305 @@
+{
+  "ok": true,
+  "verification_scope": "file bytes and quantitative equality; input transport and browser persistence are not established",
+  "files": {
+    "project": {
+      "path": "C:\\Users\\wwulli\\Desktop\\deepmark\\work\\mimics-vue-reconstruction\\evidence\\browser-file-exchange\\oblique.deepmark.zip",
+      "sha256": "f1af6625a1aba9985f9635bbeb16110a00de3ec41c6076b8a651cce904dd105c",
+      "format": "deepmark-mimics-workbench",
+      "version": 1,
+      "entry_count": 8,
+      "zip_crc_verified": true,
+      "name": "MPR-reslice-717-oblique",
+      "selected_mask_id": "mask-mw3czi8l-1",
+      "selected_part_id": "part-mw3ddl4n-4",
+      "image": {
+        "name": "MPR-reslice-717-oblique",
+        "dims": [
+          48,
+          48,
+          64
+        ],
+        "values": {
+          "count": 147456,
+          "min": -1000.0,
+          "max": 650.0,
+          "mean": -742.3731121013699,
+          "nonzero_count": 147456
+        },
+        "header": {
+          "endianness": "little",
+          "dims": [
+            48,
+            48,
+            64
+          ],
+          "voxel_count": 147456,
+          "datatype": 16,
+          "bitpix": 32,
+          "intent_code": 0,
+          "voxel_offset": 352,
+          "slope": 1.0,
+          "intercept": 0.0,
+          "qform_code": 0,
+          "sform_code": 1,
+          "affine_method": "sform",
+          "sform_native": [
+            [
+              2.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.5,
+              0.0
+            ]
+          ],
+          "affine_native": [
+            [
+              2.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.5,
+              0.0
+            ]
+          ],
+          "affine_mm": [
+            [
+              2.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.5,
+              0.0
+            ]
+          ],
+          "pixdim_native": [
+            2.0,
+            2.0,
+            1.5
+          ],
+          "spatial_unit_code": 2,
+          "spatial_unit": "millimetre"
+        }
+      },
+      "masks": [
+        {
+          "id": "mask-mw3czi8l-1",
+          "name": "Mask 1",
+          "revision": 3,
+          "threshold": null,
+          "voxel_count": 147456,
+          "member_count": 16,
+          "value_range": [
+            0,
+            1
+          ],
+          "member_voxel_bounds": {
+            "min": [
+              25,
+              24,
+              35
+            ],
+            "max": [
+              27,
+              27,
+              38
+            ]
+          },
+          "member_volume_mm3": 96.0
+        }
+      ],
+      "overlapping_voxel_count": 0,
+      "parts": [
+        {
+          "id": "part-mw3ddl4n-4",
+          "name": "Mask 1 3D 1",
+          "source_mask_id": "mask-mw3czi8l-1",
+          "source_revision": 2,
+          "has_normals": true,
+          "vertex_count": 144,
+          "referenced_vertex_count": 144,
+          "unique_coordinate_vertex_count": 144,
+          "triangle_count": 284,
+          "index_range": [
+            0,
+            143
+          ],
+          "bounds_mm": {
+            "min": [
+              49.54903793334961,
+              46.857051849365234,
+              52.5
+            ],
+            "max": [
+              55.64711380004883,
+              55.285255432128906,
+              58.5
+            ]
+          },
+          "referenced_bounds_mm": {
+            "min": [
+              49.54903793334961,
+              46.857051849365234,
+              52.5
+            ],
+            "max": [
+              55.64711380004883,
+              55.285255432128906,
+              58.5
+            ]
+          },
+          "topology_indexed": {
+            "edge_count": 426,
+            "boundary_edges": 0,
+            "non_manifold_edges": 0,
+            "orientation_conflict_edges": 0
+          },
+          "topology_welded_exact": {
+            "edge_count": 426,
+            "boundary_edges": 0,
+            "non_manifold_edges": 0,
+            "orientation_conflict_edges": 0
+          },
+          "degenerate_triangles": 0,
+          "surface_area_mm2": 134.07405645685975,
+          "closed_and_consistently_oriented_edges": true,
+          "signed_volume_mm3": 74.12499876904137,
+          "enclosed_volume_mm3": 74.12499876904137,
+          "triangle_fingerprint": "fe7ffce252ff249b4bb17fc0dd7116a3796cc684546303b2bb39d6b1ec64a46e",
+          "oriented_triangle_fingerprint": "89c6d89d0cbfc2bb391a9aa04a9e516eb494fa209a606b0c4b3c2a1a0b49c35d"
+        }
+      ],
+      "measurement_count": 0,
+      "optional_object_counts": {
+        "centerlines": 0,
+        "polylines": 0,
+        "resliceObjects": 1
+      },
+      "reslice_transform": {
+        "utf8_byte_length": 1518,
+        "sha256": "0e6cf03b235139f0310501d12439786929efb8cc9c0ecf9ea51226777f412fc8",
+        "update_cs": true,
+        "old_world_mm_to_new_world_mm": [
+          [
+            0.0,
+            0.49999999999999994,
+            -0.8660254037844387,
+            64.16970032881474
+          ],
+          [
+            0.0,
+            0.8660254037844387,
+            0.49999999999999994,
+            -17.761206679760825
+          ],
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "new_world_mm_to_old_world_mm": [
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.49999999999999994,
+            0.8660254037844387,
+            0.0,
+            -16.703193977868622
+          ],
+          [
+            -0.8660254037844387,
+            0.49999999999999994,
+            0.0,
+            64.45319397786862
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "new_ijk_to_old_ijk": [
+          [
+            0.0,
+            0.0,
+            1.5,
+            0.0
+          ],
+          [
+            0.9999999999999999,
+            1.7320508075688774,
+            0.0,
+            -16.703193977868622
+          ],
+          [
+            -1.1547005383792515,
+            0.6666666666666665,
+            0.0,
+            42.96879598524575
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "world_inverse_max_abs_residual": 3.552713678800501e-15,
+        "source_sampling_map_checked": "requires an independently supplied source project affine"
+      }
+    }
+  },
+  "comparisons": {},
+  "errors": [],
+  "limitations": [
+    "STL has no unit field; project Part coordinates are compared in their millimetre contract.",
+    "Exact-coordinate welding does not close small gaps; edge incidence does not prove vertex-manifoldness or absence of self-intersections.",
+    "Enclosed volume is the absolute algebraic oriented-surface volume under the closed-surface assumption; complex shells require separate solid validation.",
+    "This validates exported synthetic artifacts, not native file-picker interaction, clinical accuracy, or original Mimics equivalence.",
+    "Advanced optional objects are counted; their algorithmic semantics are not independently validated."
+  ]
+}

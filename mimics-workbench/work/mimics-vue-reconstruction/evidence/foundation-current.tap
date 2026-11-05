@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: failed image/project import preserves committed data, dirty state, history and location
+ok 1 - failed image/project import preserves committed data, dirty state, history and location
+  ---
+  duration_ms: 10.6706
+  type: 'test'
+  ...
+# Subtest: cancelled image import cannot replace a subsequently loaded image
+ok 2 - cancelled image import cannot replace a subsequently loaded image
+  ---
+  duration_ms: 6.3411
+  type: 'test'
+  ...
+# Subtest: an obsolete import finally cannot clear busy or progress owned by the next import
+ok 3 - an obsolete import finally cannot clear busy or progress owned by the next import
+  ---
+  duration_ms: 6.2587
+  type: 'test'
+  ...
+# Subtest: late Mask and STL imports cannot attach objects to a replacement project
+ok 4 - late Mask and STL imports cannot attach objects to a replacement project
+  ---
+  duration_ms: 8.5027
+  type: 'test'
+  ...
+# Subtest: same-sized Mask with different physical geometry is rejected without altering the project
+ok 5 - same-sized Mask with different physical geometry is rejected without altering the project
+  ---
+  duration_ms: 6.0328
+  type: 'test'
+  ...
+# Subtest: cancelled brush followed by end never commits and leaves no ghost draft
+ok 6 - cancelled brush followed by end never commits and leaves no ghost draft
+  ---
+  duration_ms: 5.9207
+  type: 'test'
+  ...
+# Subtest: changing target during a brush cannot overwrite the new target
+ok 7 - changing target during a brush cannot overwrite the new target
+  ---
+  duration_ms: 5.7746
+  type: 'test'
+  ...
+# Subtest: successive brush strokes commit independently and selection is cleared on image replacement
+ok 8 - successive brush strokes commit independently and selection is cleared on image replacement
+  ---
+  duration_ms: 6.9327
+  type: 'test'
+  ...
+# Subtest: cancelling a parsed replacement preserves the dirty project, selection, history and view
+ok 9 - cancelling a parsed replacement preserves the dirty project, selection, history and view
+  ---
+  duration_ms: 5.663
+  type: 'test'
+  ...
+# Subtest: seed collection is exclusive and changing tools clears its uncommitted constraints
+ok 10 - seed collection is exclusive and changing tools clears its uncommitted constraints
+  ---
+  duration_ms: 5.9413
+  type: 'test'
+  ...
+# Subtest: worker failure and invalid region target leave data atomic and permit retry
+ok 11 - worker failure and invalid region target leave data atomic and permit retry
+  ---
+  duration_ms: 64.7241
+  type: 'test'
+  ...
+# Subtest: changing threshold cleanup parameters invalidates the in-flight preview before Apply
+ok 12 - changing threshold cleanup parameters invalidates the in-flight preview before Apply
+  ---
+  duration_ms: 63.451
+  type: 'test'
+  ...
+# Subtest: Part geometry and provenance remain historical after source edits and ZIP restore
+ok 13 - Part geometry and provenance remain historical after source edits and ZIP restore
+  ---
+  duration_ms: 69.5153
+  type: 'test'
+  ...
+# Subtest: worker project export and controller ZIP restore retain the saved working position and selected annotation
+ok 14 - worker project export and controller ZIP restore retain the saved working position and selected annotation
+  ---
+  duration_ms: 67.9953
+  type: 'test'
+  ...
+# Subtest: save cancellation, write failure and unconfirmed download preserve dirty data and history
+ok 15 - save cancellation, write failure and unconfirmed download preserve dirty data and history
+  ---
+  duration_ms: 66.2833
+  type: 'test'
+  ...
+# Subtest: cache-before-replacement failure preserves the dirty document, then successful retry restores its data and view
+ok 16 - cache-before-replacement failure preserves the dirty document, then successful retry restores its data and view
+  ---
+  duration_ms: 8.4452
+  type: 'test'
+  ...
+# Subtest: missing or corrupt cached projects cannot replace a valid current document
+ok 17 - missing or corrupt cached projects cannot replace a valid current document
+  ---
+  duration_ms: 5.4277
+  type: 'test'
+  ...
+# Subtest: unknown image units block 3D until explicit metre/mm/micron confirmation establishes one consistent millimetre grid
+ok 18 - unknown image units block 3D until explicit metre/mm/micron confirmation establishes one consistent millimetre grid
+  ---
+  duration_ms: 353.434
+  type: 'test'
+  ...
+# Subtest: two-label NIfTI import creates independent masks in one reversible controller transaction
+ok 19 - two-label NIfTI import creates independent masks in one reversible controller transaction
+  ---
+  duration_ms: 4.8853
+  type: 'test'
+  ...
+# Subtest: Mask import accepts physically equivalent metre and micron headers into a millimetre controller project
+ok 20 - Mask import accepts physically equivalent metre and micron headers into a millimetre controller project
+  ---
+  duration_ms: 4.4408
+  type: 'test'
+  ...
+# Subtest: Calculate 3D batches two overlapping masks into one reversible transaction and keeps Calculate separate from Close
+ok 21 - Calculate 3D batches two overlapping masks into one reversible transaction and keeps Calculate separate from Close
+  ---
+  duration_ms: 62.1714
+  type: 'test'
+  ...
+# Subtest: Calculate 3D publishes no partial batch when a later empty Mask fails and permits a valid retry
+ok 22 - Calculate 3D publishes no partial batch when a later empty Mask fails and permits a valid retry
+  ---
+  duration_ms: 60.0963
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1099.7882

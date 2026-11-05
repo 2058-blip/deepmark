@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: controller angle uses full affine geometry and exposes the documented structured values
+ok 1 - controller angle uses full affine geometry and exposes the documented structured values
+  ---
+  duration_ms: 18.3408
+  type: 'test'
+  ...
+# Subtest: controller diameter uses full affine geometry and exposes the documented structured values
+ok 2 - controller diameter uses full affine geometry and exposes the documented structured values
+  ---
+  duration_ms: 8.2918
+  type: 'test'
+  ...
+# Subtest: controller ellipse uses full affine geometry and exposes the documented structured values
+ok 3 - controller ellipse uses full affine geometry and exposes the documented structured values
+  ---
+  duration_ms: 6.4635
+  type: 'test'
+  ...
+# Subtest: controller area uses full affine geometry and exposes the documented structured values
+ok 4 - controller area uses full affine geometry and exposes the documented structured values
+  ---
+  duration_ms: 7.0862
+  type: 'test'
+  ...
+# Subtest: Cancel discards incomplete geometric measurements, and area remains a single-slice contour
+ok 5 - Cancel discards incomplete geometric measurements, and area remains a single-slice contour
+  ---
+  duration_ms: 6.3266
+  type: 'test'
+  ...
+# Subtest: one area geometry batch updates all four corners in one transaction without changing raw data or metadata references
+ok 6 - one area geometry batch updates all four corners in one transaction without changing raw data or metadata references
+  ---
+  duration_ms: 6.3982
+  type: 'test'
+  ...
+# Subtest: density-rectangle samples the current slice and geometry batches preserve raw intensities across scrolling and metadata edits
+ok 7 - density-rectangle samples the current slice and geometry batches preserve raw intensities across scrolling and metadata edits
+  ---
+  duration_ms: 65.3567
+  type: 'test'
+  ...
+# Subtest: density-ellipse samples the current slice and geometry batches preserve raw intensities across scrolling and metadata edits
+ok 8 - density-ellipse samples the current slice and geometry batches preserve raw intensities across scrolling and metadata edits
+  ---
+  duration_ms: 63.1375
+  type: 'test'
+  ...
+# Subtest: legacy two-click density creation still commits one ROI and incomplete legacy placement can be cancelled
+ok 9 - legacy two-click density creation still commits one ROI and incomplete legacy placement can be cancelled
+  ---
+  duration_ms: 6.0665
+  type: 'test'
+  ...
+# Subtest: distance across two Parts preserves each point source through batch geometry, drag, metadata and worker ZIP exchange
+ok 10 - distance across two Parts preserves each point source through batch geometry, drag, metadata and worker ZIP exchange
+  ---
+  duration_ms: 69.448
+  type: 'test'
+  ...
+# Subtest: mixed image/Part and cross-slice image distances have no false uniform Part or single-plane attachment
+ok 11 - mixed image/Part and cross-slice image distances have no false uniform Part or single-plane attachment
+  ---
+  duration_ms: 13.1138
+  type: 'test'
+  ...
+# Subtest: 3D ellipse accepts three cross-Part points and exposes six-by-four ellipse values without binding the last Part
+ok 12 - 3D ellipse accepts three cross-Part points and exposes six-by-four ellipse values without binding the last Part
+  ---
+  duration_ms: 6.0758
+  type: 'test'
+  ...
+# Subtest: PartToMask uses the actual worker geometry and records its source Part without changing source models or masks
+ok 13 - PartToMask uses the actual worker geometry and records its source Part without changing source models or masks
+  ---
+  duration_ms: 66.0861
+  type: 'test'
+  ...
+# Subtest: deleting a Part cancels incomplete point-source drafts but preserves committed historical point references
+ok 14 - deleting a Part cancels incomplete point-source drafts but preserves committed historical point references
+  ---
+  duration_ms: 6.433
+  type: 'test'
+  ...
+# Subtest: single-plane density creation and geometry updates reject cross-plane or zero-size input atomically
+ok 15 - single-plane density creation and geometry updates reject cross-plane or zero-size input atomically
+  ---
+  duration_ms: 5.9549
+  type: 'test'
+  ...
+# Subtest: stale revision and old-document geometry gestures cannot publish into a reopened project with the same measurement ID
+ok 16 - stale revision and old-document geometry gestures cannot publish into a reopened project with the same measurement ID
+  ---
+  duration_ms: 72.3517
+  type: 'test'
+  ...
+# Subtest: area point insertion/removal is a single image-plane transaction and resizes only null point provenance
+ok 17 - area point insertion/removal is a single image-plane transaction and resizes only null point provenance
+  ---
+  duration_ms: 7.1001
+  type: 'test'
+  ...
+# Subtest: slice changes reject old UI density and image-point payloads even when volume and revision are unchanged, while explicit program APIs remain compatible
+ok 18 - slice changes reject old UI density and image-point payloads even when volume and revision are unchanged, while explicit program APIs remain compatible
+  ---
+  duration_ms: 64.379
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 716.4414

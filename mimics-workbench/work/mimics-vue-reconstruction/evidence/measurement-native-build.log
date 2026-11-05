@@ -1,0 +1,15 @@
+
+> slicer-web-annotation@0.1.0 build
+> vue-tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 94 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              0.43 kB │ gzip:   0.33 kB
+dist/assets/grayRegion.worker-e6tafdtb.js    3.45 kB
+dist/assets/operations.worker-gmluFj8a.js  136.63 kB
+dist/assets/index-DFYgCj_C.css              64.46 kB │ gzip:  13.32 kB
+dist/assets/index-C4WMQc1T.js              499.71 kB │ gzip: 177.87 kB
+✓ built in 1.32s

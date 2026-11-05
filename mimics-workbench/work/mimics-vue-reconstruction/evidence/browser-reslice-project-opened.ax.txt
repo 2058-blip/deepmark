@@ -1,0 +1,213 @@
+Browser tab: 1501583400, Title: "医学分割标注 · Deepmark", URL: "http://127.0.0.1:5173/".
+0 AXWebArea 医学分割标注 · Deepmark, URL: 127.0.0.1:5173/
+	1 container
+		2 text ◈ Deepmark  Studio
+		3 text 影像 · 分割 · 三维重建
+		41 container
+			344 text MPR-reslice-717-oblique 48 × 48 × 64 · 2.00 / 2.00 / 1.50 mm
+		5 button 本地工程
+		6 button 打开影像 / 工程
+		7 button DICOM 文件夹
+		8 button Reslice Project…
+		9 button 保存工程
+		10 button 下载工程副本
+		11 link Description: 协作工作台 ↗, Help: 打开原有协作标注工作台, Value: 127.0.0.1:5173/?workspace=collaboration
+		12 button 分割与标注
+		13 button 三维重建
+		14 button 测量与注释
+		15 button 轮廓与中心线
+		16 button (disabled) ↶ 撤销
+		17 button (disabled) ↷ 重做
+		18 text 工程对象 3
+		19 button Mask 1
+		20 button 3D 1
+		21 button 测量 0
+		22 button RP 1
+		23 button 曲线 0
+		351 button ＋ 新建
+		352 button 复制
+		353 button 删除
+		354 container
+			355 color well (settable) Description: Mask 1颜色, Value: #48d7ae
+			356 text field (settable) Description: mask-mw3czi8l-1名称, Value: Mask 1
+			357 text 独立分割Mask · r3
+			358 button 隐藏Mask
+		359 container
+			360 text 透明度  45%
+			361 slider (settable, float) 透明度 45%, Value: 0.44999998807907104, Details: 0.45
+		362 definition list
+			363 container 体素
+				364 text 体素
+			365 text 16
+			366 container 体积
+				367 text 体积
+			368 text 96 mm³
+			369 container 灰度均值
+				370 text 灰度均值
+			371 text 52.19
+		372 button 清空成员，保留阈值
+		373 button 导入 Mask
+		374 button 导出 NIfTI
+		375 button 下载 NIfTI 副本
+		31 text 窗宽窗位
+		32 container
+			33 text 窗位
+			34 stepper (settable, integer) 窗位, Value: 300
+		35 container
+			36 text 窗宽
+			37 stepper (settable, integer) 窗宽, Value: 1400
+		38 button 骨窗
+		39 button 软组织
+		40 button 肺窗
+		62 container
+			63 text MPR 1 · 物理平面重采样
+			64 text Linear · 256 × 256
+			65 button 适配
+			66 image 任意物理平面 MPR，滚轮沿法线移动，Ctrl 滚轮缩放，右键平移，Shift 左键世界定位，右击 Area 控制点增删
+			343 text — mm · 世界坐标 滚动 1 mm · Mask nearest
+		69 container
+			70 text MPR 2 · 物理平面重采样
+			71 text Linear · 256 × 256
+			72 button 适配
+			73 image 任意物理平面 MPR，滚轮沿法线移动，Ctrl 滚轮缩放，右键平移，Shift 左键世界定位，右击 Area 控制点增删
+			75 text — mm · 世界坐标 滚动 1 mm · Mask nearest
+		76 container
+			77 text MPR 3 · 物理平面重采样
+			78 text Linear · 256 × 256
+			79 button 适配
+			80 image 任意物理平面 MPR，滚轮沿法线移动，Ctrl 滚轮缩放，右键平移，Shift 左键世界定位，右击 Area 控制点增删
+			82 text — mm · 世界坐标 滚动 1 mm · Mask nearest
+		83 button 表面模型
+		84 button 体绘制
+		85 container 三维 Part 视图
+			86 container
+				87 text 3D / Parts
+				88 button 适配, Help: 显示全部对象 (F)
+				89 button 正面 XY, Help: 从世界 +Z 朝 −Z 观察 XY 平面
+				90 button 顶面 XZ, Help: 从世界 −Y 朝 +Y 观察 XZ 平面
+				91 button 侧面 YZ, Help: 从世界 −X 朝 +X 观察 YZ 平面
+				92 button 等轴
+				93 checkbox (settable, integer) Description: 网格边, Value: 0
+			94 container
+				95 image 拖动旋转，Shift 或右键拖动平移，滚轮缩放，点击表面拾取物理坐标
+				96 image 三维测量与注释覆盖层
+					97 container 世界 XYZ 坐标方向
+						98 text X
+						99 text Y
+						100 text Z
+					101 container 选中的三维 RP 平面
+						102 text RP
+				103 text 拖动旋转 · Shift / 右键平移 · 滚轮缩放 · 点击表面拾取
+			104 container
+				105 text 1 个可见对象 284 个三角形 · mm · 正交投影
+		106 container 三维重切片平面修改
+			107 text RP 1 · 三维平面
+			108 button Rotate · 旋转/移动
+			109 button Resize · 调整边框
+			110 button Plane Properties · 平面属性
+		111 button 交互式 MPR · 新建 RP
+		112 container 在线 MPR 重切片
+			113 text Online Reslice · 在线重切片
+			114 button 返回原始三视图
+			115 button 三点定义平面
+			116 button 轴位
+			117 button 冠状
+			118 button 矢状
+			119 container
+				120 text 绕 X (°)
+				121 stepper (settable, integer) 绕 X (°), Value: 0
+			122 container
+				123 text 绕 Y (°)
+				124 stepper (settable, integer) 绕 Y (°), Value: -65, Details: -65.00000000000001
+			125 container
+				126 text 绕 Z (°)
+				127 stepper (settable, integer) 绕 Z (°), Value: -30, Details: -29.999999999999993
+			128 container
+				129 text 宽度 (samples)
+				130 stepper (settable, integer) 宽度 (samples), Value: 256
+			131 container
+				132 text 高度 (samples)
+				133 stepper (settable, integer) 高度 (samples), Value: 256
+			134 button 应用方向与采样尺寸
+			135 container
+				136 text 法向层间距 (mm)
+				137 stepper (settable, integer) 法向层间距 (mm), Value: 1
+			138 container
+				139 text 灰度采样
+				140 pop up button (collapsed, settable) 灰度采样, Value: 三线性, Secondary Actions: Expand
+					141 menu
+						142 (selected) 三线性
+						143 最近邻
+			144 button 将 MPR 定位同步到原始三视图
+			145 text 滚轮沿各自法线翻片，Ctrl＋滚轮缩放，右拖平移。MPR 定位与原始三视图独立；灰度采样不修改影像，Mask 使用最近邻显示。
+			146 text 支持测量、文字、画笔及 Lasso/LiveWire。Lasso 松开闭合；LiveWire 点选锚点，Enter/双击闭合（本应用约定）；Escape 取消。多片编辑仍在原始切片操作。
+		147 text Calculate 3D
+		148 text 由当前 Mask 生成独立三角表面。
+		149 container
+			150 text 输入 Mask Mask 1
+		151 button Calculate 3D…
+		152 text 表面后处理
+		153 checkbox (settable, integer) Description: 保留原始模型, Value: 1
+		154 container
+			155 text 平滑次数
+			156 stepper (settable, integer) 平滑次数, Value: 3
+		157 container
+			158 text 平滑系数
+			159 stepper (settable, float) 平滑系数, Value: 0.30000001192092896, Details: 0.3
+		160 checkbox (settable, integer) Description: 补偿体积收缩, Value: 1
+		161 button 平滑所选表面
+		162 container
+			163 text 保留三角形比例
+			164 stepper (settable, float) 保留三角形比例, Value: 0.5
+		165 container
+			166 text 容差 mm
+			167 stepper (settable, float) 容差 mm, Value: 0.30000001192092896, Details: 0.3
+		168 container
+			169 text 保边角度 °
+			170 stepper (settable, integer) 保边角度 °, Value: 45
+		171 button 减少三角形
+		172 text Wrap 包络
+		173 container
+			174 text 分辨率 mm
+			175 stepper (settable, integer) 分辨率 mm, Value: 1
+		176 container
+			177 text 闭合距离 mm
+			178 stepper (settable, integer) 闭合距离 mm, Value: 2
+		179 checkbox (settable, integer) Description: 保护薄壁, Value: 1
+		180 button 生成包络表面
+		181 button 从所选3D计算新 Mask
+		182 button 导出 STL
+		183 text 平面切割
+		184 text 当前表面：Mask 1 3D 1。平面采用世界坐标 mm。
+		185 button 平面经过当前十字线
+		186 container
+			187 text X
+			188 stepper (settable, integer) X, Value: 0
+		189 container
+			190 text Y
+			191 stepper (settable, integer) Y, Value: 0
+		192 container
+			193 text Z
+			194 stepper (settable, integer) Z, Value: 0
+		195 container
+			196 text Nx
+			197 stepper (settable, integer) Nx, Value: 0
+		198 container
+			199 text Ny
+			200 stepper (settable, integer) Ny, Value: 0
+		201 container
+			202 text Nz
+			203 stepper (settable, integer) Nz, Value: 1
+		204 checkbox (settable, integer) Description: 封闭切面（保留孔洞）, Value: 1
+		205 checkbox (settable, integer) Description: 保留原模型, Value: 1
+		206 button 切割为平面两侧
+		207 button 按连通壳分离
+		208 text 表面修复
+		209 button 修正方向，保留内部空腔
+		210 container
+			211 text 边界缝合容差 mm
+			212 stepper (settable, float) 边界缝合容差 mm, Value: 0.0010000000474974513, Details: 0.001
+		213 button 缝合邻近开放边
+		350 text 影像已加载 I 23 · J 24 · K 32 本地副本已保存 本地处理 · 就绪
+
+The focused UI element is 19 button Mask 1

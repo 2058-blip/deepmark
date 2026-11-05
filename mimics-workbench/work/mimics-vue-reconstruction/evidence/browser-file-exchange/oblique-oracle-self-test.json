@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "self_test": {
+    "passed": 8,
+    "cases": [
+      "recorded axes form an orthonormal right-handed frame",
+      "output grid middle of first slice recovers recorded line start",
+      "sampled final stack center stops at 94.5 rather than extending to 95",
+      "trilinear raw interpolation reproduces an independent affine scalar field",
+      "outside source centers use the explicit finite background",
+      "positive and negative half coordinates choose the upper cell",
+      "two ULP half tie repair is narrow rather than a blanket epsilon",
+      "normal transformation excludes point translation"
+    ]
+  },
+  "errors": []
+}

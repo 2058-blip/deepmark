@@ -1,0 +1,21 @@
+
+> slicer-web-annotation@0.1.0 build
+> vue-tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 128 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                               0.43 kB │ gzip:   0.32 kB
+dist/assets/grayRegion.worker-e6tafdtb.js     3.45 kB
+dist/assets/mprSampling.worker-DZopFQvd.js    7.38 kB
+dist/assets/operations.worker-BDvp9eoP.js   205.88 kB
+dist/assets/index-D5k92V-e.css               76.56 kB │ gzip:  15.04 kB
+dist/assets/index-B8dulRLO.js               689.48 kB │ gzip: 238.34 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.82s

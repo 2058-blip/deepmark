@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: ordinary lasso add edits known voxels directly with one Undo/Redo and preserves the temporary selection
+ok 1 - ordinary lasso add edits known voxels directly with one Undo/Redo and preserves the temporary selection
+  ---
+  duration_ms: 13.594
+  type: 'test'
+  ...
+# Subtest: ordinary lasso remove edits known voxels directly with one Undo/Redo and preserves the temporary selection
+ok 2 - ordinary lasso remove edits known voxels directly with one Undo/Redo and preserves the temporary selection
+  ---
+  duration_ms: 7.111
+  type: 'test'
+  ...
+# Subtest: ordinary lasso threshold edits known voxels directly with one Undo/Redo and preserves the temporary selection
+ok 3 - ordinary lasso threshold edits known voxels directly with one Undo/Redo and preserves the temporary selection
+  ---
+  duration_ms: 5.9334
+  type: 'test'
+  ...
+# Subtest: ordinary LiveWire add closes the real worker path and edits the active mask without a temporary Apply
+ok 4 - ordinary LiveWire add closes the real worker path and edits the active mask without a temporary Apply
+  ---
+  duration_ms: 65.5389
+  type: 'test'
+  ...
+# Subtest: ordinary LiveWire remove closes the real worker path and edits the active mask without a temporary Apply
+ok 5 - ordinary LiveWire remove closes the real worker path and edits the active mask without a temporary Apply
+  ---
+  duration_ms: 62.8522
+  type: 'test'
+  ...
+# Subtest: ordinary LiveWire threshold closes the real worker path and edits the active mask without a temporary Apply
+ok 6 - ordinary LiveWire threshold closes the real worker path and edits the active mask without a temporary Apply
+  ---
+  duration_ms: 64.7945
+  type: 'test'
+  ...
+# Subtest: invalid contours and unchanged operations never create a history entry
+ok 7 - invalid contours and unchanged operations never create a history entry
+  ---
+  duration_ms: 25.6164
+  type: 'test'
+  ...
+# Subtest: changing the target, edit operation, threshold range or slice cancels an unfinished ordinary contour
+ok 8 - changing the target, edit operation, threshold range or slice cancels an unfinished ordinary contour
+  ---
+  duration_ms: 24.1408
+  type: 'test'
+  ...
+# Subtest: LiveWire parameter changes and explicit cancellation discard pending worker contour results
+ok 9 - LiveWire parameter changes and explicit cancellation discard pending worker contour results
+  ---
+  duration_ms: 19.9759
+  type: 'test'
+  ...
+# Subtest: non-measurement tools never fall through to measurement creation and Multiple Slice Select only edits the temporary mask
+ok 10 - non-measurement tools never fall through to measurement creation and Multiple Slice Select only edits the temporary mask
+  ---
+  duration_ms: 5.7156
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 488.1075

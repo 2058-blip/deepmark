@@ -1,0 +1,45 @@
+✔ controller angle uses full affine geometry and exposes the documented structured values (19.5273ms)
+✔ controller diameter uses full affine geometry and exposes the documented structured values (10.5995ms)
+✔ controller ellipse uses full affine geometry and exposes the documented structured values (7.5938ms)
+✔ controller area uses full affine geometry and exposes the documented structured values (7.9054ms)
+✔ Cancel discards incomplete geometric measurements, and area remains a single-slice contour (6.6933ms)
+✔ one area geometry batch updates all four corners in one transaction without changing raw data or metadata references (6.9261ms)
+✔ density-rectangle samples the current slice and geometry batches preserve raw intensities across scrolling and metadata edits (79.1267ms)
+✔ density-ellipse samples the current slice and geometry batches preserve raw intensities across scrolling and metadata edits (71.6723ms)
+✔ legacy two-click density creation still commits one ROI and incomplete legacy placement can be cancelled (6.9689ms)
+✔ distance across two Parts preserves each point source through batch geometry, drag, metadata and worker ZIP exchange (74.7977ms)
+✔ mixed image/Part and cross-slice image distances have no false uniform Part or single-plane attachment (14.2213ms)
+✔ 3D ellipse accepts three cross-Part points and exposes six-by-four ellipse values without binding the last Part (6.1325ms)
+✔ PartToMask uses the actual worker geometry and records its source Part without changing source models or masks (72.7775ms)
+✔ deleting a Part cancels incomplete point-source drafts but preserves committed historical point references (6.6177ms)
+✔ single-plane density creation and geometry updates reject cross-plane or zero-size input atomically (6.1622ms)
+✔ stale revision and old-document geometry gestures cannot publish into a reopened project with the same measurement ID (72.2896ms)
+✔ area point insertion/removal is a single image-plane transaction and resizes only null point provenance (6.0382ms)
+✔ slice changes reject old UI density and image-point payloads even when volume and revision are unchanged, while explicit program APIs remain compatible (67.9893ms)
+✔ real MPR sampling uses the full source affine and world-linear oracle while masks remain independent nearest samples (86.4378ms)
+✔ density ROI samples the current MPR slice and active interpolation without changing raw geometry, source, history or clean state on scroll (78.1341ms)
+✔ MPR world-point creation, previews, geometry release and Undo/Redo retain the plane and independent label offset (8.2391ms)
+✔ Part world events can preview and edit an MPR ellipse on its stored plane after closing MPR while explicit pane events reject (76.4265ms)
+✔ MPR density geometry release uses the displayed scrolled frame and remains one atomic reversible edit (7.4433ms)
+✔ density label relocation on a scrolled MPR frame preserves the stored ROI and changes only its world offset (6.2232ms)
+✔ pose epochs reject stale picks, ROI releases, previews, geometry and label edits after returning to identical plane coordinates (6.5183ms)
+✔ plane definition, exact world crosshair and explicit source synchronization remain non-destructive and pending work cancels on pose change (6.8948ms)
+✔ real worker ZIP export and install restore exact MPR pose, density results, geometry and labels while replacing stale document epochs (79.381ms)
+✔ MPR three-point plane keeps first-to-second axis, positive projected up and the world centroid (2.667ms)
+✔ MPR duplicate or collinear third definitions retain the first two points for a valid retry (0.4883ms)
+✔ scrolling each orthogonal MPR view addresses its physical normal without moving either saved crosshair (0.8636ms)
+✔ MPR snapshot restore clones the exact plane and independent crosshair, then explicit source sync uses the full affine (0.4628ms)
+✔ restored oblique MPR orientation survives applying only a changed output resolution (0.379ms)
+✔ MPR restored Euler gimbal cases retain both in-plane axis directions after resolution-only application (0.5958ms)
+✔ controller density scrolling preserves world in-plane geometry and samples the current reflected/sheared physical plane (17.4346ms)
+✔ controller density labels remain movable on the current MPR slice after non-destructive scrolling (8.803ms)
+✔ controller stale MPR scroll payloads cannot alter a new pose or a restored document with an identical plane (12.1988ms)
+✔ a small actual orientation change does not misclassify a stored density plane as a pure scroll and invalidate its ROI (6.7492ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 793.3972

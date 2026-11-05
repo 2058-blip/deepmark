@@ -1,0 +1,36 @@
+✔ 2D annotation anchors open a world-coordinate draft; Cancel does nothing and Apply is exactly one Undo/Redo transaction (18.4468ms)
+✔ 3D annotation creation is deferred and never changes the generated Part or its source Mask (70.2256ms)
+✔ workbench properties, duplicate and hide survive real worker ZIP export/restore without modifying masks (76.4506ms)
+✔ new-document install and deleting an edited annotation cancel the stale dialog and clear invalid selection IDs (9.9828ms)
+✔ invalid, hidden, transparent or deleted 3D hits cannot select objects or open annotation drafts (66.1983ms)
+✔ starting real background work cancels a deferred annotation and ignores additional 3D picks until completion (63.8074ms)
+✔ deleting a source Part preserves committed world-coordinate annotation provenance according to the existing orphan policy (70.0477ms)
+✔ deleting the Part of a pending new 3D annotation cancels creation without changing the old committed-object orphan policy (66.7123ms)
+✔ supported annotation styles and old objects without style survive real ZIP encode/decode (9.889ms)
+✔ style validation rejects non-annotation, unknown fields, invalid enums and rotation in save, load and history atomically (16.3013ms)
+✔ style history snapshots remain independent of external edits and undo-redo results (0.7403ms)
+✔ creation is deferred until Apply, geometry is isolated and read-only, and Cancel creates no history (5.1539ms)
+✔ editing metadata preserves newer live points, plane and attachment and no-op Apply creates no transaction (0.9035ms)
+✔ properties reject geometry/reference patches and invalid values without changing state or dismissing the editable draft (0.7322ms)
+✔ busy state, document replacement and deleted measurements cancel stale dialogs without committing (0.5224ms)
+✔ duplicate deeply copies annotation style and path geometry, keeps attachments and selects only after one committed transaction (0.6168ms)
+✔ toggle and optional-property removal save correctly; failed commits retain the draft and never select an unpublished ID (1.5106ms)
+✔ deleting the source Part cancels only a pending creation and preserves existing orphan annotations (0.6311ms)
+✔ Source/Target are independent of the active visualization Mask and Swap exchanges two existing IDs without history (16.6021ms)
+✔ Target New creates one separate nonempty Mask per click while Source and active selection stay unchanged (63.743ms)
+✔ existing Target receives the selected Source component even when another Mask is active, and repeated copy is a whole-operation no-op (71.6968ms)
+✔ Leave Original off moves into an overlapping existing Target atomically, including when only Source changes (62.9147ms)
+✔ background seeds and same-source targets cannot create empty masks, history or a partial source cut (62.4094ms)
+✔ 6/26 connectivity and Multiple off use explicit source membership and the clicked orthogonal plane (373.2199ms)
+✔ changing Source, Target, connectivity, Multiple or Leave Original discards an in-flight move with no partial commit (32.5873ms)
+✔ cancel and immediate rerun retain the independent Source and publish only the newer region request (65.7314ms)
+✔ deleting Source/Target and opening another document do not leave stale workflow IDs (15.0704ms)
+✔ legacy direct runMask region uses active Source when its separate source ID is absent (60.0212ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1100.8519

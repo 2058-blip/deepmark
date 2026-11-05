@@ -1,0 +1,306 @@
+{
+  "ok": true,
+  "verification_scope": "recorded 30-degree CS-on synthetic reslice; every gray voxel/Mask membership plus retained Part/RP coordinates, independently parsed in Python",
+  "files": {
+    "source": {
+      "path": "C:\\Users\\wwulli\\Desktop\\deepmark\\work\\mimics-vue-reconstruction\\evidence\\browser-file-exchange\\source.deepmark.zip",
+      "sha256": "6c67ea04c749027ef94d62a17d0ed82d3863854d01c17c9fd0af56ba988289b1"
+    },
+    "resliced": {
+      "path": "C:\\Users\\wwulli\\Desktop\\deepmark\\work\\mimics-vue-reconstruction\\evidence\\browser-file-exchange\\oblique.deepmark.zip",
+      "sha256": "f1af6625a1aba9985f9635bbeb16110a00de3ec41c6076b8a651cce904dd105c"
+    }
+  },
+  "analytic_case": {
+    "source_dims": [
+      96,
+      96,
+      64
+    ],
+    "source_affine_mm": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.5,
+        0.0
+      ]
+    ],
+    "output_dims": [
+      48,
+      48,
+      64
+    ],
+    "output_affine_mm": [
+      [
+        2.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        2.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.5,
+        0.0
+      ]
+    ],
+    "start_mm": [
+      0.0,
+      47.5,
+      47.25
+    ],
+    "end_mm": [
+      95.0,
+      47.5,
+      47.25
+    ],
+    "up_mm": [
+      0,
+      1,
+      0
+    ],
+    "rotation_degrees": 30,
+    "width_height_mm": [
+      96,
+      96
+    ],
+    "pixel_size_mm": 2,
+    "slice_distance_mm": 1.5,
+    "u": [
+      0.0,
+      0.5,
+      -0.8660254037844386
+    ],
+    "v": [
+      0.0,
+      0.8660254037844386,
+      0.5
+    ],
+    "normal": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "first_stored_sample_source_world_mm": [
+      0.0,
+      -16.703193977868608,
+      64.45319397786861
+    ],
+    "sampled_line_length_mm": 94.5,
+    "remaining_line_length_mm": 0.5,
+    "background_gray": -1000.0,
+    "update_cs": true
+  },
+  "checks": {
+    "analytic_transform_matrices_match": true,
+    "all_gray_values_match_linear_Float32_oracle": true,
+    "recorded_outside_gray_count_matches": true,
+    "all_independent_masks_match_nearest_oracle": true,
+    "all_retained_parts_follow_coordinate_change": true,
+    "all_retained_RPs_follow_coordinate_change": true
+  },
+  "transform_matrix_max_abs_residuals": {
+    "old_world_to_new_world": 2.842170943040401e-14,
+    "new_world_to_old_world": 1.4210854715202004e-14,
+    "new_ijk_to_old_ijk": 1.4210854715202004e-14
+  },
+  "expected_old_world_to_new_world": [
+    [
+      0.0,
+      0.5,
+      -0.8660254037844386,
+      64.16970032881471
+    ],
+    [
+      0.0,
+      0.8660254037844386,
+      0.5,
+      -17.76120667976084
+    ],
+    [
+      1.0,
+      0.0,
+      0.0,
+      -0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "expected_new_world_to_old_world": [
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.5,
+      0.8660254037844386,
+      0.0,
+      -16.703193977868608
+    ],
+    [
+      -0.8660254037844386,
+      0.5,
+      0.0,
+      64.45319397786861
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "expected_new_ijk_to_old_ijk": [
+    [
+      0.0,
+      0.0,
+      1.5,
+      0.0
+    ],
+    [
+      1.0,
+      1.7320508075688772,
+      0.0,
+      -16.703193977868608
+    ],
+    [
+      -1.1547005383792515,
+      0.6666666666666666,
+      0.0,
+      42.968795985245734
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "gray": {
+    "compared_voxel_count": 147456,
+    "mismatch_count": 0,
+    "exact_Float32_value_mismatch_count": 0,
+    "max_absolute_error": 0.0,
+    "mean_absolute_error": 0.0,
+    "tolerance": "max(1e-5, 2 Float32 ULP)",
+    "expected_outside_count": 24448,
+    "expected_valid_count": 123008
+  },
+  "nearest_policy": "closed source half-cell support; within two Float64 ULP of n+0.5 chooses n+1, otherwise floor(x+0.5); clipped at source edge",
+  "expected_outside_mask_support_count": 23040,
+  "masks": [
+    {
+      "id": "mask-mw3czi8l-1",
+      "ok": true,
+      "checks": {
+        "every_membership_matches_nearest_oracle": true,
+        "revision_incremented_once": true,
+        "threshold_metadata_preserved": true
+      },
+      "membership_mismatch_count": 0,
+      "source_member_count": 56,
+      "expected_output_member_count": 16,
+      "actual_output_member_count": 16,
+      "source_revision": 2,
+      "output_revision": 3
+    }
+  ],
+  "parts": [
+    {
+      "id": "part-mw3ddl4n-4",
+      "ok": true,
+      "checks": {
+        "positions_follow_T": true,
+        "normals_follow_R_only": true,
+        "index_bytes_unchanged": true,
+        "source_reference_preserved": true,
+        "retained_geometry_is_stale": true
+      },
+      "positions": {
+        "ok": true,
+        "value_count": 432,
+        "mismatch_count": 0,
+        "exact_value_mismatch_count": 0,
+        "max_absolute_error": 0.0,
+        "tolerance": "max(1e-5, 2 Float32 ULP)"
+      },
+      "normals": {
+        "ok": true,
+        "value_count": 432,
+        "mismatch_count": 0,
+        "exact_value_mismatch_count": 0,
+        "max_absolute_error": 0.0,
+        "tolerance": "max(1e-5, 2 Float32 ULP)"
+      },
+      "triangle_count": 284,
+      "source_revision": 2,
+      "resampled_mask_revision": 3
+    }
+  ],
+  "reslice_objects": [
+    {
+      "id": "reslice-mw3czybh-3",
+      "ok": true,
+      "checks": {
+        "origin_and_steps_follow_T_R": true,
+        "output_sample_counts_preserved": true
+      },
+      "components": {
+        "origin": {
+          "ok": true,
+          "value_count": 3,
+          "mismatch_count": 0,
+          "exact_value_mismatch_count": 2,
+          "max_absolute_error": 1.5987211554602254e-14,
+          "tolerance": "absolute 1e-8"
+        },
+        "u": {
+          "ok": true,
+          "value_count": 3,
+          "mismatch_count": 0,
+          "exact_value_mismatch_count": 2,
+          "max_absolute_error": 2.7755575615628914e-17,
+          "tolerance": "absolute 1e-8"
+        },
+        "v": {
+          "ok": true,
+          "value_count": 3,
+          "mismatch_count": 0,
+          "exact_value_mismatch_count": 2,
+          "max_absolute_error": 5.551115123125783e-17,
+          "tolerance": "absolute 1e-8"
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "This checks one recorded synthetic browser export and does not establish all-angle, all-file or native Mimics equivalence.",
+    "The two-Float32-ULP allowance covers independently ordered floating arithmetic; Mask and mesh-index comparisons are exact.",
+    "The source and downloaded resliced files are read only; transport and browser actions require their separate UI evidence."
+  ]
+}

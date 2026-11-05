@@ -1,0 +1,14 @@
+/* 退出协同对话框 */
+.exit-dialog { width: min(460px, calc(100vw - 32px)); }
+.exit-dialog h2 { font-size: 17px; font-weight: 600; margin: 0 0 12px; }
+.exit-dialog p { font-size: 12px; line-height: 1.9; color: var(--text-2); margin: 0 0 8px; }
+.exit-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.exit-actions button { font-size: 12px; }
+
+/* 顶栏在中小宽度下的收纳 */
+@media (max-width: 960px) {
+  .top-actions { gap: 6px; }
+  .top-actions button { font-size: 11px; padding: 5px 8px; }
+  .top-actions button svg { display: none; }
+  .brand small { display: none; }
+}

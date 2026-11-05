@@ -1,0 +1,135 @@
+TAP version 13
+# Subtest: multiple/select/deselect share a session direction and preserve completed selection across type and operation changes
+ok 1 - multiple/select/deselect share a session direction and preserve completed selection across type and operation changes
+  ---
+  duration_ms: 14.9025
+  type: 'test'
+  ...
+# Subtest: displayMasks isolates the active Mask with ephemeral visibility without changing real metadata or history
+ok 2 - displayMasks isolates the active Mask with ephemeral visibility without changing real metadata or history
+  ---
+  duration_ms: 7.4909
+  type: 'test'
+  ...
+# Subtest: Multiple Slice lasso Select/Deselect applies union/difference only to the temporary mask
+ok 3 - Multiple Slice lasso Select/Deselect applies union/difference only to the temporary mask
+  ---
+  duration_ms: 7.513
+  type: 'test'
+  ...
+# Subtest: Multiple Slice livewire Select/Deselect applies union/difference only to the temporary mask
+ok 4 - Multiple Slice livewire Select/Deselect applies union/difference only to the temporary mask
+  ---
+  duration_ms: 68.482
+  type: 'test'
+  ...
+# Subtest: type, Select/Deselect, axis and slice changes cancel only unfinished contours while retaining completed members
+ok 5 - type, Select/Deselect, axis and slice changes cancel only unfinished contours while retaining completed members
+  ---
+  duration_ms: 24.1315
+  type: 'test'
+  ...
+# Subtest: changing target clears the old temporary mask and unfinished contour without changing either real Mask
+ok 6 - changing target clears the old temporary mask and unfinished contour without changing either real Mask
+  ---
+  duration_ms: 5.86
+  type: 'test'
+  ...
+# Subtest: in-flight Multiple Slice LiveWire results cannot revive contours after type, operation, axis, slice or target changes
+ok 7 - in-flight Multiple Slice LiveWire results cannot revive contours after type, operation, axis, slice or target changes
+  ---
+  duration_ms: 32.8196
+  type: 'test'
+  ...
+# Subtest: wrong-view editing cannot alter the fixed-axis selection until setSelectionAxis explicitly changes it
+ok 8 - wrong-view editing cannot alter the fixed-axis selection until setSelectionAxis explicitly changes it
+  ---
+  duration_ms: 5.7396
+  type: 'test'
+  ...
+# Subtest: nonzero copy uses the fixed session axis, replaces full destination slices and jumps to the clipped last destination
+ok 9 - nonzero copy uses the fixed session axis, replaces full destination slices and jumps to the clipped last destination
+  ---
+  duration_ms: 61.6854
+  type: 'test'
+  ...
+# Subtest: reverse copy clips at the first slice and fixed sagittal copies also use their own axis
+ok 10 - reverse copy clips at the first slice and fixed sagittal copies also use their own axis
+  ---
+  duration_ms: 125.4597
+  type: 'test'
+  ...
+# Subtest: zero copy fills all remaining slices in either direction and keeps the current slice
+ok 11 - zero copy fills all remaining slices in either direction and keeps the current slice
+  ---
+  duration_ms: 117.0015
+  type: 'test'
+  ...
+# Subtest: empty, invalid and cancelled copy preserve both selection and crosshair
+ok 12 - empty, invalid and cancelled copy preserve both selection and crosshair
+  ---
+  duration_ms: 8.1012
+  type: 'test'
+  ...
+# Subtest: interpolation publishes a separate known preview and blocks editing, copy, repeat interpolation and final Apply until resolved
+not ok 13 - interpolation publishes a separate known preview and blocks editing, copy, repeat interpolation and final Apply until resolved
+  ---
+  duration_ms: 176.3388
+  type: 'test'
+  location: 'C:\\Users\\wwulli\\Desktop\\deepmark\\tests\\mimics-multiple-edit.test.ts:142:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(editor.interpolationPreview.value===preview)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    file:///C:/Users/wwulli/Desktop/deepmark/tests/mimics-multiple-edit.test.ts:148:78
+    async withEditor (file:///C:/Users/wwulli/Desktop/deepmark/tests/mimics-multiple-edit.test.ts:52:155)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: cancelInterpolation discards only its preview and cancelled/failed computations cannot replace the temporary mask
+ok 14 - cancelInterpolation discards only its preview and cancelled/failed computations cannot replace the temporary mask
+  ---
+  duration_ms: 115.6375
+  type: 'test'
+  ...
+# Subtest: final temporary add edits only the known ROI in one active-Mask transaction
+ok 15 - final temporary add edits only the known ROI in one active-Mask transaction
+  ---
+  duration_ms: 62.2222
+  type: 'test'
+  ...
+# Subtest: final temporary remove edits only the known ROI in one active-Mask transaction
+ok 16 - final temporary remove edits only the known ROI in one active-Mask transaction
+  ---
+  duration_ms: 59.4164
+  type: 'test'
+  ...
+# Subtest: final temporary threshold edits only the known ROI in one active-Mask transaction
+ok 17 - final temporary threshold edits only the known ROI in one active-Mask transaction
+  ---
+  duration_ms: 58.58
+  type: 'test'
+  ...
+# Subtest: closeMultipleEdit drops temporary state and interpolation preview, returns to navigation, and leaves active data untouched
+ok 18 - closeMultipleEdit drops temporary state and interpolation preview, returns to navigation, and leaves active data untouched
+  ---
+  duration_ms: 61.3821
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 17
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1211.7905

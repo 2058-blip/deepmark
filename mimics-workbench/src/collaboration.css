@@ -1,0 +1,85 @@
+/* 协作面板（位于右侧协作栏内） */
+.collaboration-panel { display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
+.collaboration-panel p { margin: 0; font-size: 11px; line-height: 1.8; }
+.collab-note { color: var(--text-3); }
+.collab-count { font-weight: 400; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 加入协同 */
+.collab-join-card {
+  display: flex; flex-direction: column; gap: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.collab-join-card strong { font-size: 12px; font-weight: 600; }
+.collab-join-card p { color: var(--text-3); }
+.collab-join-card input { padding: 7px 9px; }
+.collab-join-card .primary { padding: 7px; }
+
+/* 成员身份 */
+.collab-member { display: flex; align-items: center; gap: 9px; }
+.collab-avatar {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-bright);
+  font-size: 13px; font-weight: 600;
+}
+.collab-member-meta { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.collab-member-meta strong { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collab-member-meta small { font-size: 10px; color: var(--text-3); }
+
+.sync-indicator {
+  font-size: 11px; line-height: 1.6;
+  color: var(--warn);
+  border: 1px solid rgba(223, 174, 83, 0.35);
+  background: rgba(223, 174, 83, 0.08);
+  border-radius: var(--radius-s);
+  padding: 5px 9px;
+}
+.collaboration-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.collaboration-controls button { font-size: 11px; flex: 1; padding: 5px 6px; }
+
+.collaboration-panel .collaboration-error {
+  color: var(--danger);
+  border: 1px solid rgba(227, 121, 111, 0.35);
+  background: rgba(227, 121, 111, 0.07);
+  border-radius: var(--radius-s);
+  padding: 6px 9px;
+}
+.collaboration-panel .collaboration-error:empty { display: none; }
+
+/* 操作记录 */
+.collaboration-history {
+  max-height: 300px; overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg-inset);
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.collaboration-history > div {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  font-size: 10.5px; color: var(--text-2);
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.collaboration-history > div:last-of-type { border-bottom: 0; }
+.collaboration-history > div > span { min-width: 0; overflow-wrap: anywhere; line-height: 1.5; }
+.collaboration-history button { font-size: 10px; padding: 3px 7px; flex-shrink: 0; }
+.collaboration-history > button { align-self: flex-start; margin-bottom: 4px; }
+.collaboration-history p { color: var(--text-3); padding: 4px 2px; }
+
+.history-banner {
+  display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  border: 1px solid rgba(223, 174, 83, 0.45);
+  background: rgba(223, 174, 83, 0.08);
+  border-radius: var(--radius-s);
+  padding: 7px 10px;
+  color: var(--warn); font-size: 11px;
+}
+.history-banner button { font-size: 10px; padding: 3px 8px; flex-shrink: 0; }
+.final-status { color: var(--ok) !important; }

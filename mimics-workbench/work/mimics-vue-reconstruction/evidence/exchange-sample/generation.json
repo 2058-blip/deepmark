@@ -1,0 +1,30 @@
+{
+  "origin": "Node operations.worker.ts; not browser UI or filesystem-picker verification",
+  "synthetic": true,
+  "dims": [
+    24,
+    24,
+    24
+  ],
+  "spacing": [
+    1,
+    1,
+    1.5
+  ],
+  "maskVoxels": 929,
+  "triangles": 1384,
+  "files": [
+    {
+      "name": "sample.deepmark.zip",
+      "bytes": 11222
+    },
+    {
+      "name": "sample.stl",
+      "bytes": 69284
+    },
+    {
+      "name": "sample-mask.nii",
+      "bytes": 28000
+    }
+  ]
+}

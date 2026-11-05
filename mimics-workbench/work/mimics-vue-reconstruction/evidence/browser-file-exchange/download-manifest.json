@@ -1,0 +1,51 @@
+{
+  "origin": "http://127.0.0.1:5173/",
+  "browser": "Edge extension3",
+  "operationTab": "1501583400",
+  "restoredDeliverableTab": "1501583401",
+  "bundle": "index-wufMiC31.js",
+  "transportEvidence": "Actual browser download actions; download event observation timed out, exact named physical files independently located and read; originals retained without changing browser download settings",
+  "generatedAt": "2026-11-05T11:24:09.946Z",
+  "files": [
+    {
+      "file": "source.deepmark.zip",
+      "sourcePath": "C:/Users/wwulli/Desktop/合成练习影像.deepmark.zip",
+      "bytes": 93644,
+      "sha256": "6c67ea04c749027ef94d62a17d0ed82d3863854d01c17c9fd0af56ba988289b1",
+      "sourceLastWriteTimeUtc": "2026-11-05T11:00:00.034Z",
+      "copyMatchesSource": true
+    },
+    {
+      "file": "source-mask.nii",
+      "sourcePath": "C:/Users/wwulli/Desktop/Mask 1.nii",
+      "bytes": 1180000,
+      "sha256": "d9e5a96883d824b178cef835ecce3c904e98ea0b44773e652632537f8a7cd60d",
+      "sourceLastWriteTimeUtc": "2026-11-05T11:02:07.585Z",
+      "copyMatchesSource": true
+    },
+    {
+      "file": "source.stl",
+      "sourcePath": "C:/Users/wwulli/Desktop/Mask 1 3D 1.stl",
+      "bytes": 14284,
+      "sha256": "838de42bf97c83f18bb541ee62ea2c638f4986980c9fe8a7f782bceeb3eeabe8",
+      "sourceLastWriteTimeUtc": "2026-11-05T11:02:55.998Z",
+      "copyMatchesSource": true
+    },
+    {
+      "file": "identity.deepmark.zip",
+      "sourcePath": "C:/Users/wwulli/Desktop/MPR-reslice-717-identity.deepmark.zip",
+      "bytes": 94546,
+      "sha256": "ffdfdccc434a288ad90b86da1c12dc1a64af8995f04143b35ce0df9280284add",
+      "sourceLastWriteTimeUtc": "2026-11-05T11:05:32.972Z",
+      "copyMatchesSource": true
+    },
+    {
+      "file": "oblique.deepmark.zip",
+      "sourcePath": "C:/Users/wwulli/Desktop/MPR-reslice-717-oblique.deepmark.zip",
+      "bytes": 81869,
+      "sha256": "f1af6625a1aba9985f9635bbeb16110a00de3ec41c6076b8a651cce904dd105c",
+      "sourceLastWriteTimeUtc": "2026-11-05T11:10:32.735Z",
+      "copyMatchesSource": true
+    }
+  ]
+}

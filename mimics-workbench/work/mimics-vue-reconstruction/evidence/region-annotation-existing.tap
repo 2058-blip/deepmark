@@ -1,0 +1,69 @@
+✔ ordinary lasso add edits known voxels directly with one Undo/Redo and preserves the temporary selection (16.3088ms)
+✔ ordinary lasso remove edits known voxels directly with one Undo/Redo and preserves the temporary selection (9.5451ms)
+✔ ordinary lasso threshold edits known voxels directly with one Undo/Redo and preserves the temporary selection (7.0947ms)
+✔ ordinary LiveWire add closes the real worker path and edits the active mask without a temporary Apply (74.7798ms)
+✔ ordinary LiveWire remove closes the real worker path and edits the active mask without a temporary Apply (70.5622ms)
+✔ ordinary LiveWire threshold closes the real worker path and edits the active mask without a temporary Apply (67.3284ms)
+✔ invalid contours and unchanged operations never create a history entry (26.3304ms)
+✔ changing the target, edit operation, threshold range or slice cancels an unfinished ordinary contour (26.1919ms)
+✔ LiveWire parameter changes and explicit cancellation discard pending worker contour results (17.6668ms)
+✔ non-measurement tools never fall through to measurement creation and Multiple Slice Select only edits the temporary mask (6.4622ms)
+✔ deleting a selected measurement and replaying the transaction cannot leave an unsavable selection (148.7747ms)
+✔ undoing a newly created selected measurement clears it immediately and redo remains savable (133.5025ms)
+✔ threshold controls follow the selected mask metadata, defaults and mask deletion undo-redo (7.2556ms)
+✔ applied threshold metadata and panel range restore together through undo-redo and project save (120.0094ms)
+✔ local project restoration applies threshold and measurement selection, while legacy view state resets selection (9.2567ms)
+✔ a new file request clears old series and replacement candidates without discarding committed dirty work (11.6373ms)
+✔ cancelling the file chooser keeps the existing candidate and committed state (6.0711ms)
+✔ an obsolete cache-before-replacement success cannot publish over a newer import or reset its busy state (8.1135ms)
+✔ an obsolete cache-before-replacement failure cannot publish over a newer import or reset its busy state (8.2476ms)
+✔ failed image/project import preserves committed data, dirty state, history and location (6.6165ms)
+✔ cancelled image import cannot replace a subsequently loaded image (7.7298ms)
+✔ an obsolete import finally cannot clear busy or progress owned by the next import (7.5463ms)
+✔ late Mask and STL imports cannot attach objects to a replacement project (8.4808ms)
+✔ same-sized Mask with different physical geometry is rejected without altering the project (5.658ms)
+✔ cancelled brush followed by end never commits and leaves no ghost draft (6.5086ms)
+✔ changing target during a brush cannot overwrite the new target (6.0491ms)
+✔ successive brush strokes commit independently and selection is cleared on image replacement (7.1401ms)
+✔ cancelling a parsed replacement preserves the dirty project, selection, history and view (5.6327ms)
+✔ seed collection is exclusive and changing tools clears its uncommitted constraints (6.4167ms)
+✖ worker failure and invalid region target leave data atomic and permit retry (65.7554ms)
+✔ changing threshold cleanup parameters invalidates the in-flight preview before Apply (62.5498ms)
+✔ Part geometry and provenance remain historical after source edits and ZIP restore (68.2455ms)
+✔ worker project export and controller ZIP restore retain the saved working position and selected annotation (63.6665ms)
+✔ save cancellation, write failure and unconfirmed download preserve dirty data and history (61.4918ms)
+✔ cache-before-replacement failure preserves the dirty document, then successful retry restores its data and view (7.3133ms)
+✔ missing or corrupt cached projects cannot replace a valid current document (4.6161ms)
+✔ unknown image units block 3D until explicit metre/mm/micron confirmation establishes one consistent millimetre grid (322.103ms)
+✔ two-label NIfTI import creates independent masks in one reversible controller transaction (5.3846ms)
+✔ Mask import accepts physically equivalent metre and micron headers into a millimetre controller project (5.4853ms)
+✔ Calculate 3D batches two overlapping masks into one reversible transaction and keeps Calculate separate from Close (57.1859ms)
+✔ Calculate 3D publishes no partial batch when a later empty Mask fails and permits a valid retry (56.2384ms)
+ℹ tests 41
+ℹ suites 0
+ℹ pass 40
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1133.7981
+
+✖ failing tests:
+
+test at tests\mimics-foundation.test.ts:207:1
+✖ worker failure and invalid region target leave data atomic and permit retry (65.7554ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 4
+  
+      at file:///C:/Users/wwulli/Desktop/deepmark/tests/mimics-foundation.test.ts:214:80
+      at async withEditor (file:///C:/Users/wwulli/Desktop/deepmark/tests/mimics-foundation.test.ts:32:7)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
