@@ -139,24 +139,31 @@ export function openCollaborationStore(filename,{adminKey:configuredKey=process.
     export(id,revision){const p=getProject(id),s=state(id,revision),mask=unzip(Buffer.from(s.mask,'base64'),Uint16Array),nifti=niftiBytes(p.header,mask),files=annotationFiles(nifti,s.labels,{projectId:id,datasetId:p.dataset,revision:s.revision,status:s.status,parallelRegions:s.regions});return {bytes:Buffer.from(zipSync(files,archiveOptions)),revision:s.revision,type:'application/zip',extension:'zip'};}
   };return store;
 }
-function sessionToken(req){return /(?:^|;\s*)deepmark_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1];}
+export function sessionCookieOptions(){
+  const name=process.env.COOKIE_NAME||'deepmark_session',path=process.env.COOKIE_PATH||'/';
+  if(!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(name))throw new Error('COOKIE_NAME 必须是有效的独立 Cookie 名称。');
+  if(path.length>256||!path.startsWith('/')||!/^[A-Za-z0-9/._~-]+$/.test(path)||path.includes('//')||path.split('/').some(part=>part==='.'||part==='..'))throw new Error('COOKIE_PATH 必须是安全的绝对路径。');
+  return {name,path};
+}
+function sessionToken(req,name){const prefix=name+'=',entry=(req.headers.cookie||'').split(';').map(part=>part.trim()).find(part=>part.startsWith(prefix)),value=entry?.slice(prefix.length);return value&&/^[a-f0-9]{64}$/.test(value)?value:undefined;}
 function sameOrigin(req){try{return !req.headers.origin||new URL(req.headers.origin).host===req.headers.host;}catch{return false;}}
 async function body(req){let length=0;const chunks=[];for await(const chunk of req){length+=chunk.length;if(length>46*1024*1024)fail('操作数据超过上限。',413);chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString());}catch{fail('请求格式无效。');}}
 export function attachCollaboration(server,{store,resolveDataset,json}){
+  const cookie=sessionCookieOptions(),sessionCookie=(value,maxAge)=>`${cookie.name}=${value}; HttpOnly; SameSite=Lax; Path=${cookie.path}; Max-Age=${maxAge}${process.env.COOKIE_SECURE==='1'?'; Secure':''}`;
   const wss=new WebSocketServer({noServer:true,maxPayload:1024});
   function broadcast(id,revision){for(const ws of wss.clients)if(ws.project===id&&ws.readyState===1)ws.send(JSON.stringify({projectId:id,revision}));}
-  server.on('upgrade',(req,socket,head)=>{socket.on('error',()=>socket.destroy());const url=new URL(req.url,'http://localhost');if(url.pathname!=='/api/collaboration/socket'||!store.person(sessionToken(req))||!sameOrigin(req)){socket.destroy();return;}const id=url.searchParams.get('project');try{store.state(id);}catch{socket.destroy();return;}wss.handleUpgrade(req,socket,head,ws=>{ws.on('error',()=>ws.terminate());ws.project=id;ws.session=digest(sessionToken(req));ws.send(JSON.stringify({projectId:id,ready:true}));});});
+  server.on('upgrade',(req,socket,head)=>{socket.on('error',()=>socket.destroy());const url=new URL(req.url,'http://localhost');if(url.pathname!=='/api/collaboration/socket'||!store.person(sessionToken(req,cookie.name))||!sameOrigin(req)){socket.destroy();return;}const id=url.searchParams.get('project');try{store.state(id);}catch{socket.destroy();return;}wss.handleUpgrade(req,socket,head,ws=>{ws.on('error',()=>ws.terminate());ws.project=id;ws.session=digest(sessionToken(req,cookie.name));ws.send(JSON.stringify({projectId:id,ready:true}));});});
   server.once('close',()=>{for(const ws of wss.clients)ws.terminate();wss.close();store.close();});
   return async(req,res,url)=>{
     if(!url.pathname.startsWith('/api/collaboration/'))return false;
     try{
       if(!['GET','POST'].includes(req.method))fail('不支持此请求方式。',405);if(req.method==='POST'&&(!req.headers['x-deepmark-request']||!sameOrigin(req)))fail('请求来源无效。',403);
-      let person=store.person(sessionToken(req));const path=url.pathname.slice('/api/collaboration'.length);
+      let person=store.person(sessionToken(req,cookie.name));const path=url.pathname.slice('/api/collaboration'.length);
       if(path==='/session'||path==='/admin/session'){
-        let resumeKey;if(req.method==='POST'){const data=await body(req),result=path==='/admin/session'?store.adminSession(data.key):store.session(data.name,data.credentials);person=result.person;resumeKey=result.resumeKey;res.setHeader('Set-Cookie',`deepmark_session=${result.token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${process.env.COOKIE_SECURE==='1'?'; Secure':''}`);}else if(person)resumeKey=store.resume(person);json(res,200,{person,resumeKey});return true;
+        let resumeKey;if(req.method==='POST'){const data=await body(req),result=path==='/admin/session'?store.adminSession(data.key):store.session(data.name,data.credentials);person=result.person;resumeKey=result.resumeKey;res.setHeader('Set-Cookie',sessionCookie(result.token,31536000));}else if(person)resumeKey=store.resume(person);json(res,200,{person,resumeKey});return true;
       }
       if(!person)fail('请先加入协同或登录管理员。',401);if(req.headers['x-deepmark-author']&&req.headers['x-deepmark-author']!==person.id)fail('当前登录身份已变化，请恢复原作者身份。',401);
-      if(path==='/logout'&&req.method==='POST'){const token=sessionToken(req);store.logout(token);for(const ws of wss.clients)if(ws.session===digest(token))ws.close();res.setHeader('Set-Cookie','deepmark_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');json(res,200,{ok:true});return true;}
+      if(path==='/logout'&&req.method==='POST'){const token=sessionToken(req,cookie.name);store.logout(token);for(const ws of wss.clients)if(ws.session===digest(token))ws.close();res.setHeader('Set-Cookie',sessionCookie('',0));json(res,200,{ok:true});return true;}
       if(path==='/projects'&&req.method==='POST'){const data=await body(req),dataset=await resolveDataset(data.datasetId);if(!dataset)fail('数据集不存在。',404);json(res,200,store.join(data.datasetId,dataset.bytes,dataset.volume));return true;}
       if(path==='/admin/projects'&&req.method==='GET'){json(res,200,{projects:store.projects(person)});return true;}
       const source=/^\/admin\/projects\/([a-f0-9]{32})\/source$/.exec(path);

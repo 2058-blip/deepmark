@@ -3,13 +3,14 @@ import type {Change} from './core.ts';
 import {exportNifti} from './core.ts';
 import {annotationArchive} from './exportArchive.ts';
 import {operationId} from './operationId.ts';
+import {appPath,socketUrl} from './deployment.ts';
 import type {Segment,Tool} from './view.ts';
 import {download,readFile} from './view.ts';
 import type {useEditor} from './useEditor.ts';
 import type {Draft,DraftIndex,Identity,Operation,ParallelRegion,Person,Project,ViewState} from './collaborationTypes.ts';
 import {allIdentities,allOperations,cacheDataset,listDrafts,readDataset,readDraft,saveIdentity,writeLocal,writeView} from './localCache.ts';
 type History={revision:number;op:string;author:string;name:string;kind:string;time:string};
-const base='/api/collaboration',sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+const base=appPath('/api/collaboration'),sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function api<T>(path:string,data?:unknown,author?:string):Promise<T>{
   const response=await fetch(base+path,{cache:'no-store',signal:AbortSignal.timeout(12000),headers:{...(author?{'X-Deepmark-Author':author}:{}),...(data===undefined?{}:{'Content-Type':'application/json','X-Deepmark-Request':'1'})},...(data===undefined?{}:{method:'POST',body:JSON.stringify(data)})});
   if(!response.ok){const result=await response.json().catch(()=>({error:'网络请求失败。'}));throw new Error(result.error||'请求失败。');}return response.json();
@@ -107,7 +108,7 @@ export function useCollaboration(editor:ReturnType<typeof useEditor>){
   }
   function connect(){
     if(stopped||!project.value)return;
-    socket=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}${base}/socket?project=${project.value.id}`);
+    socket=new WebSocket(socketUrl(`/api/collaboration/socket?project=${encodeURIComponent(project.value.id)}`,location));
     socket.onopen=()=>{connected.value=true;mark();void pump();void refresh();};socket.onmessage=()=>{if(!queue.length)void refresh();};
     socket.onclose=()=>{connected.value=false;mark();if(!stopped)reconnect=setTimeout(()=>{void ensureSession().then(connect).catch(()=>{reconnect=setTimeout(connect,3000);});},1500);};socket.onerror=()=>socket?.close();
   }

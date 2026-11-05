@@ -1,9 +1,10 @@
 import type {Draft,DraftIndex,Identity,Operation,ViewState} from './collaborationTypes.ts';
+import {collaborationCacheName,legacyCollaborationCacheName} from './deployment.ts';
 let connection:Promise<IDBDatabase>|null=null;
 let migration:Promise<void>|null=null;
 const legacyKeys=new Set<string>();
 function db(){return connection??=new Promise((resolve,reject)=>{
-  const request=indexedDB.open('deepmark-workspaces',1);
+  const request=indexedDB.open(collaborationCacheName,1);
   request.onupgradeneeded=()=>{for(const name of ['queue','drafts','draftIndex','datasets','identities'])if(!request.result.objectStoreNames.contains(name))request.result.createObjectStore(name,{keyPath:name==='identities'?'id':'key'});};
   request.onsuccess=()=>{const database=request.result;database.onversionchange=()=>database.close();resolve(database);};request.onerror=()=>reject(request.error);request.onblocked=()=>reject(new Error('本地缓存正在升级，请关闭旧版网页后重试。'));
 });}
@@ -20,7 +21,7 @@ export function writeLocal({operation,operations,draft,removeOp}:{operation?:Ope
   });
   return write.then(async()=>{if(removeOp&&legacyKeys.has(removeOp)){const old=await legacy();if(old.objectStoreNames.contains('queue'))await new Promise<void>((resolve,reject)=>{const tx=old.transaction('queue','readwrite');tx.objectStore('queue').delete(removeOp);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});old.close();legacyKeys.delete(removeOp);}});
 }
-function legacy():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const r=indexedDB.open('deepmark-collaboration');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
+function legacy():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const r=indexedDB.open(legacyCollaborationCacheName);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function migrateLegacy(){
   const old=await legacy();if(!old.objectStoreNames.contains('queue')){old.close();return;}
   const rows=await new Promise<Operation[]>((resolve,reject)=>{const request=old.transaction('queue').objectStore('queue').getAll();request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});old.close();

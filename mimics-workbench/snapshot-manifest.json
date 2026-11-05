@@ -2106,6 +2106,31 @@
       "path": ".gitignore",
       "reason": "Ignore dependency link and publication temporary files",
       "publishedSha256": "0e93102597b29a1904b184d3cebc33cdbda14af99ef52a6247caf7d43dfa4a9a"
+    },
+    {
+      "path": "server/collaboration.mjs",
+      "reason": "Independent /mimics/ deployment: prefixed requests, isolated storage/cookies, public download paths and process-owned health.",
+      "publishedSha256": "128b8ae66adf6cc9c1f417380c830567d9deddf3381da43621b1e44ccabc49a6"
+    },
+    {
+      "path": "server/server.mjs",
+      "reason": "Independent /mimics/ deployment: prefixed requests, isolated storage/cookies, public download paths and process-owned health.",
+      "publishedSha256": "4c8bdd8a2e7a92e5bf360b9ccf80704ad3dfef703e95bb36fd7b0a441f7d3a2b"
+    },
+    {
+      "path": "src/DatasetBrowser.vue",
+      "reason": "Independent /mimics/ deployment: prefixed requests, isolated storage/cookies, public download paths and process-owned health.",
+      "publishedSha256": "fdac9920fc367f513008a22a862cdb08acffaa3bf934902be933676b0f30ea29"
+    },
+    {
+      "path": "src/localCache.ts",
+      "reason": "Independent /mimics/ deployment: prefixed requests, isolated storage/cookies, public download paths and process-owned health.",
+      "publishedSha256": "3f98f6d54c3b725da91f22f459bb2938f5713df56288c6e212c5e472349c09f8"
+    },
+    {
+      "path": "src/useCollaboration.ts",
+      "reason": "Independent /mimics/ deployment: prefixed requests, isolated storage/cookies, public download paths and process-owned health.",
+      "publishedSha256": "00cdca68616041053d53a5caa52022c9ffb7f1c38cf4f1dec94985a32a8d5752"
     }
   ],
   "validation": {
@@ -2116,5 +2141,84 @@
     "build": "passed",
     "bundle": "index-B8dulRLO.js",
     "newBrowserAcceptance": false
+  },
+  "deploymentDate": "2026-11-05",
+  "deploymentFiles": [
+    {
+      "path": "DEPLOYMENT-VALIDATION.md",
+      "sha256": "51c598808a0cee3f978adf69499db679d943d1b077e2ee536bff5a93e71916b8"
+    },
+    {
+      "path": "README-PUBLISH.md",
+      "sha256": "ac7a76a8af814080fdd49fee3458e4aa31b509d8955f56081c4a7bd1bc763e55"
+    },
+    {
+      "path": "deploy/README.md",
+      "sha256": "02dd7702a6a3e9f7ced6927b75a540f3595d5547457954942f03631cd2a5120b"
+    },
+    {
+      "path": "deploy/common.sh",
+      "sha256": "11555d7e910de59ead88142d5e8a2eccef722e9433ed6bab2afe667959ce13c0"
+    },
+    {
+      "path": "deploy/nginx.location.conf",
+      "sha256": "60299c620ecec625e4b0665a2f2be119800abb69b2234530d40c4b3a375213ba"
+    },
+    {
+      "path": "deploy/run-service.sh",
+      "sha256": "dd49b85e47dd429aacd2802b0f5d53b0da36cdc64010c00804a0f94144a88fd7"
+    },
+    {
+      "path": "deploy/start.sh",
+      "sha256": "33ee8d4264210d73b3ea57aba5954fbc08272e9a8146857ccfed57afdef0db7c"
+    },
+    {
+      "path": "deploy/status.sh",
+      "sha256": "d03965e560bf30923cd0240c41b9032c81b5d9f192a2cf9968cf305823e1d6f7"
+    },
+    {
+      "path": "deploy/stop.sh",
+      "sha256": "74a8aa1da67e215196c5dc780c74626ae5e387a63393634c057bab1ab7b475a1"
+    },
+    {
+      "path": "server/collaboration.mjs",
+      "sha256": "128b8ae66adf6cc9c1f417380c830567d9deddf3381da43621b1e44ccabc49a6"
+    },
+    {
+      "path": "server/server.mjs",
+      "sha256": "4c8bdd8a2e7a92e5bf360b9ccf80704ad3dfef703e95bb36fd7b0a441f7d3a2b"
+    },
+    {
+      "path": "src/DatasetBrowser.vue",
+      "sha256": "fdac9920fc367f513008a22a862cdb08acffaa3bf934902be933676b0f30ea29"
+    },
+    {
+      "path": "src/deployment.ts",
+      "sha256": "603515c1c86811803b948465e7fef673244a50fc3737d16642f1ea063feb2288"
+    },
+    {
+      "path": "src/localCache.ts",
+      "sha256": "3f98f6d54c3b725da91f22f459bb2938f5713df56288c6e212c5e472349c09f8"
+    },
+    {
+      "path": "src/useCollaboration.ts",
+      "sha256": "00cdca68616041053d53a5caa52022c9ffb7f1c38cf4f1dec94985a32a8d5752"
+    },
+    {
+      "path": "tests/deployment-paths.test.ts",
+      "sha256": "9f0de58620a58d13bc12a4f63d5b523e6e0f6c3c65bddd2d047a66667d7c75eb"
+    },
+    {
+      "path": "tests/deployment.test.ts",
+      "sha256": "db6da5d8d18862a0aa71dc991a403daed6fe80c3d174eed600252a7b46eb767a"
+    }
+  ],
+  "deploymentValidation": {
+    "tests": 804,
+    "browserChecks": 29,
+    "additionalHealthChecks": 9,
+    "serviceChecks": 27,
+    "publicBase": "/mimics/",
+    "report": "DEPLOYMENT-VALIDATION.md"
   }
 }

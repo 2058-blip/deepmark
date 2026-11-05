@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { open, readdir, realpath, stat, readFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 import { parseNifti } from '../src/core.ts';
-import { attachCollaboration,openCollaborationStore } from './collaboration.mjs';
+import { attachCollaboration,openCollaborationStore,sessionCookieOptions } from './collaboration.mjs';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { pipeline } from 'node:stream/promises';
@@ -19,7 +19,12 @@ function json(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
 }
-async function catalog(directory) {
+function publicBasePath(value) {
+  if(!value||value==='/')return '';
+  if(value.length>256||!value.startsWith('/')||!/^[A-Za-z0-9/._~-]+$/.test(value)||value.includes('//')||value.split('/').some(part=>part==='.'||part==='..'))throw new Error('PUBLIC_BASE_PATH 必须是安全的绝对路径。');
+  return value.replace(/\/$/,'');
+}
+async function catalog(directory,publicBase='') {
   const root = await realpath(directory), entries = [];
   async function walk(folder) {
     for (const item of await readdir(folder, { withFileTypes: true })) {
@@ -34,7 +39,7 @@ async function catalog(directory) {
       const id = createHash('sha256').update(rel).digest('hex');
       entries.push({ id, name: item.name, folder: rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '',
         size: info.size, modified: info.mtime.toISOString(), format: /\.gz$/i.test(item.name) ? 'NIfTI · gzip' : 'NIfTI',
-        downloadUrl: `/api/datasets/${id}/download`, file: actual });
+        downloadUrl: `${publicBase}/api/datasets/${id}/download`, file: actual });
     }
   }
   await walk(root);
@@ -69,6 +74,7 @@ async function sendFile(req, res, file, type, filename) {
 }
 export function createDatasetServer({ datasetDir = process.env.DATASET_DIR || defaultDatasetDir,
   distDir = resolve(projectRoot,'dist'), stateDir = process.env.STATE_DIR || resolve(datasetDir,'../collaboration') } = {}) {
+  const publicBase=publicBasePath(process.env.PUBLIC_BASE_PATH||'');sessionCookieOptions();
   let collaboration;
   const server=createServer(async (req,res) => {
     try {
@@ -78,13 +84,14 @@ export function createDatasetServer({ datasetDir = process.env.DATASET_DIR || de
       if (!['GET','HEAD'].includes(req.method)) {
         res.setHeader('Allow','GET, HEAD'); json(res,405,{error:'此服务仅提供数据集列表和下载。'}); return;
       }
+      if (url.pathname === '/api/health') {json(res,200,{status:'ok',backend:'node',pid:process.pid});return;}
       if (url.pathname === '/api/datasets') {
-        const {entries} = await catalog(datasetDir);
+        const {entries} = await catalog(datasetDir,publicBase);
         json(res,200,{datasets:entries.map(({file,...entry})=>entry)}); return;
       }
       const match = /^\/api\/datasets\/([a-f0-9]{64})\/download$/.exec(url.pathname);
       if (match) {
-        const {root,entries} = await catalog(datasetDir), entry = entries.find(e=>e.id===match[1]);
+        const {root,entries} = await catalog(datasetDir,publicBase), entry = entries.find(e=>e.id===match[1]);
         if (!entry) { json(res,404,{error:'数据集不存在或已移除，请刷新列表。'}); return; }
         const actual = await realpath(entry.file);
         if(!within(root,actual)){json(res,404,{error:'数据集不存在。'});return;}
@@ -113,7 +120,7 @@ export function createDatasetServer({ datasetDir = process.env.DATASET_DIR || de
   });
   collaboration=attachCollaboration(server,{store:openCollaborationStore(resolve(stateDir,'deepmark.sqlite')),json,
     resolveDataset:async id=>{
-      const {entries}=await catalog(datasetDir),entry=entries.find(e=>e.id===id);if(!entry)return null;
+      const {entries}=await catalog(datasetDir,publicBase),entry=entries.find(e=>e.id===id);if(!entry)return null;
       const bytes=await readFile(entry.file),raw=bytes[0]===31&&bytes[1]===139?gunzipSync(bytes,{maxOutputLength:1024*1024*1024}):bytes;
       return {bytes,volume:parseNifti(raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength),entry.name)};
     }});
