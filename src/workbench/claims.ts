@@ -49,6 +49,7 @@ export class WorkbenchClaims {
   private masks=new Map<string,Map<string,ClaimBits>>();
   private bits(mask:string,author:string){let authors=this.masks.get(mask);if(!authors){authors=new Map();this.masks.set(mask,authors);}let bits=authors.get(author);if(!bits){bits=new ClaimBits();authors.set(author,bits);}return bits;}
   apply(mask:string,author:string,packet:Uint8Array,count:number){this.bits(mask,author).apply(packet,count);}
+  authorsAt(mask:string,index:number){return[...this.masks.get(mask)||[]].filter(([,bits])=>bits.has(index)).map(([author])=>author);}
   foreignAt(mask:string,user:string,index:number){for(const[author,bits]of this.masks.get(mask)||[])if(author!==user&&bits.has(index))return true;return false;}
   hasForeign(mask:string,user:string){for(const[author,bits]of this.masks.get(mask)||[])if(author!==user&&bits.count)return true;return false;}
   foreignIntersects(mask:string,user:string,start:number,end:number){for(const[author,bits]of this.masks.get(mask)||[])if(author!==user&&bits.intersects(start,end))return true;return false;}

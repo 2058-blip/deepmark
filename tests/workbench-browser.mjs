@@ -61,6 +61,38 @@ try{
  console.log('Foreign-author erasure protected');
  await b.page.getByRole('button',{name:'＋ 新建',exact:true}).click();await settle(b.page);await stroke(b.page);await settle(b.page);
  await a.page.waitForFunction(()=>document.querySelectorAll('.mw-mask-row').length===2);
+ // Hover must report all covering Masks and all voxel-level coauthors.
+ async function hoverCenter(page,selector='.image-viewport canvas,.mpr-viewport canvas'){
+   const box=await page.locator(selector).first().boundingBox();await page.mouse.move(box.x+box.width*.5,box.y+box.height*.5);await page.getByRole('tooltip',{name:'标注信息',exact:true}).waitFor();return page.getByRole('tooltip',{name:'标注信息',exact:true});
+ }
+ let hover=await hoverCenter(a.page);
+ await a.page.waitForFunction(()=>document.querySelector('.native-annotation-hover')?.getAttribute('data-mask-count')==='2');
+ if((await hover.locator('section').nth(0).innerText()).includes('测试B'))throw new Error('An unrelated author was attributed to the first Mask');
+ if(!(await hover.locator('section').nth(0).innerText()).includes('测试A')||!(await hover.locator('section').nth(1).innerText()).includes('测试B'))throw new Error('Overlapping Masks lost their individual author attribution');
+ await a.page.getByRole('button',{name:'＋ 新建',exact:true}).click();await settle(a.page);await b.page.waitForFunction(()=>document.querySelectorAll('.mw-mask-row').length===3);
+ await b.page.locator('.mw-mask-row').nth(2).locator('small').click();
+ const concurrentRoute='**/api/collaboration/workbenches/**/operations**';
+ await a.page.route(concurrentRoute,route=>route.abort());await b.page.route(concurrentRoute,route=>route.abort());
+ await stroke(a.page);await stroke(b.page);await a.page.unroute(concurrentRoute);await b.page.unroute(concurrentRoute);await settle(a.page);await settle(b.page);
+ hover=await hoverCenter(a.page);await a.page.waitForFunction(()=>document.querySelector('.native-annotation-hover')?.getAttribute('data-mask-count')==='3');
+ await a.page.waitForFunction(()=>document.querySelectorAll('.native-annotation-hover section:last-child [data-author-id]').length===2);
+ const sharedMask=hover.locator('section').nth(2);if(!(await sharedMask.innerText()).includes('测试A')||!(await sharedMask.innerText()).includes('测试B'))throw new Error('Same-Mask overlapping coauthors were collapsed');
+ await a.page.screenshot({path:'artifacts/hover-overlapping-masks.png',fullPage:true});
+ await a.page.keyboard.down('Control');await a.page.mouse.wheel(0,-250);await a.page.keyboard.up('Control');await a.page.waitForFunction(()=>document.querySelector('.native-annotation-hover')?.getAttribute('data-mask-count')==='3');
+ const sliceSlider=a.page.locator('.image-viewport input[type=range]').first(),oldSlice=await sliceSlider.inputValue();
+ await sliceSlider.evaluate(el=>{el.value=String(Number(el.value)+1);el.dispatchEvent(new Event('input',{bubbles:true}));});await hover.waitFor({state:'hidden'});
+ await sliceSlider.evaluate((el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));},oldSlice);await hover.waitFor();
+ await a.page.getByRole('button',{name:'显示 MPR 三正交视图',exact:true}).click();await a.page.waitForFunction(()=>document.querySelectorAll('.mpr-loading').length===0);
+ hover=await hoverCenter(a.page,'.mpr-viewport canvas');await a.page.waitForFunction(()=>document.querySelector('.native-annotation-hover')?.getAttribute('data-mask-count')==='3');
+ if(await hover.locator('section').nth(2).locator('[data-author-id]').count()!==2)throw new Error('MPR hover lost a coauthor');
+ await a.page.screenshot({path:'artifacts/hover-mpr-overlap.png',fullPage:true});
+ await a.page.getByRole('button',{name:'返回原始三视图',exact:true}).click();
+ await b.page.goto(base);await a.page.waitForFunction(()=>document.querySelector('.native-members small')?.textContent?.includes('1 人在线'));
+ hover=await hoverCenter(a.page);if(!(await hover.innerText()).includes('测试B'))throw new Error('Offline authors disappeared from hover');
+ await a.page.reload();await enter(a.page);hover=await hoverCenter(a.page);if(await hover.locator('section').nth(2).locator('[data-author-id]').count()!==2)throw new Error('Reload lost offline coauthor profiles');
+ await enter(b.page);await b.page.locator('.mw-mask-row').nth(1).locator('small').click();
+ for(const page of [a.page,b.page])if(await page.getByRole('button',{name:'返回原始三视图',exact:true}).count())await page.getByRole('button',{name:'返回原始三视图',exact:true}).click();
+ console.log('Hover passed: overlapping Masks, same-Mask coauthors, offline authors, reload, zoom, slice change and MPR');
  await a.page.locator('.mw-mask-row').nth(1).locator('small').click();await settle(a.page);
  // An unavailable upload path must not lose completed outcomes across reload.
  const operationRoute='**/api/collaboration/workbenches/**/operations**';
@@ -83,7 +115,7 @@ try{
  if(await a.page.locator('.mw-mask-row').count()!==1)throw new Error('Historical view is not revision one');
  if(!await a.page.getByRole('button',{name:'＋ 新建',exact:true}).isDisabled())throw new Error('Historical view permits edits');
  await a.page.getByRole('button',{name:'返回实时成果',exact:true}).click();await a.page.locator('.native-sync-bar[data-connected=true]').waitFor();await a.page.locator('.busy-overlay').waitFor({state:'hidden'});
- if(await a.page.locator('.mw-mask-row').count()!==2)throw new Error('Returning from history did not restore current outcome');
+ if(await a.page.locator('.mw-mask-row').count()!==3)throw new Error('Returning from history did not restore current outcome');
  console.log('History read-only navigation and return to current outcome passed');
  await a.page.getByRole('button',{name:'测量与注释',exact:true}).click();await a.page.locator('.mw-tool-grid button').filter({hasText:'文字标注'}).click();
  const annotationBox=await a.page.locator('canvas').first().boundingBox();await a.page.mouse.click(annotationBox.x+annotationBox.width*.5,annotationBox.y+annotationBox.height*.5);
@@ -96,7 +128,7 @@ try{
  console.log('Native annotation metadata and generated 3D mesh resources synchronized');
  const projects=(await json(a.page,'/api/datasets')).datasets,project=projects.find(x=>x.id===uploaded.dataset.id);
  await a.page.screenshot({path:'artifacts/workbench-collaboration-A.png',fullPage:true});await b.page.screenshot({path:'artifacts/workbench-collaboration-B.png',fullPage:true});
- const report={dataset:uploaded.dataset.id,project:project.projectId,revision:project.revision,countA,countB,foreignEraseProtected:true,independentMasks:2,reloadRecovery:true,lostAcknowledgement:discarded,historyNavigation:true,annotations:true,models:true,errors};
+ const report={dataset:uploaded.dataset.id,project:project.projectId,revision:project.revision,countA,countB,foreignEraseProtected:true,independentMasks:3,hover:{overlappingMasks:true,coauthors:true,offline:true,reload:true,zoom:true,slices:true,mpr:true},reloadRecovery:true,lostAcknowledgement:discarded,historyNavigation:true,annotations:true,models:true,errors};
  await json(a.page,'/api/datasets/'+uploaded.dataset.id+'/complete','POST',{revision:project.revision});
  await b.page.waitForFunction(()=>document.querySelector('.mimics-workbench')?.getAttribute('data-readonly')==='true');
  await owner.page.getByRole('button',{name:'刷新工作台',exact:true}).click();await choose(owner.page);
@@ -106,6 +138,6 @@ try{
  }
 }catch(error){
  console.log('FAIL: '+error.message);
- for(let i=0;i<contexts.length;i++){const page=contexts[i].pages()[0];console.log('PAGE '+i+': '+(await page.locator('body').innerText().catch(()=>'' )).slice(-2500));await page.screenshot({path:'artifacts/workbench-failure-'+i+'.png',fullPage:true}).catch(()=>{});}
+ for(let i=0;i<contexts.length;i++){const page=contexts[i].pages()[0];console.log('PAGE '+i+': '+(await page.locator('body').innerText().catch(()=>'' )).slice(-2500));console.log('HOVER '+i,await page.locator('[data-annotation-hover-anchor]').evaluateAll(nodes=>nodes.map(node=>({html:node.outerHTML,parent:node.parentElement?.className}))));await page.screenshot({path:'artifacts/workbench-failure-'+i+'.png',fullPage:true}).catch(()=>{});}
  throw error;
 }finally{await browser.close();}

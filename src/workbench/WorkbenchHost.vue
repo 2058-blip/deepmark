@@ -8,6 +8,7 @@ import {api,downloadBlobAuthenticated,fingerprint} from '../api.ts';
 import type {AuthUser,Dataset,TransferProgress as Progress} from '../api.ts';
 import TransferProgress from '../TransferProgress.vue';
 import WorkbenchSyncBar from './WorkbenchSyncBar.vue';
+import AnnotationHover from './AnnotationHover.vue';
 import {useTeamWorkbench} from './useTeamWorkbench.ts';
 import {WORKBENCH_BASE} from './wire.ts';
 import type {SharedWorkbench,HistoryView} from './wire.ts';
@@ -72,6 +73,7 @@ onBeforeUnmount(()=>{request.abort();sync.dispose();window.removeEventListener('
   <div class="collaborative-native-workbench" @pointerdown.capture="pointerDown">
     <Workbench :editor="editor" :read-only="readOnly" :team-mode="!sync.localMode.value" :allow-export="allowExport">
       <template #collaboration><WorkbenchSyncBar :user="user" :dataset="dataset" :sync="sync" :leaving="leaving" @back="leave()" @logout="leave(true)" @history="openHistory"/></template>
+      <template #annotation-hover="view"><AnnotationHover v-bind="view" :annotations-at="sync.annotationsAt"/></template>
     </Workbench>
     <div v-if="loading" class="busy-overlay" role="status"><TransferProgress :title="dataset.name" :progress="progress" :stage="stage" cancellable @cancel="request.abort();emit('back')"/></div>
     <div v-if="error" class="native-host-error" role="alert">{{error}}<button @click="error=''">关闭提示</button><button v-if="!editor.volume.value" @click="emit('back')">返回任务列表</button></div>

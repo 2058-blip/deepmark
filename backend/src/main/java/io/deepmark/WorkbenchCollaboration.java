@@ -115,9 +115,7 @@ public final class WorkbenchCollaboration {
     }
     public Map<String,Object> snapshot(Auth.User user,String id,Long revision){
         return platform.db.read(c->{Row row=readable(c,user,id);WorkbenchModel model=model(c,row,revision);long version=revision==null?row.revision:revision;
-            List<Map<String,Object>> claims=new ArrayList<>();
-            for(var layer:model.layers.entrySet())for(var author:layer.getValue().authors.entrySet())if(!author.getValue().isEmpty())
-                claims.add(map("mask",layer.getKey(),"author",author.getKey(),"name",authorName(c,author.getKey())));
+            List<Map<String,Object>> claims=claimProfiles(c,model);
             return map("id",id,"datasetId",row.dataset,"fingerprint",row.fingerprint,"count",row.count,"revision",version,"latestRevision",row.revision,"claims",claims,
                 "manifest",model.manifest,"canWrite",revision==null&&canWrite(user,row.dataset),"datasetStatus",platform.dataset(row.dataset).get("status"),
                 "maskBase",BASE+"/"+id+"/mask?revision="+version+"&mask=","resourceBase",BASE+"/"+id+"/resources/");
@@ -250,7 +248,7 @@ public final class WorkbenchCollaboration {
         if(platform.legacyCollaboration==null)throw new NotFoundResponse("旧版历史不可用。");Collaboration.NativeExport export=platform.legacyCollaboration.nativeExport(user,row.dataset,row.fingerprint,revision);if(export==null)throw new NotFoundResponse("旧版历史不存在。");
         WorkbenchModel model=export.model();platform.db.read(c->{JsonNode current=parse((String)one(c,"SELECT manifest FROM wb_projects WHERE id=?",row.id).get("manifest"));int raw=current.path("rawUnit").asInt();model.manifest.put("rawUnit",raw);model.manifest.put("sourceUnit",raw>=1&&raw<=3?raw:0);return null;});return model;
     }
-    public Map<String,Object> legacySnapshot(Auth.User user,String id,long revision){return platform.db.read(c->{Row row=readable(c,user,id);WorkbenchModel model=legacyModel(user,row,revision);return map("id",id,"datasetId",row.dataset,"fingerprint",row.fingerprint,"count",row.count,"revision",revision,"latestRevision",row.revision,"manifest",model.manifest,"claims",List.of(),"canWrite",false,"historicalKind","legacy","datasetStatus",platform.dataset(row.dataset).get("status"),"maskBase",BASE+"/"+id+"/mask?legacyRevision="+revision+"&mask=","resourceBase",BASE+"/"+id+"/resources/");});}
+    public Map<String,Object> legacySnapshot(Auth.User user,String id,long revision){return platform.db.read(c->{Row row=readable(c,user,id);WorkbenchModel model=legacyModel(user,row,revision);return map("id",id,"datasetId",row.dataset,"fingerprint",row.fingerprint,"count",row.count,"revision",revision,"latestRevision",row.revision,"manifest",model.manifest,"claims",claimProfiles(c,model),"canWrite",false,"historicalKind","legacy","datasetStatus",platform.dataset(row.dataset).get("status"),"maskBase",BASE+"/"+id+"/mask?legacyRevision="+revision+"&mask=","resourceBase",BASE+"/"+id+"/resources/");});}
     public Map<String,Object> history(Auth.User user,String id){return platform.db.read(c->{Row row=readable(c,user,id);List<Map<String,Object>> events=rows(c,"SELECT revision,op,author,name,kind,time FROM wb_events WHERE project=? ORDER BY revision DESC LIMIT 100",id);JsonNode manifest=parse((String)one(c,"SELECT manifest FROM wb_projects WHERE id=?",id).get("manifest"));List<Map<String,Object>> legacy=List.of();JsonNode source=manifest.path("legacySource");if(source.has("project")&&platform.tableExists("collab_events"))legacy=rows(c,"SELECT revision,op,author,name,kind,time FROM collab_events WHERE project=? ORDER BY revision DESC LIMIT 100",source.path("project").asText());return map("events",events,"legacy",legacy,"legacySource",source);});}
     public Map<String,Object> provenance(Auth.User user,String id,long index){
         return platform.db.read(c->{Row row=readable(c,user,id);if(index<0||index>=row.count)throw new BadRequestResponse("体素位置无效。");WorkbenchModel model=model(c,row,null);List<Map<String,Object>> result=new ArrayList<>();
@@ -264,6 +262,12 @@ public final class WorkbenchCollaboration {
         platform.requireRead(user,(String)row.get("dataset"));return new Row(id,(String)row.get("dataset"),(String)row.get("fingerprint"),((Number)row.get("count")).intValue(),((Number)row.get("revision")).longValue());
     }
     private boolean canWrite(Auth.User user,String dataset){try{platform.requireWrite(user,dataset);return true;}catch(HttpResponseException error){return false;}}
+    private List<Map<String,Object>> claimProfiles(Connection c,WorkbenchModel model)throws SQLException{
+        List<Map<String,Object>> claims=new ArrayList<>();
+        for(var layer:model.layers.entrySet())for(var author:layer.getValue().authors.entrySet())if(!author.getValue().isEmpty())
+            claims.add(map("mask",layer.getKey(),"author",author.getKey(),"name",authorName(c,author.getKey())));
+        return claims;
+    }
     private static String authorName(Connection c,String author)throws SQLException{Map<String,Object> row=one(c,"SELECT name FROM users WHERE id=?",author);return row==null?"历史导入":String.valueOf(row.get("name"));}
     private void remember(String id,long revision,WorkbenchModel model){cache.put(id,new Cached(revision,model));while(cache.size()>3)cache.remove(cache.keySet().iterator().next());}
     private Auth.User peerUser(Peer peer){Auth.User user=platform.auth.fromCookie(peer.cookie);if(user==null||!user.id().equals(peer.user))throw new UnauthorizedResponse();platform.requireRead(user,peer.dataset);return user;}

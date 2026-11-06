@@ -7,11 +7,23 @@ const root=fileURLToPath(new URL('../',import.meta.url)),require=createRequire(i
 let ts;try{ts=require('typescript');}catch{ts=require('../mimics-workbench/node_modules/typescript');}
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const relative=file=>path.relative(root,file).split(path.sep).join('/');
+// The hover feature adds only these two read-only template slots. Strip their
+// exact lines before comparing the original bytes; never rebaseline tool code.
+const hoverBridges={
+  'mimics-workbench/src/mimics/ImageViewport.vue':`    <slot v-if="$slots?.['annotation-hover']" name="annotation-hover" :locate="locate" :grid="grid" :volume="volume" :axis="axis" :point="point" :view="geometry" :size="size" :revision="revision"/>`,
+  'mimics-workbench/src/mimics/MprViewport.vue':`    <slot v-if="$slots?.['annotation-hover']" name="annotation-hover" :pixel-at="eventPixel" :grid="grid" :volume="volume" :plane="plane" :view="geometry" :size="size" :revision="revision" :ready="!loading&&!!samples.data&&!samples.error"/>`,
+};
+function protectedBytes(file){
+  const bytes=fs.readFileSync(file),bridge=hoverBridges[relative(file)];if(!bridge)return bytes;
+  const source=bytes.toString('utf8'),lines=[bridge+'\r\n',bridge+'\n'],count=lines.reduce((sum,line)=>sum+source.split(line).length-1,0);
+  if(count>1)throw new Error('Duplicate hover bridge: '+relative(file));
+  return count?Buffer.from(lines.reduce((text,line)=>text.replace(line,''),source),'utf8'):bytes;
+}
 const directory=path.join(root,'mimics-workbench/src/mimics'),files=[];
 function walk(folder){for(const item of fs.readdirSync(folder,{withFileTypes:true})){const file=path.join(folder,item.name);if(item.isDirectory())walk(file);else if(/\.(ts|vue)$/.test(item.name)&&item.name!=='Workbench.vue')files.push(file);}}
 walk(directory);
 for(const name of ['core.ts','view.ts','niftiIO.ts','volumeCapacity.ts'])files.push(path.join(root,'mimics-workbench/src',name));
-const entries=Object.fromEntries(files.sort().map(file=>[relative(file),hash(fs.readFileSync(file))]));
+const entries=Object.fromEntries(files.sort().map(file=>[relative(file),hash(protectedBytes(file))]));
 const workbench=fs.readFileSync(path.join(directory,'Workbench.vue'),'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)?.[1];
 if(!workbench)throw new Error('Workbench script was not found');
 const source=ts.createSourceFile('Workbench.ts',workbench,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),functions={};

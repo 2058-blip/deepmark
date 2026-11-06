@@ -127,6 +127,9 @@ class WorkbenchIntegrationTest {
                 assertEquals(423,call(client,base,"a","POST",route+"/operations",json(Map.of("op","old-write","baseRevision",4,"patch",Collaboration.encodePatch(List.of(new int[]{2,0,1})))).getBytes(),Map.of()).statusCode());
                 assertEquals(4,((List<?>)p.workbenches.history(a,nativeId).get("legacy")).size());
                 assertEquals(0,Platform.JSON.valueToTree(p.workbenches.legacySnapshot(a,nativeId,0)).path("revision").asInt());
+                JsonNode legacyAuthors=Platform.JSON.valueToTree(p.workbenches.legacySnapshot(a,nativeId,4)).path("claims");
+                assertEquals(3,legacyAuthors.size(),"historical hover retains all authors, including same-Mask agreements");
+                assertTrue(legacyAuthors.findValuesAsText("author").containsAll(List.of("a","b")));
                 p.workbenches.stage(a,nativeId,"native-withdraw",0,"legacy-1",paint(0,1,1,0));p.workbenches.commit(a,nativeId,Platform.JSON.readTree("{\"op\":\"native-withdraw\",\"baseRevision\":0,\"parts\":1,\"changes\":{}}"));
                 assertEquals(1,((List<?>)p.workbenches.provenance(a,nativeId,0).get("annotations")).size());
             }finally{app.stop();}

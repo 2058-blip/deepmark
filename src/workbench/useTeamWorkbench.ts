@@ -10,6 +10,7 @@ import {diffMaskPackets,applyMaskPackets,readMaskRuns,sameMaskPackets} from './m
 import type {VoxelBounds} from './maskRuns.ts';
 import {WORKBENCH_BASE,COLLECTIONS,WorkbenchResources,readMaskSnapshot,maskSnapshotPackets,metadataChanges,hasMetadataChanges,applyMetadata,nativeState} from './wire.ts';
 import type {Manifest,SharedWorkbench,SharedEvent} from './wire.ts';
+import {annotationsAtVoxel} from './hover.ts';
 
 function same(a:any,b:any):boolean{
   if(a===b)return true;
@@ -37,6 +38,7 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   const project=shallowRef<SharedWorkbench|null>(null),connected=ref(false),initializing=ref(true),queueCount=ref(0),sending=ref(false),error=ref(''),notice=ref(''),localMode=ref(false);
   const members=ref<AuthUser[]>([]),history=ref<SharedEvent[]>([]),legacyHistory=ref<SharedEvent[]>([]),sourceData=shallowRef<Float32Array|null>(null),encoding=ref(0),recoveryBlocked=ref(false),viewingHistory=ref(false);
   const outbox=new WorkbenchOutbox(user.id),claims=new WorkbenchClaims(),authority=new Map<string,Uint8Array>();
+  const authorNames=new Map<string,string>([[user.id,user.name]]),ownershipRevision=ref(0);
   const draftHints=new WeakMap<Uint8Array,{source:Uint8Array;bounds:VoxelBounds}>();
   const delayedClaims:{mask:string;author:string;packet:Uint8Array}[]=[];
   const ownedAfter=new Map<string,WeakRef<ProjectState>>();
@@ -53,6 +55,16 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   const activeGesture=()=>pointer||!!editor.draft.value||!!editor.mpr.brushPreview.value||!!editor.draftPoints.value.length||!!editor.mpr.contourDraft.value||!!editor.measurementEditor.draft.value||editor.busy.value;
   const pending=computed(()=>queueCount.value+encoding.value>0);
   const base=()=>WORKBENCH_BASE+'/'+project.value!.id;
+  function annotationsAt(index:number){
+    ownershipRevision.value;
+    const rows=annotationsAtVoxel(editor.state.value.masks,index,claims,authorNames);
+    for(const row of rows){
+      if(localMode.value){row.authors=[];continue;}
+      if(!viewingHistory.value&&!authority.get(row.id)?.[index]&&!row.authors.some(author=>author.id===user.id))row.authors.push({id:user.id,name:user.name});
+    }
+    return rows;
+  }
+  watch(members,list=>{for(const member of list)authorNames.set(member.id,member.name);ownershipRevision.value++;});
   async function recount(){if(project.value)queueCount.value=(await outbox.list(project.value.id)).length;}
   function protectDraft(data:Uint8Array|null,bounds:VoxelBounds|null|undefined){
     const mask=editor.activeMask.value,volume=editor.volume.value;if(!data||!mask||!volume||!bounds||!canWrite.value)return;
@@ -121,8 +133,10 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
     viewingHistory.value=historical;
     const cached=editor.state.value;
     project.value=snapshot;resources=new WorkbenchResources(snapshot.id,user.id);manifest=snapshot.manifest;authority.clear();
+    for(const claim of snapshot.claims||[])authorNames.set(claim.author,claim.name);
     for(const def of manifest.masks)authority.set(String(def.id),await readMaskSnapshot(snapshot.maskBase+encodeURIComponent(String(def.id)),snapshot.count));
     for(const claim of snapshot.claims||[])for await(const packet of maskSnapshotPackets(snapshot.maskBase+encodeURIComponent(claim.mask)+'&author='+encodeURIComponent(claim.author),snapshot.count))claims.apply(claim.mask,claim.author,packet,snapshot.count);
+    ownershipRevision.value++;
     sourceData.value=editor.volume.value!.data;
     if(!historical)await recover(cached,cacheRevision);
     await projectView(true);initializing.value=false;
@@ -165,7 +179,8 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
     if(!project.value||!resources||!manifest||localMode.value||stopped)return;
     if(!force&&(activeGesture()||encoding.value)){deferred=true;return;}
     const projectedRevision=project.value.revision;let nativeRevision=editor.revision.value;
-    for(const claim of delayedClaims.splice(0))claims.apply(claim.mask,claim.author,claim.packet,project.value.count);
+    const queuedClaims=delayedClaims.splice(0);for(const claim of queuedClaims)claims.apply(claim.mask,claim.author,claim.packet,project.value.count);
+    if(queuedClaims.length)ownershipRevision.value++;
     const projected=new Map(authority),operations=viewingHistory.value?[]:await outbox.list(project.value.id);
     let projectedManifest=manifest;
     for(const operation of operations){
@@ -199,6 +214,7 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   async function accept(event:SharedEvent){
     if(!project.value||event.revision<=project.value.revision)return;
     if(event.revision!==project.value.revision+1){await refresh();return;}
+    authorNames.set(event.author,event.name);
     manifest=applyMetadata(manifest!,event.changes);
     const own=ownedAfter.get(event.op)?.deref(),ownBefore=ownedBefore.get(event.op)?.deref();
     if(own&&event.author===user.id){
@@ -236,6 +252,7 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
     for(const id of [...authority.keys()])if(!manifest.masks.some(mask=>mask.id===id)){authority.delete(id);claims.remove(id);}
     await outbox.remove(project.value.id+':'+event.op);ownedAfter.delete(event.op);ownedBefore.delete(event.op);
     project.value={...project.value,revision:event.revision,latestRevision:Math.max(event.revision,project.value.latestRevision),manifest};
+    ownershipRevision.value++;
     history.value=[event,...history.value].slice(0,100);await recount();
     await projectView();
   }
@@ -295,5 +312,5 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   async function markCached(nativeRevision:number){if(project.value)await outbox.mark(project.value.id,revisionBases.get(nativeRevision)??editorBaseRevision,nativeRevision);}
   function dispose(){stopped=true;resources?.dispose();socket?.close();if(retry)clearTimeout(retry);if(reconnect)clearTimeout(reconnect);if(poll)clearInterval(poll);}
   onScopeDispose(dispose);
-  return{project,connected,initializing,queueCount,sending,error,notice,localMode,members,history,legacyHistory,viewingHistory,sourceData,encoding,recoveryBlocked,canWrite,pending,load,refresh,flush,dispose,pointerState,markCached,readHistory,pendingFor:(id:string)=>outbox.list(id)};
+  return{project,connected,initializing,queueCount,sending,error,notice,localMode,members,history,legacyHistory,viewingHistory,sourceData,encoding,recoveryBlocked,canWrite,pending,load,refresh,flush,dispose,pointerState,markCached,readHistory,annotationsAt,pendingFor:(id:string)=>outbox.list(id)};
 }
