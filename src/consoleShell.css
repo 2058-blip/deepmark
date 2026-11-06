@@ -1,51 +1,51 @@
 /* The authenticated consoles share the workstation's brand and spacing. */
-.console-shell{font-family:Inter,"Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif}
+.console-shell{font-family:var(--font-sans)}
 .console-shell .console-topbar{height:64px;min-height:64px;padding:0 28px;gap:24px;background:#fff;border-bottom:1px solid var(--border);align-items:center}
-.console-shell .console-brand{display:flex;align-items:center;gap:22px;min-width:0;font-size:26px;font-weight:750;letter-spacing:-1.1px;color:#18aaa9}
+.console-shell .console-brand{display:flex;align-items:center;gap:22px;min-width:0;font-size:26px;font-weight:700;letter-spacing:-1.1px;color:var(--brand)}
 .console-shell .console-brand>strong{font:inherit;white-space:nowrap}
 .console-shell .console-brand>.console-brand-role{display:flex;align-items:center;gap:8px;margin:0;padding-left:22px;border-left:1px solid var(--border);font-size:13px;line-height:22px;font-weight:500;letter-spacing:0;color:var(--text-2);white-space:nowrap}
 .console-shell .console-brand-role>.dm-icon{color:var(--primary)}
 .console-shell .console-account{gap:11px;min-width:0;font-size:12px;color:var(--text-2)}
-.console-shell .console-account-avatar{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid #cfe8e2;border-radius:50%;background:#e7f5f1;color:#397e6b;font-size:13px;font-weight:650}
+.console-shell .console-account-avatar{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid #cfe8e2;border-radius:50%;background:#e7f5f1;color:var(--primary);font-size:13px;font-weight:600}
 .console-shell .console-account-identity{display:flex;flex-direction:column;gap:4px;min-width:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35}
-.console-shell .console-account small{display:block;margin:0;font-size:10px;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
-.console-shell .console-account>button{display:flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:6px 10px;margin-left:5px;font-size:11px;white-space:nowrap;flex-shrink:0}
+.console-shell .console-account small{display:block;margin:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.console-shell .console-account>button{display:flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:6px 10px;margin-left:5px;font-size:12px;white-space:nowrap;flex-shrink:0}
 .console-shell .console-content{width:100%;max-width:1500px;min-width:0;margin:0 auto;padding:34px 38px 46px;gap:24px}
 .console-shell .console-heading{align-items:center;gap:30px;margin:0 0 3px}
 .console-shell .console-heading>div{min-width:0;max-width:980px}
-.console-shell .console-heading .eyebrow{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:550;line-height:18px;letter-spacing:1.35px;color:var(--primary)}
-.console-shell .console-heading h1{margin:8px 0 9px;font-size:27px;font-weight:650;line-height:1.5;letter-spacing:.1px;color:var(--text)}
+.console-shell .console-heading .eyebrow{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;line-height:18px;letter-spacing:.5px;color:var(--primary)}
+.console-shell .console-heading h1{margin:8px 0 9px;font-size:27px;font-weight:600;line-height:1.5;letter-spacing:.1px;color:var(--text)}
 .console-shell .console-heading p{max-width:850px;margin:0;font-size:12px;line-height:1.9;color:var(--muted)}
-.console-shell .console-heading>button{display:flex;align-items:center;justify-content:center;gap:7px;height:36px;min-height:36px;padding:7px 12px;font-size:11px;white-space:nowrap;flex-shrink:0}
+.console-shell .console-heading>button{display:flex;align-items:center;justify-content:center;gap:7px;height:36px;min-height:36px;padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0}
 .console-shell .console-card{min-width:0;padding:24px;border-radius:6px;box-shadow:none}
 .console-shell .console-card h2,.console-shell .console-card h3{display:flex;align-items:center;gap:9px;line-height:1.6;overflow-wrap:anywhere}
 .console-shell .console-card h2{margin:0 0 9px;font-size:16px;font-weight:600}
 .console-shell .console-card h2>.dm-icon,.console-shell .console-card h3>.dm-icon{color:var(--primary)}
-.console-shell .console-card h3{font-size:12px;font-weight:600}
+.console-shell .console-card h3{font-size:14px;font-weight:600}
 .console-shell .console-upload{grid-template-columns:minmax(210px,.75fr) minmax(0,2.5fr);align-items:center;gap:30px}
 .console-shell .console-upload form{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) auto;gap:13px}
 .console-shell .console-upload form>button,.console-shell .console-team-forms form>button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:38px;white-space:nowrap}
-.console-shell .console-upload input[type=file]{min-width:0;overflow:hidden;max-width:100%;font-size:11px}
-.console-shell .console-upload form>small{overflow-wrap:anywhere;font-size:10px}
+.console-shell .console-upload input[type=file]{min-width:0;overflow:hidden;max-width:100%;font-size:12px}
+.console-shell .console-upload form>small{overflow-wrap:anywhere;font-size:12px}
 .console-shell .console-team-grid{grid-template-columns:minmax(0,.9fr) minmax(0,1.5fr);gap:24px}
 .console-shell .console-team-forms{gap:24px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .console-shell .console-team-forms form{min-width:0;gap:13px}
 .console-shell .console-team-forms form+form{padding-left:24px}
-.console-shell .console-team-forms form>button{font-size:11px;margin-top:3px}
+.console-shell .console-team-forms form>button{font-size:12px;margin-top:3px}
 .console-shell .console-group{padding:14px 0}
 .console-shell .console-group>div{flex-wrap:wrap;gap:8px}
 .console-shell .console-group strong{font-size:13px;font-weight:600;overflow-wrap:anywhere}
-.console-shell .console-group p{font-size:11px;line-height:1.9;overflow-wrap:anywhere}
-.console-shell .console-group code{display:inline-block;max-width:100%;padding:1px 6px;line-height:1.7;letter-spacing:1.1px;overflow-wrap:anywhere;font-size:11px}
-.console-shell .console-role{font-size:10px;padding:2px 7px}
+.console-shell .console-group p{font-size:12px;line-height:1.9;overflow-wrap:anywhere}
+.console-shell .console-group code{display:inline-block;max-width:100%;padding:1px 6px;line-height:1.7;letter-spacing:1.1px;overflow-wrap:anywhere;font-size:12px}
+.console-shell .console-role{font-size:12px;padding:2px 7px}
 .console-shell .console-section-heading{gap:24px;margin-bottom:22px;align-items:center}
 .console-shell .console-section-heading>div{min-width:0}
-.console-shell .console-section-heading p{font-size:11px;line-height:1.8}
-.console-shell .console-section-heading>button{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;white-space:nowrap;flex-shrink:0}
-.console-shell .console-claim-group{min-width:190px;gap:7px;font-size:10px;flex-shrink:0}
+.console-shell .console-section-heading p{font-size:12px;line-height:1.8}
+.console-shell .console-section-heading>button{display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;white-space:nowrap;flex-shrink:0}
+.console-shell .console-claim-group{min-width:190px;gap:7px;font-size:12px;flex-shrink:0}
 .console-shell .console-list-toolbar{gap:18px;margin-bottom:16px}
 .console-shell .console-filters{gap:6px}
-.console-shell .console-list-toolbar>input{max-width:280px;font-size:11px}
+.console-shell .console-list-toolbar>input{max-width:280px;font-size:12px}
 .console-shell .console-detail-grid{gap:22px}
 .console-shell .console-detail-grid dd{font-size:12px;line-height:1.8}
 .console-shell .console-detail-columns{gap:32px;padding-top:22px}
@@ -63,17 +63,17 @@
 @media(max-width:760px){
   .console-shell .console-topbar{padding:0 16px;gap:14px}
   .console-shell .console-brand{flex-direction:column;align-items:flex-start;gap:1px;font-size:23px;line-height:27px}
-  .console-shell .console-brand>.console-brand-role{gap:5px;padding:0;border:0;font-size:10px;line-height:17px}
+  .console-shell .console-brand>.console-brand-role{gap:5px;padding:0;border:0;font-size:12px;line-height:17px}
   .console-shell .console-brand-role>.dm-icon{width:12px;height:12px}
-  .console-shell .console-account{gap:8px;font-size:11px}
+  .console-shell .console-account{gap:8px;font-size:12px}
   .console-shell .console-account-avatar{width:28px;height:28px;flex-basis:28px;font-size:12px}
   .console-shell .console-account-identity{max-width:130px;gap:3px}
-  .console-shell .console-account small{font-size:9px}
-  .console-shell .console-account>button{margin:0;gap:5px;height:31px;padding:5px 7px;font-size:10px}
+  .console-shell .console-account small{font-size:12px}
+  .console-shell .console-account>button{margin:0;gap:5px;height:31px;padding:5px 7px;font-size:12px}
   .console-shell .console-content{padding:24px 16px 32px;gap:19px}
   .console-shell .console-heading{align-items:flex-start;gap:18px}
   .console-shell .console-heading h1{font-size:22px;line-height:1.55}
-  .console-shell .console-heading p{font-size:11px;line-height:1.85}
+  .console-shell .console-heading p{font-size:12px;line-height:1.85}
   .console-shell .console-card{padding:19px 17px}
   .console-shell .console-card h2{font-size:15px}
   .console-shell .console-team-forms{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}

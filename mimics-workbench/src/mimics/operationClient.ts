@@ -13,6 +13,8 @@ export class OperationClient {
   private grid:VolumeGrid|null=null;
   private serial=0;
   private pending:{id:number;resolve:(value:unknown)=>void;reject:(e:Error)=>void;progress?:(value:number)=>void}|null=null;
+  private releaseWorker(){this.worker?.terminate();this.worker=null;}
+  private releaseLargeSource(){if((this.grid?.data.byteLength||0)>=64*1024*1024)this.releaseWorker();}
   initialize(grid:VolumeGrid){this.cancel();this.grid=grid;}
   private start(){
     if(!this.grid)return;
@@ -20,17 +22,22 @@ export class OperationClient {
     this.worker.onmessage=({data})=>{
       const p=this.pending;if(!p||data.id!==p.id)return;
       if(data.type==='progress')p.progress?.(data.fraction);
-      else if(data.type==='result'){this.pending=null;p.resolve(data.result);}
-      else if(data.type==='error'){this.pending=null;p.reject(new Error(data.message));}
+      else if(data.type==='result'){this.pending=null;this.releaseLargeSource();p.resolve(data.result);}
+      else if(data.type==='error'){this.pending=null;this.releaseLargeSource();p.reject(new Error(data.message));}
     };
     this.worker.onerror=event=>{const p=this.pending;this.pending=null;p?.reject(new Error(event.message||'后台计算失败。'));this.worker?.terminate();this.worker=null;};
-    this.worker.postMessage({type:'init',grid:this.grid});
+    try{this.worker.postMessage({type:'init',grid:this.grid});}catch(error){this.releaseWorker();throw error;}
   }
   run<T>(request:OperationRequest,progress?:(value:number)=>void):Promise<T>{
     if(this.pending)return Promise.reject(new Error('已有计算正在进行。'));
-    if(!this.worker)this.start();if(!this.worker)return Promise.reject(new Error('请先加载影像。'));
+    try{if(!this.worker)this.start();}catch(error){return Promise.reject(error);}if(!this.worker)return Promise.reject(new Error('请先加载影像。'));
     const id=++this.serial;
-    return new Promise<T>((resolve,reject)=>{this.pending={id,resolve:value=>resolve(value as T),reject,progress};try{this.worker!.postMessage({...request,options:plainOptions(request.options),seed:request.seed?[...request.seed]:undefined,type:'run',id});}catch(e){this.pending=null;reject(e);}});
+    return new Promise<T>((resolve,reject)=>{this.pending={id,resolve:value=>resolve(value as T),reject,progress};try{
+      // Dynamic growth and thresholding read the CT, not either input Mask.
+      // Never clone hundreds of MiB of unused masks into the worker.
+      const {mask,other,...rest}=request;
+      this.worker!.postMessage({...rest,...(!['dynamic','threshold'].includes(request.kind)&&mask?{mask}:{}),...(['boolean','selection'].includes(request.kind)&&other?{other}:{}),options:plainOptions(request.options),seed:request.seed?[...request.seed]:undefined,type:'run',id});
+    }catch(e){this.pending=null;this.releaseLargeSource();reject(e);}});
   }
   cancel(){this.worker?.terminate();this.worker=null;const p=this.pending;this.pending=null;p?.reject(new Error('计算已取消，原对象未更改。'));}
   dispose(){this.cancel();this.grid=null;}

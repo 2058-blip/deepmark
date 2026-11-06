@@ -1,5 +1,6 @@
 import { physicalPoint, requireGrid, voxelIndex, voxelPoint } from './types.ts';
 import type { AlgorithmControl, Axis, BinaryMask, MaskResult, RegionBounds, SlicePlane, Vec3, VolumeGrid } from './types.ts';
+import {VoxelFifo} from './voxelFifo.ts';
 
 /** Cooperative cancellation never publishes a partial result or modifies an input. */
 export class AlgorithmCancelledError extends Error {
@@ -12,7 +13,12 @@ export function checkAlgorithmControl(control: AlgorithmControl = {}, fraction?:
 }
 
 export interface SelectionDomain extends AlgorithmControl { roi?: RegionBounds; plane?: SlicePlane }
-export interface GrowOptions extends SelectionDomain { connectivity?: 6 | 26 }
+export interface GrowOptions extends SelectionDomain {
+  connectivity?: 6 | 26;
+  /** Scratch bitset + FIFO budget for dynamic growth and hole filling;
+   * excludes inputs and the required full-resolution result. */
+  maxWorkingBytes?: number;
+}
 interface Domain { min: Vec3; max: Vec3; plane?: SlicePlane }
 
 function domainOf(grid: VolumeGrid, options: SelectionDomain = {}): Domain {
@@ -50,7 +56,11 @@ function resultOf(mask: BinaryMask, control: AlgorithmControl = {}): MaskResult 
   checkAlgorithmControl(control, 1);
   return { mask, count };
 }
-function binaryCopy(mask: BinaryMask): BinaryMask { return Uint8Array.from(mask, n => n ? 1 : 0); }
+function binaryCopy(mask: BinaryMask): BinaryMask {
+  // TypedArray.from consumes an iterable into a temporary JS-number list before
+  // conversion in V8. A large CT Mask must never be expanded onto the JS heap.
+  const copy=new Uint8Array(mask.length);for(let i=0;i<mask.length;i++)copy[i]=mask[i]?1:0;return copy;
+}
 
 /** Confirmed comparison: lower <= intensity <= upper (MatImageOperations 0x180020A00). */
 export function threshold(grid: VolumeGrid, lower: number, upper: number, options: SelectionDomain = {}): MaskResult {
@@ -147,26 +157,34 @@ export function dynamicRegionGrow(grid: VolumeGrid, seed: Vec3, options: Dynamic
   if (options.updateMean !== undefined && typeof options.updateMean !== 'boolean') throw new Error('在线均值开关必须为布尔值。');
   if (!Number.isFinite(grid.data[first])) throw new Error('种子强度必须是有限数。');
   checkAlgorithmControl(options, 0);
-  const mask = new Uint8Array(grid.data.length), visited = new Uint8Array(Math.ceil(mask.length / 4));
-  const queue: number[] = [first]; mask[first] = 1;
-  const mark = (i: number, state: number) => { visited[i >>> 2] |= state << ((i & 3) * 2); };
-  const seen = (i: number) => ((visited[i >>> 2] >>> ((i & 3) * 2)) & 1) !== 0;
-  mark(first, 3);
-  let mean = grid.data[first], count = 1, steps = 0;
-  for (let head = 0; head < queue.length; head++) {
-    if ((head & 1023) === 0) checkAlgorithmControl(options, head / mask.length);
-    const p = voxelPoint(queue[head], grid.dims);
+  const [minX,minY,minZ]=domain.min,[maxX,maxY,maxZ]=domain.max;
+  const domainWidth=maxX-minX+1,domainHeight=maxY-minY+1,domainCount=domainWidth*domainHeight*(maxZ-minZ+1);
+  const visitedBytes=Math.ceil(domainCount/8),maxWorkingBytes=options.maxWorkingBytes??64*1024*1024;
+  if(!Number.isSafeInteger(maxWorkingBytes)||maxWorkingBytes<4)throw new Error('动态区域生长工作内存预算无效。');
+  if(visitedBytes+4>maxWorkingBytes)throw new Error('动态区域生长处理范围超过工作内存预算，请缩小处理范围或改用单层后重试。');
+  let mask:Uint8Array,visited:Uint8Array;
+  try{mask=new Uint8Array(grid.data.length);visited=new Uint8Array(visitedBytes);}catch{throw new Error('浏览器无法分配动态区域生长结果内存，请关闭其他大影像页面或缩小影像后重试。');}
+  const queue=new VoxelFifo(maxWorkingBytes-visitedBytes,domainCount);queue.push(first);mask[first]=1;
+  const localIndex=(x:number,y:number,z:number)=>(x-minX)+domainWidth*((y-minY)+domainHeight*(z-minZ));
+  const mark=(i:number)=>{visited[i>>>3]|=1<<(i&7);};
+  const seen=(i:number)=>(visited[i>>>3]&(1<<(i&7)))!==0;
+  mark(localIndex(seed[0],seed[1],seed[2]));
+  const [width,height]=grid.dims,planeStride=width*height;
+  let mean = grid.data[first], count = 1, steps = 0,processed=0;
+  while(queue.length){
+    if ((processed++ & 1023) === 0) checkAlgorithmControl(options, processed / domainCount);
+    const current=queue.shift()!,x=current%width,row=(current-x)/width,y=row%height,z=(row-y)/height;
     for (let dz = -1; dz <= 1; dz++) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const distance = Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
       if (!distance || connectivity === 6 && distance !== 1) continue;
-      const q: Vec3 = [p[0] + dx, p[1] + dy, p[2] + dz];
-      if (!contains(q, domain)) continue;
-      const i = voxelIndex(q, grid.dims);
-      if (seen(i)) continue;
-      mark(i, 1); // Rejected voxels must not be retried after the mean moves.
+      const qx=x+dx,qy=y+dy,qz=z+dz;
+      if(qx<minX||qx>maxX||qy<minY||qy>maxY||qz<minZ||qz>maxZ)continue;
+      const local=localIndex(qx,qy,qz),i=qx+width*qy+planeStride*qz;
+      if (seen(local)) continue;
+      mark(local); // Rejected voxels must not be retried after the mean moves.
       const value = grid.data[i];
       if (Number.isFinite(value) && mean - options.lowerDeviation < value && value < mean + options.upperDeviation) {
-        mark(i, 3); mask[i] = 1; queue.push(i);
+        mask[i] = 1; queue.push(i);
         if (options.updateMean) mean += (value - mean) / (count + 1);
         count++;
       }
@@ -264,18 +282,50 @@ export function fillHoles(grid: VolumeGrid, source: BinaryMask, options: GrowOpt
   requireGrid(grid, source);
   const domain = domainOf(grid, options), connectivity = connectivityOf(options);
   checkAlgorithmControl(options, 0);
-  const rle = scanRuns(grid, domain, i => !source[i], options), seeds: number[] = [];
-  for (let id = 0; id < rle.runs.length; id++) {
-    const r = rle.runs[id];
-    if (domain.plane?.axis !== 0 && (r.start === domain.min[0] || r.end === domain.max[0]) ||
-        domain.plane?.axis !== 1 && (r.y === domain.min[1] || r.y === domain.max[1]) ||
-        domain.plane?.axis !== 2 && (r.z === domain.min[2] || r.z === domain.max[2])) seeds.push(id);
+  const [minX,minY,minZ]=domain.min,[maxX,maxY,maxZ]=domain.max;
+  const domainWidth=maxX-minX+1,domainHeight=maxY-minY+1,domainCount=domainWidth*domainHeight*(maxZ-minZ+1);
+  const visitedBytes=Math.ceil(domainCount/8),maxWorkingBytes=options.maxWorkingBytes??64*1024*1024;
+  if(!Number.isSafeInteger(maxWorkingBytes)||maxWorkingBytes<4)throw new Error('填充孔洞工作内存预算无效。');
+  if(visitedBytes+4>maxWorkingBytes)throw new Error('填充孔洞处理范围超过工作内存预算，请缩小处理范围或改用单层后重试。');
+  let mask:Uint8Array,visited:Uint8Array;
+  try{mask=binaryCopy(source);visited=new Uint8Array(visitedBytes);}catch{throw new Error('浏览器无法分配填充孔洞结果内存，请关闭其他大影像页面或缩小影像后重试。');}
+  const queue=new VoxelFifo(maxWorkingBytes-visitedBytes,domainCount,16384,'填充孔洞');
+  const [width,height]=grid.dims,planeStride=width*height;
+  const localIndex=(x:number,y:number,z:number)=>(x-minX)+domainWidth*((y-minY)+domainHeight*(z-minZ));
+  const enqueue=(x:number,y:number,z:number)=>{
+    const i=x+width*y+planeStride*z,local=localIndex(x,y,z),bit=1<<(local&7);
+    if(source[i]||visited[local>>>3]&bit)return;
+    visited[local>>>3]|=bit;queue.push(i);
+  };
+  // Flood only exterior background. One bit per domain voxel replaces millions
+  // of row/run objects; a planar flood ignores the fixed axis as a boundary.
+  let steps=0;
+  if(domain.plane?.axis!==0)for(let z=minZ;z<=maxZ;z++)for(let y=minY;y<=maxY;y++){
+    enqueue(minX,y,z);if(maxX!==minX)enqueue(maxX,y,z);if((++steps&4095)===0)checkAlgorithmControl(options);
   }
-  traverseRuns(rle, seeds, connectivity, options);
-  const mask = binaryCopy(source);
-  for (let id = 0; id < rle.runs.length; id++) {
-    if (!rle.runs[id].visited) paintRun(mask, rle, rle.runs[id]);
-    if ((id & 4095) === 0) checkAlgorithmControl(options);
+  if(domain.plane?.axis!==1)for(let z=minZ;z<=maxZ;z++)for(let x=minX;x<=maxX;x++){
+    enqueue(x,minY,z);if(maxY!==minY)enqueue(x,maxY,z);if((++steps&4095)===0)checkAlgorithmControl(options);
+  }
+  if(domain.plane?.axis!==2)for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+    enqueue(x,y,minZ);if(maxZ!==minZ)enqueue(x,y,maxZ);if((++steps&4095)===0)checkAlgorithmControl(options);
+  }
+  let processed=0;
+  while(queue.length){
+    if((processed++&1023)===0)checkAlgorithmControl(options,.8*processed/domainCount);
+    const current=queue.shift()!,x=current%width,row=(current-x)/width,y=row%height,z=(row-y)/height;
+    for(let dz=-1;dz<=1;dz++)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const distance=Math.abs(dx)+Math.abs(dy)+Math.abs(dz);
+      if(!distance||connectivity===6&&distance!==1)continue;
+      const qx=x+dx,qy=y+dy,qz=z+dz;
+      if(qx<minX||qx>maxX||qy<minY||qy>maxY||qz<minZ||qz>maxZ)continue;
+      enqueue(qx,qy,qz);
+    }
+  }
+  let filled=0;
+  for(let z=minZ;z<=maxZ;z++)for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+    const local=localIndex(x,y,z);
+    if(!(visited[local>>>3]&(1<<(local&7))))mask[x+width*y+planeStride*z]=1;
+    if((++filled&16383)===0)checkAlgorithmControl(options,.8+.19*filled/domainCount);
   }
   return resultOf(mask, options);
 }

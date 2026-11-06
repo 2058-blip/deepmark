@@ -7,7 +7,7 @@ button,a,input,select,textarea,summary{touch-action:manipulation}
 .touch-mode-buttons>button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:38px;flex:1;padding:6px 8px;border-color:#c9dfd8;background:#fff;color:#43675c;font-size:12px}
 .touch-mode-buttons>button[aria-pressed=true]{border-color:#087f7c;background:#087f7c;color:#fff}
 .touch-hint{margin:0;color:#608076;font-size:10px;line-height:1.6;overflow-wrap:anywhere}
-@media(any-pointer:coarse){
+@media(pointer:coarse){
   body :is(button,summary){min-height:44px!important;min-width:44px!important}
   body :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){min-height:44px!important;font-size:16px!important}
   body :is(input[type=checkbox],input[type=radio]){width:22px!important;height:22px!important;flex-shrink:0}

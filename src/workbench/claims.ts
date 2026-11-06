@@ -52,6 +52,7 @@ export class WorkbenchClaims {
   authorsAt(mask:string,index:number){return[...this.masks.get(mask)||[]].filter(([,bits])=>bits.has(index)).map(([author])=>author);}
   foreignAt(mask:string,user:string,index:number){for(const[author,bits]of this.masks.get(mask)||[])if(author!==user&&bits.has(index))return true;return false;}
   hasForeign(mask:string,user:string){for(const[author,bits]of this.masks.get(mask)||[])if(author!==user&&bits.count)return true;return false;}
+  authors(mask:string){return [...(this.masks.get(mask)||[])].filter(([,bits])=>bits.count>0).map(([author])=>author);}
   foreignIntersects(mask:string,user:string,start:number,end:number){for(const[author,bits]of this.masks.get(mask)||[])if(author!==user&&bits.intersects(start,end))return true;return false;}
   protect(mask:string,user:string,target:Uint8Array){for(const[author,bits]of this.masks.get(mask)||[])if(author!==user)bits.ranges((start,end)=>target.fill(1,start,end));}
   remove(mask:string){this.masks.delete(mask);}

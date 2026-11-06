@@ -38,8 +38,8 @@ export async function downloadAuthenticated(url:string,filename:string,options:T
   const objectUrl=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=objectUrl;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(objectUrl),30000);
 }
-export async function fingerprint(file:Blob):Promise<string>{
-  return sha256Blob(file);
+export async function fingerprint(file:Blob,options:Pick<TransferOptions,'signal'>={}):Promise<string>{
+  return sha256Blob(file,options);
 }
 export function uploadDataset(form:FormData,onProgress:(progress:TransferProgress)=>void,options:Pick<TransferOptions,'signal'>={}):Promise<{dataset:Dataset}>{
   return new Promise((resolve,reject)=>{

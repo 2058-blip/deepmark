@@ -6,6 +6,8 @@ import type {ProjectState} from '../../mimics-workbench/src/mimics/project.ts';
 import {WorkbenchOutbox} from './outbox.ts';
 import type {WorkbenchOperation} from './outbox.ts';
 import {WorkbenchClaims} from './claims.ts';
+import {retryWorkbenchEncoding} from './encodingRetry.ts';
+import {createQueuePump} from './queuePump.ts';
 import {diffMaskPackets,applyMaskPackets,readMaskRuns,sameMaskPackets} from './maskRuns.ts';
 import type {VoxelBounds} from './maskRuns.ts';
 import {WORKBENCH_BASE,COLLECTIONS,WorkbenchResources,readMaskSnapshot,maskSnapshotPackets,metadataChanges,hasMetadataChanges,applyMetadata,nativeState} from './wire.ts';
@@ -43,8 +45,9 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   const delayedClaims:{mask:string;author:string;packet:Uint8Array}[]=[];
   const ownedAfter=new Map<string,WeakRef<ProjectState>>();
   const ownedBefore=new Map<string,WeakRef<ProjectState>>();
-  let resources:WorkbenchResources|null=null,manifest:Manifest|null=null,socket:WebSocket|null=null,stopped=false,applying=false,pumping=false,refreshing=false,deferred=false;
-  let serial=Promise.resolve(),network=Promise.resolve(),projection=Promise.resolve(),clock=0,retry:ReturnType<typeof setTimeout>|null=null,reconnect:ReturnType<typeof setTimeout>|null=null,poll:ReturnType<typeof setInterval>|null=null;
+  const encodingAbortController=new AbortController();
+  let resources:WorkbenchResources|null=null,manifest:Manifest|null=null,socket:WebSocket|null=null,stopped=false,applying=false,refreshing=false,deferred=false;
+  let serial=Promise.resolve(),network=Promise.resolve(),projection=Promise.resolve(),clock=0,reconnect:ReturnType<typeof setTimeout>|null=null,poll:ReturnType<typeof setInterval>|null=null;
   let accessRevoked=false;
   let pointer=false;
   let lastNative=editor.state.value,requestedKind='',editorBaseRevision=0;
@@ -52,6 +55,19 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   const revisionBases=new Map<number,number>();
   const selectionOverrides=new Map<string,string>();
   const canWrite=computed(()=>!initializing.value&&!localMode.value&&!recoveryBlocked.value&&!!project.value?.canWrite&&project.value.datasetStatus!=='completed');
+  const maskContributors=computed(()=>{
+    ownershipRevision.value;project.value;editor.revision.value;
+    const names=new Map(authorNames);for(const member of members.value)names.set(member.id,member.name);
+    return new Map(editor.state.value.masks.map(mask=>[mask.id,claims.authors(mask.id).map(author=>({author,name:names.get(author)||'未记录姓名的作者'}))]));
+  });
+  const maskDeletionReason=computed(()=>{
+    ownershipRevision.value;project.value;editor.revision.value;
+    const id=editor.activeMask.value?.id;
+    if(!canWrite.value||!id||!claims.hasForeign(id,user.id))return '';
+    const names=[...new Set((maskContributors.value.get(id)||[]).filter(author=>author.author!==user.id).map(author=>author.name))];
+    return `此 Mask 包含${names.join('、')||'其他作者'}的标注，不能删除。`;
+  });
+  watch(canWrite,(writable,previous)=>{if(previous&&!writable)encodingAbortController.abort();},{flush:'sync'});
   const activeGesture=()=>pointer||!!editor.draft.value||!!editor.mpr.brushPreview.value||!!editor.draftPoints.value.length||!!editor.mpr.contourDraft.value||!!editor.measurementEditor.draft.value||editor.busy.value;
   const pending=computed(()=>queueCount.value+encoding.value>0);
   const base=()=>WORKBENCH_BASE+'/'+project.value!.id;
@@ -88,13 +104,13 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   const endMpr=editor.mpr.endBrush;
   editor.mpr.endBrush=change=>{if(canWrite.value&&editor.mpr.brushPreview.value&&!changedDraft(editor.mpr.brushPreview.value)){editor.mpr.cancelBrushGesture(change);notice.value='未删除其他作者的标注';return false;}return endMpr(change);};
   const deleteMask=editor.deleteMask;
-  editor.deleteMask=()=>{const id=editor.activeMask.value?.id;if(canWrite.value&&id&&claims.hasForeign(id,user.id)){notice.value='该 Mask 包含其他作者的标注，不能删除';return;}deleteMask();};
+  editor.deleteMask=()=>{if(maskDeletionReason.value){notice.value=maskDeletionReason.value;return;}deleteMask();};
   watch(editor.volume,volume=>{
     if(project.value&&sourceData.value&&volume&&volume.data!==sourceData.value&&!initializing.value){
       localMode.value=true;connected.value=false;socket?.close();if(poll)clearInterval(poll);notice.value='已打开本地派生工程；原协同工程保留在服务器';}
   },{flush:'sync'});
   const undo=editor.undo;
-  editor.undo=redo=>{requestedKind=redo?'重做':'撤销';try{undo(redo);}finally{requestedKind='';}};
+  editor.undo=redo=>{requestedKind=redo?'重做':'撤销';try{return undo(redo);}finally{requestedKind='';}};
   watch(editor.revision,()=>{
     const after=editor.state.value,before=lastNative;lastNative=after;
     const beforeUnit=lastUnit,afterUnit=editor.volume.value?(editor.volume.value.header[123]!&7):0;lastUnit=afterUnit;
@@ -114,20 +130,25 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
     serial=serial.then(async()=>{
       const operation:WorkbenchOperation={key:captured.id+':'+op,project:captured.id,op,baseRevision,kind,changes:{},created:clock=Math.max(clock+1,Date.now()),parts:0,status:'encoding',nativeRevision};
       await outbox.begin(operation);
-      const beforeMeta=await resources!.manifest(before),afterMeta=await resources!.manifest(after);
-      beforeMeta.sourceUnit=beforeUnit;afterMeta.sourceUnit=afterUnit;
-      const changes=metadataChanges(beforeMeta,afterMeta);
-      const changed=after.masks.filter(mask=>before.masks.find(item=>item.id===mask.id)?.data!==mask.data);
-      if(!changed.length&&!hasMetadataChanges(changes)){await outbox.remove(operation.key);ownedAfter.delete(op);ownedBefore.delete(op);return;}
-      operation.changes=changes;await outbox.begin(operation);let n=0;
-      for(const mask of changed){
-        const old=before.masks.find(item=>item.id===mask.id)?.data||null,hint=draftHints.get(mask.data),inverse=old?draftHints.get(old):undefined;
-        const bounds=hint?.source===old?hint.bounds:inverse?.source===mask.data?inverse.bounds:undefined;
-        for await(const packet of diffMaskPackets(old,mask.data,volume.dims,{bounds})){await outbox.part(operation,n++,mask.id,packet);}
-      }
-      if(!n&&!hasMetadataChanges(changes)){await outbox.remove(operation.key);ownedAfter.delete(op);ownedBefore.delete(op);return;}
-      await outbox.ready(operation,n);await recount();void pump();
-    }).catch(reason=>{error.value=(reason as Error).message;}).finally(()=>{encoding.value--;});
+      const encoderResources=resources!;
+      await retryWorkbenchEncoding(async assertActive=>{
+        assertActive();
+        const beforeMeta=await encoderResources.manifest(before),afterMeta=await encoderResources.manifest(after);
+        assertActive();
+        beforeMeta.sourceUnit=beforeUnit;afterMeta.sourceUnit=afterUnit;
+        const changes=metadataChanges(beforeMeta,afterMeta);
+        const changed=after.masks.filter(mask=>before.masks.find(item=>item.id===mask.id)?.data!==mask.data);
+        if(!changed.length&&!hasMetadataChanges(changes)){await outbox.remove(operation.key);ownedAfter.delete(op);ownedBefore.delete(op);return;}
+        operation.changes=changes;await outbox.begin(operation);assertActive();let n=0;
+        for(const mask of changed){
+          const old=before.masks.find(item=>item.id===mask.id)?.data||null,hint=draftHints.get(mask.data),inverse=old?draftHints.get(old):undefined;
+          const bounds=hint?.source===old?hint.bounds:inverse?.source===mask.data?inverse.bounds:undefined;
+          for await(const packet of diffMaskPackets(old,mask.data,volume.dims,{bounds})){assertActive();await outbox.part(operation,n++,mask.id,packet);}
+        }
+        if(!n&&!hasMetadataChanges(changes)){await outbox.remove(operation.key);ownedAfter.delete(op);ownedBefore.delete(op);return;}
+        assertActive();await outbox.ready(operation,n);assertActive();await recount();void pump();
+      },{signal:encodingAbortController.signal,active:()=>!stopped&&!accessRevoked&&!localMode.value&&project.value?.id===captured.id&&!!project.value.canWrite&&project.value.datasetStatus!=='completed',onRetry:reason=>{error.value=(reason as Error).message+'；网络恢复后会自动继续同步，成果已保留在本机。';}});
+    }).catch(reason=>{if((reason as Error).name==='AbortError'){if(!stopped&&!localMode.value&&!error.value)error.value=(reason as Error).message;}else handleError(reason);}).finally(()=>{encoding.value--;void recount();});
   },{flush:'sync'});
   async function load(snapshot:SharedWorkbench,cacheRevision?:number,historical=false){
     viewingHistory.value=historical;
@@ -232,7 +253,7 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
       const packet=new Uint8Array(await response.arrayBuffer());
       if(part.scope==='claim'){
         if(activeGesture())delayedClaims.push({mask:part.mask,author:part.author||event.author,packet});
-        else claims.apply(part.mask,part.author||event.author,packet,project.value.count);
+        else{claims.apply(part.mask,part.author||event.author,packet,project.value.count);ownershipRevision.value++;}
         continue;
       }
       const packets=received.get(part.mask)||[];packets.push(packet);received.set(part.mask,packets);
@@ -268,12 +289,11 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
       if(!recoveryBlocked.value)error.value='';
     }catch(reason){handleError(reason);}finally{refreshing=false;}
   }
-  async function pump(){
-    if(stopped||accessRevoked||!project.value||pumping||!project.value.canWrite||recoveryBlocked.value)return;pumping=true;sending.value=true;
-    try{
-      const operations=await outbox.list(project.value.id);
-      for(const operation of operations){
-        if(operation.status!=='ready')continue;
+  const outgoing=createQueuePump<WorkbenchOperation>({
+    canRun:()=>!stopped&&!accessRevoked&&!!project.value?.canWrite&&project.value.datasetStatus!=='completed'&&!recoveryBlocked.value,
+    read:async()=> (await outbox.list(project.value!.id)).filter(operation=>operation.status==='ready'),
+    key:operation=>operation.key,
+    send:async operation=>{
         for(const part of await outbox.parts(operation.key)){
           const response=await authenticatedFetch(base()+'/operations/'+encodeURIComponent(operation.op)+'/parts/'+part.n,{method:'PUT',headers:{'Content-Type':'application/octet-stream','X-Mask-Id':encodeURIComponent(part.mask),'X-Workbench-Author':encodeURIComponent(user.id)},body:part.packet as Uint8Array<ArrayBuffer>});
           if(!response.ok)throw await responseError(response);
@@ -282,21 +302,23 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
         if(acknowledgement.protectedCount)notice.value='已保留其他作者的标注';
         if(acknowledgement.event.revision<=project.value!.revision){await outbox.remove(operation.key);ownedAfter.delete(operation.op);ownedBefore.delete(operation.op);await recount();await projectView();}
         await refresh();
-      }
-      error.value='';
-    }catch(reason){handleError(reason);if(!stopped&&!accessRevoked){if(retry)clearTimeout(retry);retry=setTimeout(()=>void pump(),1500);}}
-    finally{pumping=false;sending.value=false;await recount();}
-  }
+    },
+    onBusy:value=>{sending.value=value;},
+    onDrained:()=>{error.value='';},
+    onError:handleError,
+    onSettled:recount,
+  });
+  function pump(){return outgoing.request();}
   function handleError(reason:unknown){
     error.value=(reason as Error).message;
     const status=(reason as any).status;if((status===401||status===403||status===423)&&project.value)project.value={...project.value,canWrite:false};
-    if(status===401||status===403){accessRevoked=true;socket?.close();if(retry)clearTimeout(retry);if(reconnect)clearTimeout(reconnect);if(poll)clearInterval(poll);if(status===401)void loadCurrentUser().catch(()=>{});}
+    if(status===401||status===403){accessRevoked=true;socket?.close();outgoing.cancelRetry();if(reconnect)clearTimeout(reconnect);if(poll)clearInterval(poll);if(status===401)void loadCurrentUser().catch(()=>{});}
   }
   function connect(){
     if(stopped||accessRevoked||localMode.value||!project.value)return;const url=new URL('/api/collaboration/workbench-socket',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';url.searchParams.set('project',project.value.id);url.searchParams.set('author',user.id);
     socket=new WebSocket(url);socket.onopen=()=>{connected.value=true;void refresh();};
     socket.onmessage=message=>{try{const value=JSON.parse(message.data);
-      if(value.members)members.value=value.members;
+      if(value.members){members.value=value.members;for(const member of members.value)authorNames.set(member.id,member.name);}
       if(value.canWrite!==undefined&&project.value)project.value={...project.value,canWrite:value.canWrite,datasetStatus:value.datasetStatus||project.value.datasetStatus};
       if(value.type==='committed'||value.type==='ready')void refresh();
     }catch{error.value='协同消息格式无效。';}};
@@ -310,7 +332,7 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   async function flush(){if(viewingHistory.value)return;await serial;await pump();await refresh();await recount();if(queueCount.value||encoding.value)throw new Error(error.value||'仍有标注操作等待同步，进度已留在本机。');}
   async function readHistory(){if(!project.value)return;const result=await api<{events:SharedEvent[];legacy:SharedEvent[]}>(base()+'/history');history.value=result.events;legacyHistory.value=result.legacy;}
   async function markCached(nativeRevision:number){if(project.value)await outbox.mark(project.value.id,revisionBases.get(nativeRevision)??editorBaseRevision,nativeRevision);}
-  function dispose(){stopped=true;resources?.dispose();socket?.close();if(retry)clearTimeout(retry);if(reconnect)clearTimeout(reconnect);if(poll)clearInterval(poll);}
+  function dispose(){stopped=true;encodingAbortController.abort();outgoing.dispose();resources?.dispose();socket?.close();if(reconnect)clearTimeout(reconnect);if(poll)clearInterval(poll);}
   onScopeDispose(dispose);
-  return{project,connected,initializing,queueCount,sending,error,notice,localMode,members,history,legacyHistory,viewingHistory,sourceData,encoding,recoveryBlocked,canWrite,pending,load,refresh,flush,dispose,pointerState,markCached,readHistory,annotationsAt,pendingFor:(id:string)=>outbox.list(id)};
+  return{project,connected,initializing,queueCount,sending,error,notice,localMode,members,maskContributors,maskDeletionReason,history,legacyHistory,viewingHistory,sourceData,encoding,recoveryBlocked,canWrite,pending,load,refresh,flush,dispose,pointerState,markCached,readHistory,annotationsAt,pendingFor:(id:string)=>outbox.list(id)};
 }

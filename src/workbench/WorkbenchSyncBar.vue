@@ -16,7 +16,7 @@ const label=computed(()=>props.sync.localMode.value?'本地模式':props.sync.vi
     <div class="native-members" aria-label="在线作者"><span v-for="member in sync.members.value" :key="member.id" :title="member.name+(member.id===user.id?'（你）':'')">{{member.name.slice(0,1)}}</span><small>{{sync.members.value.length}} 人在线</small></div>
     <button @click="emit('history')" :disabled="!sync.project.value">操作记录</button>
     <span class="native-account">{{user.name}}<small>{{user.role==='dispatcher'?'派活 · 只读':'标注工程师'}}</small></span>
-    <button :disabled="leaving" @click="emit('logout')">退出账号</button>
+    <button class="native-logout" :disabled="leaving" @click="emit('logout')">退出账号</button>
     <div v-if="sync.error.value||sync.notice.value" class="native-sync-notice" :class="{error:!!sync.error.value}" role="status">{{sync.error.value||sync.notice.value}}</div>
   </section>
 </template>

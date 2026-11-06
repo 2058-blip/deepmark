@@ -8,13 +8,19 @@
   --border-strong:#cddcda;
   --text:#18272c;
   --text-2:#46565c;
-  --muted:#6c7e81;
-  --faint:#879899;
+  --muted:#5e7073;   /* 5.2:1 on white – was #6c7e81 */
+  --faint:#6b7d80;   /* 4.3:1 on white – was #879899 */
   --primary:#087f7c;
   --primary-hover:#066c69;
   --primary-soft:#e7f9f7;
   --primary-soft-2:#c4efea;
+  --primary-line:#a9dcd6;
   --primary-ring:#13b8b52b;
+  /* Single brand teal for the wordmark, selection marks and progress bars. */
+  --brand:#12a19e;
+  /* One font stack for every screen: Segoe UI / SF for Latin, YaHei / PingFang for CJK. */
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",sans-serif;
+  --font-mono:"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
   --success:#2b9a74;
   --success-soft:#e8f6f0;
   --success-line:#cfeadf;
@@ -34,7 +40,7 @@
   --shadow:0 1px 2px rgba(16,24,40,.04),0 2px 6px rgba(16,24,40,.04);
   --shadow-lg:0 12px 40px rgba(16,24,40,.14);
   --topbar-h:64px;
-  font-family:Inter,"Noto Sans CJK SC","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-family:var(--font-sans);
   font-size:13px;line-height:1.5;color:var(--text);background:var(--bg);
   font-synthesis:none;color-scheme:light;-webkit-font-smoothing:antialiased;
 }
@@ -199,7 +205,7 @@ h1{font-size:18px;font-weight:600;letter-spacing:.3px;margin:2px 0 0;color:var(-
 @media(prefers-reduced-motion:reduce){.busy-card::before{animation-duration:2.4s}}
 
 /* ===== Detail layer: numbering, mono figures, bilingual labels, shared selection marks ===== */
-:root{--mono:ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,monospace;--mark:#13b8b5;--mark-soft:#e7f9f7}
+:root{--mono:var(--font-mono);--mark:var(--brand);--mark-soft:#e7f9f7}
 /* "// ENGLISH" page eyebrows */
 .main-heading .eyebrow,.datasets-header .eyebrow{font-family:var(--mono);letter-spacing:1.5px;color:var(--muted)}
 .main-heading .eyebrow::before,.datasets-header .eyebrow::before{content:"// ";color:var(--primary);font-weight:600}

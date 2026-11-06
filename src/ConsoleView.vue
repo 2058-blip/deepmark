@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed,onBeforeUnmount,onMounted,ref} from 'vue';
+import {computed,nextTick,onBeforeUnmount,onMounted,ref} from 'vue';
 import {api,downloadAuthenticated,uploadDataset} from './api.ts';
 import type {AuthUser,Dataset,Group} from './api.ts';
 import type {TransferProgress as TransferState} from './api.ts';
@@ -41,7 +41,7 @@ const detailProgress=computed(()=>{
 });
 function stateName(status:Dataset['status']){return {unassigned:'未标注',in_progress:'进行中',completed:'已完成'}[status]||status;}
 function formatSize(size:number){return size>=1024**3?`${(size/1024**3).toFixed(2)} GB`:size>=1024**2?`${(size/1024**2).toFixed(1)} MB`:`${Math.max(1,Math.ceil(size/1024))} KB`;}
-function time(value?:string){if(!value)return '暂无';const parsed=new Date(value);return Number.isNaN(parsed.getTime())?value:parsed.toLocaleString('zh-CN');}
+function time(value?:string){if(!value)return '暂无';const parsed=new Date(value);if(Number.isNaN(parsed.getTime()))return value;const pad=(n:number)=>String(n).padStart(2,'0');return `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;}
 function ownGroup(dataset:Dataset){return groups.value.find(group=>group.id===dataset.groupId);}
 function canComplete(dataset:Dataset){const group=ownGroup(dataset);return !isDispatcher.value&&dataset.status==='in_progress'&&!!group&&(group.isLeader||group.leaderId===props.user.id);}
 function canOpen(dataset:Dataset){return isDispatcher.value?!!dataset.projectId:dataset.status!=='unassigned'&&!!ownGroup(dataset);}
@@ -62,7 +62,7 @@ async function readDetail(id:string,quiet=false){
   catch(reason){if(selectedId.value===id)error.value=(reason as Error).message;}
   finally{if(selectedId.value===id)detailLoading.value=false;}
 }
-async function selectDetail(dataset:Dataset){selectedId.value=dataset.id;detail.value={dataset};error.value='';await readDetail(dataset.id);}
+async function selectDetail(dataset:Dataset){selectedId.value=dataset.id;detail.value={dataset};error.value='';await nextTick();document.querySelector('.console-detail')?.scrollIntoView({behavior:'smooth',block:'start'});await readDetail(dataset.id);}
 async function refresh(initial=false,background=false){
   if(refreshing.value)return;refreshing.value=true;manualRefreshing.value=!initial&&!background;if(initial)loading.value=true;
   try{
@@ -101,7 +101,7 @@ onBeforeUnmount(()=>{if(poll)clearInterval(poll);metadataRequest.abort();transfe
     <div v-if="transfer" class="console-transfer-status"><TransferProgress :title="transferTitle" :progress="transfer" :stage="transferStage" :cancellable="canCancelTransfer" @cancel="cancelTransfer"/></div>
     <header class="console-topbar"><div class="console-brand"><strong>DeepMark</strong><span class="console-brand-role"><UiIcon :name="isDispatcher?'folder':'users'" :size="17"/>{{isDispatcher?'派活工作台':'干活工作台'}}</span></div><div class="console-account"><span class="console-account-avatar" aria-hidden="true">{{(user.name||user.username).slice(0,1)}}</span><span class="console-account-identity" :title="`${user.name} · @${user.username}`">{{user.name}} <small>@{{user.username}}</small></span><button :disabled="!!busy" @click="emit('logout')"><UiIcon name="logout" :size="17"/>退出登录</button></div></header>
     <main class="console-content">
-      <section class="console-heading"><div><span class="eyebrow"><UiIcon :name="isDispatcher?'folder':'users'" :size="16"/>{{isDispatcher?'DATASET DELIVERY':'TEAM WORKSPACE'}}</span><h1>{{isDispatcher?'发布影像，跟进标注成果':'组成小组，协同完成标注'}}</h1><p>{{isDispatcher?'上传后的影像会进入待认领列表。你可以查看自己发布的数据集、监看标注并下载已完成成果。':'组长认领待标注影像，小组成员使用同一份实时协作工程。已完成任务保留为只读。'}}</p></div><button :disabled="manualRefreshing||!!busy" :aria-busy="manualRefreshing" @click="error='';refresh()"><UiIcon name="refresh" :size="17"/>刷新工作台</button></section>
+      <section class="console-heading"><div><span class="eyebrow"><UiIcon :name="isDispatcher?'folder':'users'" :size="16"/>{{isDispatcher?'影像发布':'团队协作'}}</span><h1>{{isDispatcher?'发布影像，跟进标注成果':'组成小组，协同完成标注'}}</h1><p>{{isDispatcher?'上传后的影像会进入待认领列表。你可以查看自己发布的数据集、监看标注并下载已完成成果。':'组长认领待标注影像，小组成员使用同一份实时协作工程。已完成任务保留为只读。'}}</p></div><button :disabled="manualRefreshing||!!busy" :aria-busy="manualRefreshing" @click="error='';refresh()"><UiIcon name="refresh" :size="17"/>刷新工作台</button></section>
       <p v-if="error" class="console-error" role="alert">{{error}}</p><p v-if="notice" class="console-notice" role="status">{{notice}}</p>
       <section v-if="isDispatcher" class="console-card console-upload"><div><h2><UiIcon name="upload" :size="21"/>发布待标注影像</h2><p>支持三维灰度 NIfTI-1：.nii / .nii.gz。</p></div><form @submit.prevent="upload"><label>影像文件<input ref="uploadInput" type="file" accept=".nii,.nii.gz" required :disabled="!!busy" @change="chooseUpload"/></label><label>显示名称<input v-model="uploadName" maxlength="160" placeholder="选填，默认使用文件名" :disabled="!!busy"/></label><button class="primary" :disabled="!uploadFile||!!busy"><UiIcon name="upload" :size="17"/>{{busy==='upload'?uploadStage:'上传并发布'}}</button><small v-if="uploadFile">{{uploadFile.name}} · {{formatSize(uploadFile.size)}}</small></form></section>
       <section v-else class="console-team-grid">

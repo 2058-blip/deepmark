@@ -27,7 +27,7 @@ const filtered=computed(()=>{
   return items.sort((a,b)=>sort.value==='patient'?(a.patient||'\uffff').localeCompare(b.patient||'\uffff','zh-CN')||a.name.localeCompare(b.name,'zh-CN'):sort.value==='oldest'?time(a)-time(b):time(b)-time(a));
 });
 const pad=(value:number)=>String(value).padStart(2,'0');
-function formatDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?'—':`${date.getFullYear()} // ${pad(date.getMonth()+1)} / ${pad(date.getDate())}  ${pad(date.getHours())}:${pad(date.getMinutes())}`;}
+function formatDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?'—':`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;}
 function formatSize(size:number){return size>=1024**3?`${(size/1024**3).toFixed(2)} GB`:size>=1024**2?`${(size/1024**2).toFixed(1)} MB`:`${Math.max(1,Math.ceil(size/1024))} KB`;}
 function stateName(status:Dataset['status']){return {unassigned:'未标注',in_progress:'进行中',completed:'已完成'}[status]||status;}
 </script>
@@ -35,7 +35,7 @@ function stateName(status:Dataset['status']){return {unassigned:'未标注',in_p
 <template>
   <div class="case-list-view">
     <div class="case-toolbar">
-      <span class="case-count">共 {{pad(rows.length)}} 份影像 · 已登记 {{pad(registered)}} 份资料</span>
+      <span class="case-count">共 {{rows.length}} 份影像 · 已登记 {{registered}} 份资料</span>
       <label class="case-sort"><span class="visually-hidden">排序方式</span><select v-model="sort" aria-label="排序方式"><option value="newest">最近修改：新 → 旧</option><option value="oldest">最近修改：旧 → 新</option><option value="patient">按患者排序</option></select></label>
       <button :disabled="loading||busy" @click="emit('refresh')">刷新列表</button>
     </div>
@@ -51,7 +51,7 @@ function stateName(status:Dataset['status']){return {unassigned:'未标注',in_p
         <tbody>
           <tr v-if="!filtered.length" class="no-match"><td colspan="5"><strong>没有匹配的病例</strong><span>尝试其他关键词，或清空列筛选。</span></td></tr>
           <tr v-for="(row,index) in filtered" :key="row.id" :class="['console-dataset',{selected:selectedId===row.id}]">
-            <td class="col-patient" data-label="患者"><div class="patient-cell"><span class="row-index">{{pad(index+1)}}</span><span v-if="row.patient" class="patient-name">{{row.patient}}</span><span v-else class="placeholder">未登记患者</span></div></td>
+            <td class="col-patient" data-label="患者"><div class="patient-cell"><span class="row-index">{{index+1}}</span><span v-if="row.patient" class="patient-name">{{row.patient}}</span><span v-else class="placeholder">未登记患者</span></div></td>
             <td class="col-desc" data-label="CT 描述"><span v-if="row.description" class="case-desc" :title="row.description">{{row.description}}</span><span v-else class="placeholder">暂无描述</span></td>
             <td class="col-file" data-label="影像与任务"><div class="case-file-heading"><strong class="file-name" :title="row.path">{{row.name}}</strong><span :class="['console-status',row.status]">{{stateName(row.status)}}</span></div><small>{{formatSize(row.size)}} · {{row.format}}<span v-if="row.groupName"> · {{row.groupName}}</span><span v-if="row.revision!==undefined"> · 修订 {{row.revision}}</span></small></td>
             <td class="col-date" data-label="最近修改"><time :datetime="row.modified">{{formatDate(row.modified)}}</time></td>

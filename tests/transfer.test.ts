@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readTransferBlob} from '../src/transfer.ts';
 import type {TransferProgress} from '../src/transfer.ts';
 import {downloadBlobAuthenticated,uploadDataset} from '../src/api.ts';
@@ -62,4 +63,39 @@ test('upload cancellation aborts the credentialed CSRF-protected request and per
     controller.abort();await assert.rejects(pending,{name:'AbortError'});assert.equal(request.aborted,true);
     const retry=uploadDataset(new FormData(),progress=>updates.push(progress));instances[1].upload.onload?.();assert.equal(updates.at(-1)?.complete,true);instances[1].onload?.();assert.deepEqual(await retry,{dataset:{id:'new'}});
   }finally{globalThis.XMLHttpRequest=original;}
+});
+
+test('large downloads seal bounded byte windows and assemble only Blob references with the exact original content',async()=>{
+ const NativeBlob=globalThis.Blob,constructed:{rawBytes:number;blobParts:number}[]=[],updates:TransferProgress[]=[];
+ const lengths=[10*1024*1024+3,7*1024*1024+13,5*1024*1024+5],total=lengths.reduce((a,b)=>a+b,0),expected=createHash('sha256');let next=0;
+ const body=new ReadableStream<Uint8Array>({pull(controller){if(next===lengths.length){controller.close();return;}const data=new Uint8Array(lengths[next]!).fill(++next);expected.update(data);controller.enqueue(data);}});
+ class ObservedBlob extends NativeBlob {
+  constructor(parts:BlobPart[]=[],options?:BlobPropertyBag){
+   const rawBytes=parts.reduce((sum,part)=>sum+(ArrayBuffer.isView(part)?part.byteLength:part instanceof ArrayBuffer?part.byteLength:typeof part==='string'?Buffer.byteLength(part):0),0);
+   super(parts,options);constructed.push({rawBytes,blobParts:parts.filter(part=>part instanceof NativeBlob).length});
+  }
+ }
+ try{
+  globalThis.Blob=ObservedBlob;
+  const result=await readTransferBlob(new Response(body,{headers:{'content-length':String(total),'content-type':'application/gzip'}}),{onProgress:value=>updates.push(value)});
+  const actual=createHash('sha256');for await(const bytes of result.stream())actual.update(bytes);
+  assert.equal(actual.digest('hex'),expected.digest('hex'));assert.equal(result.size,total);assert.equal(result.type,'application/gzip');
+  assert.ok(constructed.length>=4);assert.ok(constructed.every(item=>item.rawBytes<=8*1024*1024));
+  assert.deepEqual(constructed.at(-1),{rawBytes:0,blobParts:3});
+  assert.equal(updates.at(-1)?.loaded,total);assert.equal(updates.at(-1)?.percent,100);assert.equal(updates.at(-1)?.complete,true);
+ }finally{globalThis.Blob=NativeBlob;}
+});
+
+test('cancelling after a sealed large download segment releases the body without publishing a partial Blob',async()=>{
+ const controller=new AbortController(),updates:TransferProgress[]=[];let cancelled=false;
+ const body=new ReadableStream<Uint8Array>({start(stream){stream.enqueue(new Uint8Array(9*1024*1024));},cancel(){cancelled=true;}});
+ await assert.rejects(readTransferBlob(new Response(body),{signal:controller.signal,onProgress:value=>{updates.push(value);if(value.loaded>=9*1024*1024)controller.abort();}}),{name:'AbortError'});
+ assert.equal(cancelled,true);assert.equal(body.locked,false);assert.ok(updates.every(value=>!value.complete));
+});
+
+test('an input error after a sealed segment unlocks the body and does not report a completed download',async()=>{
+ const updates:TransferProgress[]=[];let next=0;
+ const body=new ReadableStream<Uint8Array>({pull(stream){if(next++===0)stream.enqueue(new Uint8Array(9*1024*1024));else stream.error(new Error('large download failed'));}});
+ await assert.rejects(readTransferBlob(new Response(body),{onProgress:value=>updates.push(value)}),/large download failed/);
+ assert.equal(body.locked,false);assert.ok(updates.every(value=>!value.complete));
 });

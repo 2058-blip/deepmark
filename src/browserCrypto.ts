@@ -20,10 +20,26 @@ export async function encryptLoginPassword(challenge:LoginChallenge,password:str
   return forge.util.encode64(key.encrypt(binary(payload),'RSA-OAEP',{md:forge.md.sha256.create(),mgf1:{md:forge.md.sha256.create()}}));
 }
 
-/** Blob hashing also needs a fallback: SubtleCrypto is unavailable on LAN HTTP. */
-export async function sha256Blob(file:Blob):Promise<string>{
-  if(globalThis.crypto?.subtle)return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer())));
-  const {sha256}=await import('@noble/hashes/sha2.js'),hash=sha256.create(),reader=file.stream().getReader();
-  try{while(true){const {value,done}=await reader.read();if(done)break;hash.update(value);}return hex(hash.digest());}
-  finally{reader.releaseLock();hash.destroy();}
+/** SubtleCrypto requires a whole-file ArrayBuffer. Bound that fast path so CT
+ * fingerprints never make another full-size resident copy on secure origins.
+ * Incremental SHA-256 has exactly the same output on localhost and LAN HTTP. */
+const MAX_NATIVE_HASH_BYTES=8*1024*1024;
+export async function sha256Blob(file:Blob,options:{signal?:AbortSignal}={}):Promise<string>{
+  const signal=options.signal;signal?.throwIfAborted();
+  if(globalThis.crypto?.subtle&&file.size<=MAX_NATIVE_HASH_BYTES){
+    const bytes=await file.arrayBuffer();signal?.throwIfAborted();
+    const result=await crypto.subtle.digest('SHA-256',bytes);signal?.throwIfAborted();return hex(new Uint8Array(result));
+  }
+  const {sha256}=await import('@noble/hashes/sha2.js');signal?.throwIfAborted();
+  const hash=sha256.create(),reader=file.stream().getReader();let completed=false;
+  const abort=()=>{void reader.cancel(signal?.reason).catch(()=>{});};
+  signal?.addEventListener('abort',abort,{once:true});
+  try{
+    while(true){signal?.throwIfAborted();const {value,done}=await reader.read();signal?.throwIfAborted();if(done)break;hash.update(value);}
+    const result=hex(hash.digest());completed=true;return result;
+  }finally{
+    signal?.removeEventListener('abort',abort);
+    if(!completed)await reader.cancel().catch(()=>{});
+    reader.releaseLock();hash.destroy();
+  }
 }

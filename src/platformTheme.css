@@ -4,7 +4,7 @@
 .console-page{height:100dvh;overflow:auto}
 .console-content{flex:none;overflow:visible;min-height:0}
 .console-topbar{min-height:64px;background:var(--panel);border-color:var(--border)}
-.console-brand{color:#18aaa9;font-weight:750;letter-spacing:-.8px}
+.console-brand{color:var(--brand);font-weight:700;letter-spacing:-.8px}
 .console-brand>span{color:var(--text-2);border-color:var(--border);letter-spacing:0;font-weight:500}
 .console-card h2,.console-card h3,.console-group strong,.console-dataset-info strong,.console-detail-grid dd,.console-member-list strong,.console-history-list strong{color:var(--text)}
 .console-account,.auth-card form>label,.console-upload form>label,.console-team-forms label,.console-claim-group{color:var(--text-2)}
@@ -29,11 +29,11 @@
 .console-role{color:var(--primary);background:var(--primary-soft);border-color:#c4e9e2;font-weight:500;border-radius:4px}
 .console-group code{color:var(--primary);background:#f0f8f6;border-color:#dcebe7}
 .console-filters{padding:4px;border:1px solid #e0eae7;background:#f5f9f8;border-radius:5px}
-.console-filters button{background:transparent;color:#5d7370;border-radius:3px;box-shadow:none}
+.console-filters button{background:transparent;color:var(--muted);border-radius:3px;box-shadow:none}
 .console-filters button.active{background:#fff;color:var(--primary);border-color:#b9e0d7;box-shadow:0 1px 3px #173c3710}
 .console-dataset{background:var(--panel);border-color:var(--border)}
 .console-dataset.selected{border-color:var(--primary)}
-.console-status{display:inline-flex;align-items:center;gap:5px;background:#eef3f3;color:#657774;border-radius:4px;font-weight:500;border:1px solid #e0e8e5}
+.console-status{display:inline-flex;align-items:center;gap:5px;background:#eef3f3;color:var(--muted);border-radius:4px;font-weight:500;border:1px solid #e0e8e5}
 .console-status.in_progress{background:#edf8f6;color:#14877a;border-color:#c9e8de}
 .console-status.completed{background:#eaf8f0;color:#2a8460;border-color:#cce8d7}
 .console-empty{color:var(--muted);border:1px dashed #cfdfdb;background:#f9fcfb;border-radius:5px;line-height:1.8}
@@ -47,31 +47,31 @@
 .app[data-testid=annotation-editor] .topbar{height:auto;min-height:var(--topbar-h);padding-block:8px}
 .app[data-testid=annotation-editor] .top-actions{flex-wrap:wrap;justify-content:flex-end}
 .annotation-author{position:absolute;left:12px;right:12px;top:12px;padding:7px 10px;background:#101c2ded;border:1px solid #566c89;border-radius:6px;color:#edf5ff;font-size:12px;pointer-events:none;z-index:5;white-space:pre-wrap}
-.zoom-reset{font-size:11px;padding:3px 6px}
+.zoom-reset{font-size:12px;padding:3px 6px}
 .canvas-host{overflow:hidden}
 .console-page .case-list-view .th-search input{min-height:30px;height:30px;padding:0 9px;background:#fff;border-color:#d9e4df}
 .console-page .case-list-view .case-sort select{min-height:34px;height:34px;padding:0 28px 0 9px}
-.console-page .case-list-view .case-toolbar>button{height:34px;border-color:#cddeda;color:#496762;box-shadow:none}
+.console-page .case-list-view .case-toolbar>button{height:34px;border-color:#cddeda;color:var(--text-2);box-shadow:none}
 .console-page .case-list-view .case-card{border-color:#e0e8e4;border-radius:5px;box-shadow:none}
-.console-page .case-table thead th{background:#f5f9f8;color:#5e7870;font-size:11px;font-weight:500;letter-spacing:0;padding:12px 14px}
+.console-page .case-table thead th{background:#f5f9f8;color:var(--muted);font-size:12px;font-weight:500;letter-spacing:0;padding:12px 14px}
 .console-page .case-table td{padding:16px 14px;border-color:#e6eeea;font-size:12px}
 .console-page .case-list-view .case-table tbody tr.console-dataset:hover,.console-page .case-list-view .case-table tbody tr.console-dataset.selected{background:#f0faf7}
-.console-page .case-list-view .case-table tbody tr:hover>td:first-child,.console-page .case-list-view .case-table tbody tr.selected>td:first-child{box-shadow:inset 3px 0 0 #13b8b5}
-.console-page .case-count{font-size:11px;color:#71877f}
-.console-page .case-list-view .row-actions button{box-shadow:none;font-size:11px;border-radius:4px}
+.console-page .case-list-view .case-table tbody tr:hover>td:first-child,.console-page .case-list-view .case-table tbody tr.selected>td:first-child{box-shadow:inset 3px 0 0 var(--brand)}
+.console-page .case-count{font-size:12px;color:var(--muted)}
+.console-page .case-list-view .row-actions button{box-shadow:none;font-size:12px;border-radius:4px}
 .console-page .console-detail-grid{gap:20px;padding:20px;border:1px solid #e1ece7;border-radius:5px;background:#f8fbfa}
-.console-page .console-detail-grid dt{font-size:11px}
+.console-page .console-detail-grid dt{font-size:12px}
 .console-page .console-detail-grid dd{font-size:13px}
 /* Dialogs inherit the same palette, including editor-local cache and exit flows. */
-.dataset-dialog{--primary:#087f7c;--primary-hover:#066c69;--primary-ring:#13b8b52b;border-color:#d6e3dd;border-radius:7px;box-shadow:0 20px 70px #173c372e;padding:24px;background:#fff;color:#213831}
+.dataset-dialog{--primary:#087f7c;--primary-hover:#066c69;--primary-ring:#13b8b52b;border-color:#d6e3dd;border-radius:7px;box-shadow:0 20px 70px #173c372e;padding:24px;background:#fff;color:var(--text)}
 .dataset-dialog::backdrop{background:#0a242d61;backdrop-filter:blur(2px)}
 .dataset-dialog .datasets-header{padding-bottom:17px;border-bottom:1px solid #e2eae6}
-.dataset-dialog .datasets-header h2{font-size:20px;color:#203a34}
-.dataset-dialog .eyebrow{font-size:10px;color:#298e7f;letter-spacing:1.4px}
-.dataset-dialog .dialog-close{display:grid;place-items:center;width:32px;height:32px;padding:5px;box-shadow:none;background:#f4f9f7;border-color:#dbe8e1;color:#648278}
-.dataset-dialog .datasets-description{margin:18px 0;color:#70887d;line-height:1.9}
+.dataset-dialog .datasets-header h2{font-size:20px;color:var(--text)}
+.dataset-dialog .eyebrow{font-size:12px;color:#298e7f;letter-spacing:1.4px}
+.dataset-dialog .dialog-close{display:grid;place-items:center;width:32px;height:32px;padding:5px;box-shadow:none;background:#f4f9f7;border-color:#dbe8e1;color:var(--muted)}
+.dataset-dialog .datasets-description{margin:18px 0;color:var(--muted);line-height:1.9}
 .dataset-dialog .dataset-card{padding:16px;border-color:#dfebe4;background:#fcfefd;border-radius:5px}
 .dataset-dialog .dataset-file-icon{border-radius:5px;background:#e8f6ef;border-color:#cce6d8;color:#329573}
-.dataset-dialog .datasets-empty{background:#f6fbf8;border-color:#d0e3d8;color:#6d8679;border-radius:5px}
+.dataset-dialog .datasets-empty{background:#f6fbf8;border-color:#d0e3d8;color:var(--muted);border-radius:5px}
 @media(max-width:1100px){.console-page .case-list-view .case-table td{padding:0}.console-page .case-list-view .case-table thead th{padding:0}.console-page .case-list-view .case-table thead tr{background:#f5f9f8}}
 @media(max-width:760px){.console-content{padding:20px 14px}.console-topbar{padding:14px 16px}.auth-page{height:auto}.app[data-testid=annotation-editor] .topbar{align-items:flex-start}.app[data-testid=annotation-editor] .top-actions{gap:6px}.console-page .console-detail-grid{padding:14px;gap:18px}.dataset-dialog{padding:18px}.dataset-dialog .datasets-header h2{font-size:18px}.console-page .console-filters{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}.console-page .console-filters button{padding:8px 4px}.console-page .console-filters button span{margin-left:3px}}

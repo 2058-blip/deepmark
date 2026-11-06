@@ -206,9 +206,13 @@ function validMesh(mesh:TriangleMesh){
   if(!(mesh.positions instanceof Float32Array)||!(mesh.indices instanceof Uint32Array)||mesh.normals!==undefined&&!(mesh.normals instanceof Float32Array))throw new Error('工程网格存储类型无效。');
   if(mesh.positions.length%3||mesh.indices.length%3||mesh.positions.some(n=>!Number.isFinite(n))||mesh.indices.some(n=>n>=mesh.positions.length/3)||mesh.normals!==undefined&&(mesh.normals.length!==mesh.positions.length||mesh.normals.some(n=>!Number.isFinite(n))))throw new Error('工程网格损坏。');
 }
-export function makeMask(length:number, name='Mask 1', color=colors[0]):MaskObject {
+/** A completed algorithm result is already owned by the new immutable state.
+ * Adopt it directly instead of briefly allocating another volume-sized mask.
+ * As with replaceMask, later edits must publish a new buffer, never mutate it. */
+export function makeMask(length:number, name='Mask 1', color=colors[0],data?:BinaryMask):MaskObject {
   maskLength(length);if(typeof name!=='string'||!/^#[0-9a-f]{6}$/i.test(color))throw new Error('Mask名称或颜色无效。');
-  return {id:objectId('mask'),name,color,visible:true,opacity:.45,data:new Uint8Array(length),threshold:null,revision:0};
+  if(data!==undefined)binaryMask(data,length);
+  return {id:objectId('mask'),name,color,visible:true,opacity:.45,data:data??new Uint8Array(length),threshold:null,revision:0};
 }
 export function createProject(volume:Volume):ProjectState {
   const mask=makeMask(volume.data.length);
@@ -228,35 +232,43 @@ export class ProjectHistory {
   /** Budget counts retained typed-array backing stores plus serialized metadata estimates, not the live state. Voxel/mesh buffers are immutable. */
   constructor(maxBytes=256*1024*1024,maxEntries=1000){this.maxBytes=maxBytes;this.maxEntries=maxEntries;this.checkBudget();}
   private checkBudget(){if(!Number.isSafeInteger(this.maxBytes)||this.maxBytes<0||!Number.isSafeInteger(this.maxEntries)||this.maxEntries<0)throw new Error('撤销内存预算无效。');}
-  get bytesUsed(){this.recount();return [...this.past,...this.future].reduce((sum,e)=>sum+e.bytes,0);}
-  private recount(){
-    const seen=new Set<ArrayBufferLike>(),states=new Set<ProjectState>();if(this.current)states.add(this.current);
-    if(this.current)for(const buffer of stateBuffers(this.current))seen.add(buffer);
-    for(const entry of [...this.past,...this.future]){
-      entry.bytes=0;
+  get bytesUsed(){const result=this.measure(this.past,this.future,this.current);for(const [entry,bytes]of result.entries)entry.bytes=bytes;return result.total;}
+  private measure(past:HistoryEntry[],future:HistoryEntry[],current:ProjectState|undefined){
+    const seen=new Set<ArrayBufferLike>(),states=new Set<ProjectState>(),entries=new Map<HistoryEntry,number>();let total=0;if(current)states.add(current);
+    if(current)for(const buffer of stateBuffers(current))seen.add(buffer);
+    for(const entry of [...past,...future]){
+      let bytes=0;
       for(const state of [entry.before,entry.after]){
         if(!states.has(state)){
           states.add(state);let size=this.metadataSizes.get(state);
           if(size===undefined){size=strToU8(JSON.stringify({...state,masks:state.masks.map(m=>({...m,data:undefined})),parts:state.parts.map(p=>({...p,mesh:undefined}))})).byteLength;this.metadataSizes.set(state,size);}
-          entry.bytes+=size;
+          bytes+=size;
         }
-        for(const buffer of stateBuffers(state))if(!seen.has(buffer)){seen.add(buffer);entry.bytes+=buffer.byteLength;}
+        for(const buffer of stateBuffers(state))if(!seen.has(buffer)){seen.add(buffer);bytes+=buffer.byteLength;}
       }
+      entries.set(entry,bytes);total+=bytes;
     }
+    return{entries,total};
   }
-  private prune(){
-    while(this.past.length+this.future.length>this.maxEntries){if(this.past.length)this.past.shift();else this.future.shift();}
-    while(this.bytesUsed>this.maxBytes){if(this.past.length)this.past.shift();else if(this.future.length)this.future.shift();else break;}
-    this.recount();
+  private prepare(past:HistoryEntry[],future:HistoryEntry[],current:ProjectState){
+    // Snapshot, budget and prune candidates before publishing stacks or entry accounting.
+    while(past.length+future.length>this.maxEntries){if(past.length)past.shift();else future.shift();}
+    let size=this.measure(past,future,current);
+    while(size.total>this.maxBytes){if(past.length)past.shift();else if(future.length)future.shift();else break;size=this.measure(past,future,current);}
+    return{past,future,current,entries:size.entries};
+  }
+  private publish(prepared:ReturnType<ProjectHistory['prepare']>){
+    for(const [entry,bytes]of prepared.entries)entry.bytes=bytes;
+    this.past=prepared.past;this.future=prepared.future;this.current=prepared.current;
   }
   push(name:string,before:ProjectState,after:ProjectState){
     this.checkBudget();
     if(typeof name!=='string')throw new Error('撤销事务名称无效。');
     const previous=snapshotState(before),next=snapshotState(after);
-    this.past.push({name,before:previous,after:next,bytes:0});this.future=[];this.current=next;this.prune();
+    this.publish(this.prepare([...this.past,{name,before:previous,after:next,bytes:0}],[],next));
   }
-  undo(){this.checkBudget();const e=this.past.pop();if(!e)return;this.future.push(e);this.current=e.before;this.prune();return snapshotState(e.before);}
-  redo(){this.checkBudget();const e=this.future.pop();if(!e)return;this.past.push(e);this.current=e.after;this.prune();return snapshotState(e.after);}
+  undo(){this.checkBudget();const e=this.past.at(-1);if(!e)return;const snapshot=snapshotState(e.before),prepared=this.prepare(this.past.slice(0,-1),[...this.future,e],e.before);this.publish(prepared);return snapshot;}
+  redo(){this.checkBudget();const e=this.future.at(-1);if(!e)return;const snapshot=snapshotState(e.after),prepared=this.prepare([...this.past,e],this.future.slice(0,-1),e.after);this.publish(prepared);return snapshot;}
   clear(){this.past=[];this.future=[];this.current=undefined;}
 }
 function stateBuffers(state:ProjectState):ArrayBufferLike[]{
@@ -275,10 +287,9 @@ export function replaceMask(state:ProjectState,id:string,data:BinaryMask,thresho
   return {...state,masks:state.masks.map(m=>m.id===id?{...m,data,revision:m.revision+1,threshold:threshold===undefined?m.threshold:threshold}:m)};
 }
 export function addMask(state:ProjectState,length:number,name?:string,data?:BinaryMask,source?:PartObject):ProjectState {
-  maskLength(length);if(state.masks.some(m=>m.data.length!==length))throw new Error('Mask尺寸不一致。');if(data!==undefined)binaryMask(data,length);
+  maskLength(length);if(state.masks.some(m=>m.data.length!==length))throw new Error('Mask尺寸不一致。');
   if(source!==undefined&&(!source||!state.parts.some(part=>part.id===source.id&&part.mesh===source.mesh)))throw new Error('来源Part或其几何已不存在。');
-  const mask=makeMask(length,name||`Mask ${state.masks.length+1}`,colors[state.masks.length%colors.length]);
-  if(data)mask.data=data;
+  const mask=makeMask(length,name||`Mask ${state.masks.length+1}`,colors[state.masks.length%colors.length],data);
   if(source)mask.sourcePartId=source.id;
   return {...state,masks:[...state.masks,mask],selectedMaskId:mask.id};
 }

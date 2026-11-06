@@ -47,7 +47,7 @@ async function enter(){
     if(selected){stage.value='正在恢复本机影像并获取服务器最新标注…';await editor.restoreLocalProject(selected.id);}
     else{
       stage.value='正在下载 CT…';const blob=await downloadBlobAuthenticated(props.dataset.downloadUrl,{signal:request.signal,onProgress:value=>{progress.value=value;}});
-      stage.value='正在校验影像…';if(await fingerprint(blob)!==props.dataset.fingerprint)throw new Error('影像指纹不一致，请重新打开数据集。');
+      stage.value='正在校验影像…';if(await fingerprint(blob,{signal:request.signal})!==props.dataset.fingerprint)throw new Error('影像指纹不一致，请重新打开数据集。');
       stage.value='正在读取 CT…';const suffix=props.dataset.format.toLowerCase().includes('gzip')?'.nii.gz':'.nii';
       if(!await editor.openFiles([new File([blob],props.dataset.id+suffix)]))throw new Error(editor.error.value||'影像读取失败。');
     }
@@ -71,7 +71,7 @@ onBeforeUnmount(()=>{request.abort();sync.dispose();window.removeEventListener('
 </script>
 <template>
   <div class="collaborative-native-workbench" @pointerdown.capture="pointerDown">
-    <Workbench :editor="editor" :read-only="readOnly" :team-mode="!sync.localMode.value" :allow-export="allowExport">
+    <Workbench :editor="editor" :read-only="readOnly" :team-mode="!sync.localMode.value" :allow-export="allowExport" :mask-delete-reason="sync.localMode.value?'':sync.maskDeletionReason.value" :mask-contributors="sync.localMode.value?undefined:sync.maskContributors.value">
       <template #collaboration><WorkbenchSyncBar :user="user" :dataset="dataset" :sync="sync" :leaving="leaving" @back="leave()" @logout="leave(true)" @history="openHistory"/></template>
       <template #annotation-hover="view"><AnnotationHover v-bind="view" :annotations-at="sync.annotationsAt"/></template>
     </Workbench>
