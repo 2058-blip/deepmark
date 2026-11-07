@@ -1,0 +1,176 @@
+/* Visual-only chrome from the reference workbench. The existing row heights,
+   vertical padding, grid tracks, controls and event handlers remain authoritative. */
+
+/* Team strip: restrained surfaces, distinct health and account information. */
+.collaborative-native-workbench .native-sync-bar{
+  background:var(--wb-panel,var(--panel-2));
+  border-bottom-color:var(--wb-line,var(--border));
+  color:var(--wb-ink-2,var(--text-2));
+}
+.collaborative-native-workbench .native-sync-bar>button,
+.collaborative-native-workbench .native-display-settings>button{
+  border-radius:var(--wb-r,2px);
+  background:var(--wb-surface,var(--panel))!important;
+  border-color:var(--wb-line-2,var(--border-strong))!important;
+  color:var(--wb-ink-2,var(--text-2))!important;
+  box-shadow:none;
+  transition:background-color .18s,border-color .18s,color .18s;
+}
+.collaborative-native-workbench .native-sync-bar>button:hover:not(:disabled),
+.collaborative-native-workbench .native-display-settings>button:hover:not(:disabled){
+  background:var(--wb-sunken,var(--panel-3))!important;
+  border-color:var(--wb-line-3,var(--border-strong))!important;
+  color:var(--wb-ink,var(--text))!important;
+}
+.collaborative-native-workbench .native-sync-bar>.native-back,
+.collaborative-native-workbench .native-sync-bar>.native-logout{
+  background:transparent!important;
+  border-color:transparent!important;
+}
+.collaborative-native-workbench .native-sync-bar>.native-logout{color:var(--wb-muted,var(--muted))!important;}
+.collaborative-native-workbench .native-team{color:var(--wb-ink,var(--text));}
+.collaborative-native-workbench .native-team>.dm-icon{color:var(--wb-faint,var(--faint));}
+.collaborative-native-workbench .native-team strong{font-weight:600;letter-spacing:.04em;}
+.collaborative-native-workbench .native-team small{color:var(--wb-muted,var(--muted));font-variant-numeric:tabular-nums;}
+.collaborative-native-workbench .native-sync-state{color:var(--wb-ink-2,var(--text-2));}
+.collaborative-native-workbench .native-sync-state i{
+  background:var(--wb-green,var(--success));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--wb-green,var(--success)) 14%,transparent);
+}
+.collaborative-native-workbench .native-sync-state.offline{color:var(--wb-amber-ink,#8a5a14);font-weight:600;}
+.collaborative-native-workbench .native-sync-state.offline i{
+  background:var(--wb-amber,var(--warning));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--wb-amber,var(--warning)) 14%,transparent);
+  animation:chrome-sync-pulse 1.6s steps(1) infinite;
+}
+.collaborative-native-workbench .native-sync-state.error{color:var(--wb-red,var(--danger));font-weight:600;}
+.collaborative-native-workbench .native-sync-state.error i{
+  background:var(--wb-red,var(--danger));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--wb-red,var(--danger)) 14%,transparent);
+}
+.collaborative-native-workbench .native-revision,
+.collaborative-native-workbench .native-members small{color:var(--wb-muted,var(--muted));}
+.collaborative-native-workbench .native-members>span{
+  border-color:var(--wb-panel,var(--panel-2));
+  background:var(--wb-sel,var(--primary));
+  color:#fff;
+  font-weight:600;
+}
+.collaborative-native-workbench .native-account{
+  border-left-color:var(--wb-line,var(--border));
+  color:var(--wb-ink,var(--text));
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:.04em;
+}
+.collaborative-native-workbench .native-account small{color:var(--wb-muted,var(--muted));font-size:11px;letter-spacing:.1em;}
+
+/* Brand and project header: original dimensions, reference typography. */
+.collaborative-native-workbench .mw-topbar{
+  background:var(--wb-surface,var(--panel));
+  border-bottom-color:var(--wb-line,var(--border));
+}
+.collaborative-native-workbench .mw-topbar .mw-brand{
+  gap:8px;
+  color:var(--wb-ink,var(--text));
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.collaborative-native-workbench .mw-topbar .mw-brand b{color:var(--wb-ink,var(--text));font-weight:300;letter-spacing:.14em;}
+.collaborative-native-workbench .mw-topbar .mw-brandmark{color:var(--wb-sel,var(--primary));font-size:20px;}
+.collaborative-native-workbench .mw-topbar .mw-project-name{
+  padding-left:18px;
+  border-left:2px solid var(--wb-ink,var(--text));
+}
+.collaborative-native-workbench .mw-topbar .mw-project-name strong{
+  color:var(--wb-ink,var(--text));font-size:16px;font-weight:700;line-height:1.25;letter-spacing:.01em;
+}
+.collaborative-native-workbench .mw-topbar .mw-project-name span{
+  color:var(--wb-muted,var(--muted));font-size:11px;line-height:1.35;letter-spacing:.06em;font-variant-numeric:tabular-nums;
+}
+.collaborative-native-workbench .mw-topbar .mw-project-name i{
+  background:var(--wb-amber,var(--warning));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--wb-amber,var(--warning)) 14%,transparent);
+}
+
+/* Existing file actions: subtle underline feedback, with no added action icons. */
+.collaborative-native-workbench .mw-topbar .mw-actions{gap:2px;}
+.collaborative-native-workbench .mw-topbar .mw-actions button{
+  position:relative;
+  border-radius:0;
+  border-color:transparent;
+  background:transparent;
+  color:var(--wb-ink-2,var(--text-2));
+  box-shadow:none;
+  transition:background-color .2s,border-color .2s,color .2s;
+}
+.collaborative-native-workbench .mw-topbar .mw-actions button:not(.mw-primary)::after{
+  content:"";position:absolute;left:10px;right:10px;bottom:4px;height:1px;
+  background:var(--wb-ink,var(--text));transform:scaleX(0);transform-origin:left center;
+  transition:transform .22s var(--wb-ease-in,cubic-bezier(.22,1,.36,1));pointer-events:none;
+}
+.collaborative-native-workbench .mw-topbar .mw-actions button:not(.mw-primary):hover:not(:disabled){
+  background:transparent;color:var(--wb-ink,var(--text));border-color:transparent;
+}
+.collaborative-native-workbench .mw-topbar .mw-actions button:not(.mw-primary):is(:hover,:focus-visible):not(:disabled)::after{transform:scaleX(1);}
+.collaborative-native-workbench .mw-topbar .mw-actions button.mw-primary{
+  background:var(--wb-teal,var(--primary));border-color:var(--wb-teal,var(--primary));
+  color:#fff;font-weight:600;letter-spacing:.08em;
+}
+.collaborative-native-workbench .mw-topbar .mw-actions button.mw-primary:hover:not(:disabled){
+  background:var(--wb-teal-hover,var(--primary-hover));border-color:var(--wb-teal-hover,var(--primary-hover));color:#fff;
+}
+
+/* Numbered workflow tabs retain the existing row and button geometry. */
+.collaborative-native-workbench .mw-ribbon{background:var(--wb-surface,var(--panel));border-bottom-color:var(--wb-line-2,var(--border-strong));}
+.collaborative-native-workbench .mw-ribbon .mw-tabs{counter-reset:chrome-workflow;gap:10px;}
+.collaborative-native-workbench .mw-ribbon .mw-tabs button{
+  position:relative;counter-increment:chrome-workflow;border-radius:0;
+  background:transparent;color:var(--wb-muted,var(--muted));font-weight:500;
+}
+.collaborative-native-workbench .mw-ribbon .mw-tabs button::before{
+  content:counter(chrome-workflow,decimal-leading-zero);margin-right:7px;
+  color:var(--wb-faint,var(--faint));font-size:10px;font-weight:500;letter-spacing:.04em;transition:color .18s;
+}
+.collaborative-native-workbench .mw-ribbon .mw-tabs button::after{
+  content:"";position:absolute;left:10px;right:12px;bottom:-1px;height:2px;
+  background:var(--wb-sel,var(--primary));transform:scaleX(0);transform-origin:left center;
+  transition:transform .18s var(--wb-ease-in,cubic-bezier(.22,1,.36,1));pointer-events:none;
+}
+.collaborative-native-workbench .mw-ribbon .mw-tabs button:hover:not(:disabled){background:transparent;color:var(--wb-ink,var(--text));}
+.collaborative-native-workbench .mw-ribbon .mw-tabs button.active,
+.collaborative-native-workbench .mw-ribbon .mw-tabs button.active:hover:not(:disabled){
+  background:transparent;color:var(--wb-ink,var(--text));border-bottom-color:transparent;box-shadow:none;font-weight:600;
+}
+.collaborative-native-workbench .mw-ribbon .mw-tabs button.active::before{color:var(--wb-sel,var(--primary));}
+.collaborative-native-workbench .mw-ribbon .mw-tabs button.active::after{transform:scaleX(1);}
+.collaborative-native-workbench .mw-ribbon .mw-history button{
+  background:transparent;border-color:transparent;border-radius:0;color:var(--wb-ink-2,var(--text-2));
+  transition:color .18s,background-color .18s;
+}
+.collaborative-native-workbench .mw-ribbon .mw-history button:hover:not(:disabled){background:var(--wb-sunken,var(--panel-3));color:var(--wb-ink,var(--text));}
+
+/* Footer typography only; the existing 28px status row stays in place. */
+.collaborative-native-workbench .mw-status{
+  background:var(--wb-panel,var(--panel-2));border-top-color:var(--wb-line-2,var(--border-strong));
+  color:var(--wb-muted,var(--muted));font-size:10.5px;letter-spacing:.08em;
+}
+.collaborative-native-workbench .mw-status span:first-child::before{
+  content:"";display:inline-block;width:5px;height:5px;margin-right:9px;vertical-align:1px;
+  background:var(--wb-sel,var(--primary));
+}
+.collaborative-native-workbench .mw-status .error{color:var(--wb-red,var(--danger));font-weight:600;}
+
+@keyframes chrome-sync-pulse{50%{opacity:.25;}}
+@media(prefers-reduced-motion:reduce){
+  .collaborative-native-workbench .native-sync-state.offline i{animation:none;}
+  .collaborative-native-workbench .native-sync-bar>button,
+  .collaborative-native-workbench .native-display-settings>button,
+  .collaborative-native-workbench .mw-topbar .mw-actions button,
+  .collaborative-native-workbench .mw-topbar .mw-actions button::after,
+  .collaborative-native-workbench .mw-ribbon .mw-tabs button::before,
+  .collaborative-native-workbench .mw-ribbon .mw-tabs button::after,
+  .collaborative-native-workbench .mw-ribbon .mw-history button{transition:none;}
+}

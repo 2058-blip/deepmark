@@ -1,0 +1,27 @@
+@import './topbarRefresh.css';
+@import './objectPanelRefresh.css';
+
+/* Reference palette is inherited only by the approved chrome containers.
+   Keep it off the editor root, image stage and right-hand tool inspector. */
+.collaborative-native-workbench :is(.native-sync-bar,.mw-topbar,.mw-ribbon,.mw-objects,.mw-status,.native-history-panel,.native-host-error){
+  --wb-app:var(--bg);--wb-panel:var(--panel-2);--wb-surface:var(--panel);--wb-sunken:var(--panel-3);--wb-select:var(--primary-soft);
+  --wb-line:var(--border);--wb-line-2:var(--border-strong);--wb-line-3:#b3c5c3;
+  --wb-ink:var(--text);--wb-ink-2:var(--text-2);--wb-muted:var(--muted);--wb-faint:var(--faint);
+  --wb-sel:var(--primary);--wb-sel-hover:var(--primary-hover);--wb-sel-soft:var(--primary-soft);
+  --wb-teal:var(--primary);--wb-teal-hover:var(--primary-hover);--wb-teal-soft:var(--primary-soft);
+  --wb-amber:var(--warning);--wb-amber-ink:#8a5a14;--wb-amber-soft:var(--warning-soft);--wb-amber-line:var(--warning-line);
+  --wb-red:var(--danger);--wb-red-soft:var(--danger-soft);--wb-red-line:var(--danger-line);--wb-green:var(--success);
+  --wb-r:2px;--wb-rf:4px;--wb-shadow-float:var(--shadow-lg);
+  --wb-ease-in:cubic-bezier(.22,1,.36,1);--wb-ease-out:cubic-bezier(.4,0,1,1);
+}
+
+/* Presentation-only entrance motion; independent translate preserves existing
+   fixed-position centring (notably the host error's translateX(-50%)). */
+@keyframes chrome-float-rise{from{opacity:0;translate:0 12px;}to{opacity:1;translate:0 0;}}
+@keyframes chrome-drawer-enter{from{opacity:0;translate:16px 0;}to{opacity:1;translate:0 0;}}
+.collaborative-native-workbench .native-history-panel{animation:chrome-drawer-enter .3s cubic-bezier(.22,1,.36,1) both;}
+.collaborative-native-workbench :is(.native-sync-notice,.native-host-error,.native-settings-panel){animation:chrome-float-rise .3s cubic-bezier(.22,1,.36,1) both;}
+
+@media(prefers-reduced-motion:reduce){
+  .collaborative-native-workbench :is(.native-history-panel,.native-sync-notice,.native-host-error,.native-settings-panel){animation:none;}
+}

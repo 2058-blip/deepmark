@@ -16,6 +16,7 @@ import {useTeamWorkbench} from './useTeamWorkbench.ts';
 import {WORKBENCH_BASE} from './wire.ts';
 import type {SharedWorkbench,HistoryView} from './wire.ts';
 import './workbench.css';
+import './chromeRefresh.css';
 const props=defineProps<{user:AuthUser;dataset:Dataset;historyView?:HistoryView}>();
 const emit=defineEmits<{back:[];logout:[];inspect:[view:HistoryView]}>();
 const displayPreferenceKey='deepmark:foreign-mask-grid:'+props.user.id;

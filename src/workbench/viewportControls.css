@@ -1,7 +1,8 @@
 .collaborative-native-workbench .native-viewport-enhanced>header>button{display:none;}
 .native-viewport-actions{display:flex;align-items:center;gap:5px;margin-left:auto;}
-.collaborative-native-workbench .native-viewport-actions button{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;margin:0;padding:0;background:#16273a;color:#cadcea;border:1px solid #476075;border-radius:5px;cursor:pointer;}
-.collaborative-native-workbench .native-viewport-actions button:hover{background:#28455a;color:#fff;border-color:#8fb3c8;}
+.collaborative-native-workbench .mimics-workbench .native-viewport-actions button{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;margin:0;padding:0;background:#1b2c3d;color:#dcebf2;border:1px solid #4a6477;border-radius:5px;cursor:pointer;}
+.collaborative-native-workbench .mimics-workbench .native-viewport-actions button:hover:not(:disabled){background:#28455a;color:#fff;border-color:#8fb3c8;}
+.collaborative-native-workbench .mimics-workbench .native-viewport-actions button:focus-visible{outline:2px solid #83c7dc;outline-offset:2px;}
 .native-viewport-zoom{position:absolute;right:9px;bottom:9px;z-index:4;display:flex;align-items:center;gap:7px;height:30px;box-sizing:border-box;padding:2px 7px 2px 3px;border:1px solid #a8c4d540;border-radius:6px;background:#0d1b2bd9;box-shadow:0 2px 10px #0002;color:#d9e9f4;font:11px/1.4 var(--font-sans);}
 .collaborative-native-workbench .native-viewport-zoom button{display:flex;align-items:center;justify-content:center;width:25px;height:24px;margin:0;padding:0;background:transparent;color:#c5dfed;border:0;border-radius:3px;cursor:pointer;}
 .collaborative-native-workbench .native-viewport-zoom button:hover:not(:disabled){background:#365266;color:#fff;}

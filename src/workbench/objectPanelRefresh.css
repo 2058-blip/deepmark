@@ -1,0 +1,101 @@
+/* Visual-only object panel refresh. Keep every rule inside the existing left
+   panel: the image stage, inspector and native grid tracks retain their styles. */
+.collaborative-native-workbench .mw-objects{
+  padding:14px 14px 16px;background:var(--wb-panel);border-color:var(--wb-line-2);color:var(--wb-ink-2);
+}
+.collaborative-native-workbench .mw-objects .mw-panel-title{
+  justify-content:flex-start;gap:8px;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid var(--wb-line-2);font-size:11px;font-weight:600;letter-spacing:.16em;color:var(--wb-ink-2);
+}
+.collaborative-native-workbench .mw-objects .mw-panel-title::before{
+  content:"";flex:none;width:5px;height:5px;background:var(--wb-sel);pointer-events:none;
+}
+.collaborative-native-workbench .mw-objects .mw-panel-title span{
+  margin-left:auto;padding:0;background:transparent;border-radius:0;color:var(--wb-muted);font-size:11px;letter-spacing:.06em;font-variant-numeric:tabular-nums;
+}
+.collaborative-native-workbench .mw-objects :is(.mw-hint,.mw-panel-title small){color:var(--wb-muted);}
+
+/* Preserve the object tabs and controls; use rules and square outlines as chrome. */
+.collaborative-native-workbench .mw-objects .mw-object-tabs{
+  margin:0 -14px 12px;padding:0 8px;gap:0;border-bottom:1px solid var(--wb-line);
+}
+.collaborative-native-workbench .mw-objects .mw-object-tabs button{
+  position:relative;padding:7px 4px 8px;background:transparent;border:0;border-radius:0;color:var(--wb-muted);transition:color .18s;
+}
+.collaborative-native-workbench .mw-objects .mw-object-tabs button:hover:not(:disabled){background:transparent;color:var(--wb-ink);}
+.collaborative-native-workbench .mw-objects .mw-object-tabs button::after{
+  content:"";position:absolute;left:4px;right:4px;bottom:-1px;height:2px;background:var(--wb-sel);transform:scaleX(0);transform-origin:left center;transition:transform .18s var(--wb-ease-in);pointer-events:none;
+}
+.collaborative-native-workbench .mw-objects .mw-object-tabs button.active,
+.collaborative-native-workbench .mw-objects .mw-object-tabs button.active:hover:not(:disabled){background:transparent;color:var(--wb-ink);border:0;font-weight:600;box-shadow:none;}
+.collaborative-native-workbench .mw-objects .mw-object-tabs button.active::after{transform:scaleX(1);}
+.collaborative-native-workbench .mw-objects .mw-object-controls{gap:4px;}
+.collaborative-native-workbench .mw-objects .mw-object-controls button{height:28px;padding:0 4px;}
+.collaborative-native-workbench .mw-objects button:not(.active):not(.mw-primary){border-radius:0;border-color:var(--wb-line-2);background:transparent;}
+.collaborative-native-workbench .mw-objects button:not(.active):not(.mw-primary):hover:not(:disabled){background:var(--wb-surface);border-color:var(--wb-ink-2);}
+.collaborative-native-workbench .mw-objects :is(button,input,select,textarea):focus-visible{outline:2px solid var(--wb-teal);outline-offset:1px;}
+
+/* Mask/Part selection stays on the same elements and keeps original hit targets. */
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row){
+  position:relative;margin:0 -14px;padding:10px 10px 10px 14px;gap:10px;background:transparent;border:0;border-bottom:1px solid var(--wb-line);border-radius:0;box-shadow:none!important;transition:background-color .12s;
+}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row):first-of-type{border-top:1px solid var(--wb-line);}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row):hover{background:var(--wb-sunken);}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row)::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--wb-sel);transform:scaleY(0);transform-origin:center;transition:transform .18s var(--wb-ease-in);pointer-events:none;
+}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row).selected{background:var(--wb-select);border-color:var(--wb-line);}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row).selected::before{transform:scaleY(1);}
+.collaborative-native-workbench .mw-objects .mw-mask-row input[type=color]{width:18px;height:22px;padding:0;border:1px solid #00000047;border-radius:0;background:none;}
+.collaborative-native-workbench .mw-objects .mw-mask-row input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
+.collaborative-native-workbench .mw-objects .mw-mask-row input[type=color]::-webkit-color-swatch{border:0;border-radius:0;}
+.collaborative-native-workbench .mw-objects .mw-mask-row input[type=color]::-moz-color-swatch{border:0;border-radius:0;}
+.collaborative-native-workbench .mw-objects .mw-mask-row div input:not([type=color]){border:0!important;box-shadow:none!important;color:var(--wb-ink)!important;font-size:13px;font-weight:500;}
+.collaborative-native-workbench .mw-objects .mw-mask-row.selected div input:not([type=color]){font-weight:600;}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row small,.mw-part-row small,.mw-mask-contributors){color:var(--wb-muted);}
+.collaborative-native-workbench .mw-objects .mw-mask-contributors{white-space:normal;overflow-wrap:anywhere;line-height:1.4;}
+.collaborative-native-workbench .mw-objects .mw-part-row strong{color:var(--wb-ink);}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row) button,
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row) button:hover:not(:disabled){width:26px;height:26px;padding:0;background:transparent;border:0;color:var(--wb-ink-2);font-size:14px;}
+.collaborative-native-workbench .mw-objects :is(.mw-mask-row,.mw-part-row) button:hover:not(:disabled){background:#0000000f;}
+.collaborative-native-workbench .mw-objects .mw-mask-row:has(> button[aria-label="显示Mask"]) :is(input[type=color],div){opacity:.42;}
+.collaborative-native-workbench .mw-objects .mw-mask-row:has(> button[aria-label="显示Mask"]) div input:not([type=color]){text-decoration:line-through;text-decoration-color:var(--wb-faint);}
+.collaborative-native-workbench .mw-objects .mw-mask-row:has(> button[aria-label="显示Mask"])>button{color:var(--wb-faint);}
+.collaborative-native-workbench .mw-objects .mw-mask-delete-reason{margin:6px 0 10px;padding:8px 10px;border:0;border-left:3px solid var(--wb-amber);border-radius:0;background:var(--wb-amber-soft);color:var(--wb-amber-ink);}
+
+/* Field styling never changes bindings, dimensions, ranges or enabled states. */
+.collaborative-native-workbench .mw-objects input:not([type=range]):not([type=checkbox]):not([type=color]):not([type=radio]),
+.collaborative-native-workbench .mw-objects select{
+  border-width:0 0 1px;border-color:var(--wb-line-3);border-radius:0;background-color:transparent;padding-left:2px;color:var(--wb-ink);transition:border-color .18s,box-shadow .18s;
+}
+.collaborative-native-workbench .mw-objects input:not([type=range]):not([type=checkbox]):not([type=color]):not([type=radio]):focus,
+.collaborative-native-workbench .mw-objects select:focus{border-color:var(--wb-sel);box-shadow:0 1px 0 var(--wb-sel);}
+.collaborative-native-workbench .mw-objects input[type=range]{accent-color:var(--wb-sel);}
+.collaborative-native-workbench .mw-objects .mw-object-properties{margin:14px -14px 0;padding:12px 14px 0;border-top-color:var(--wb-line);color:var(--wb-ink-2);}
+.collaborative-native-workbench .mw-objects :is(.mw-object-properties,.mw-window) label{font-size:11px;letter-spacing:.06em;color:var(--wb-muted);}
+.collaborative-native-workbench .mw-objects .mw-object-properties dl{gap:6px 10px;}
+.collaborative-native-workbench .mw-objects .mw-object-properties dt{font-size:11px;letter-spacing:.06em;color:var(--wb-muted);}
+.collaborative-native-workbench .mw-objects .mw-object-properties dd{color:var(--wb-ink)!important;font-family:inherit;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;}
+.collaborative-native-workbench .mw-objects .mw-bottom-buttons{gap:4px;}
+
+/* Existing measurements, curves and RP rows share the restrained list treatment. */
+.collaborative-native-workbench .mw-objects .mw-measure-row{border-bottom-color:var(--wb-line);color:var(--wb-ink-2);}
+.collaborative-native-workbench .mw-objects .mw-measure-row strong{color:var(--wb-ink);}
+.collaborative-native-workbench .mw-objects .mw-measure-row span{color:var(--wb-amber-ink);}
+.collaborative-native-workbench .mw-objects .mw-reslice-row{border-bottom-color:var(--wb-line);transition:background-color .12s;}
+.collaborative-native-workbench .mw-objects .mw-reslice-row.selected{background:var(--wb-select);border-left:0;padding-left:4px;box-shadow:inset 3px 0 0 var(--wb-sel);}
+.collaborative-native-workbench .mw-objects .mw-reslice-row small{color:var(--wb-muted);}
+.collaborative-native-workbench .mw-objects .stl-coordinate-controls{color:var(--wb-ink-2);}
+.collaborative-native-workbench .mw-objects .stl-coordinate-controls select{color:var(--wb-ink);border-color:var(--wb-line-3);border-radius:0;background:transparent;}
+
+/* Keep the original bottom placement and preset actions; only restyle the surface. */
+.collaborative-native-workbench .mw-objects .mw-window{margin:auto -14px 0;padding:14px 14px 0;border-top:1px solid var(--wb-line);}
+.collaborative-native-workbench .mw-objects .mw-window input{font-variant-numeric:tabular-nums;}
+.collaborative-native-workbench .mw-objects .mw-presets{gap:0;}
+.collaborative-native-workbench .mw-objects .mw-presets button{border-radius:0!important;margin-left:-1px;}
+.collaborative-native-workbench .mw-objects .mw-presets button:first-child{margin-left:0;}
+
+@media(prefers-reduced-motion:reduce){
+  .collaborative-native-workbench .mw-objects *,
+  .collaborative-native-workbench .mw-objects *::before,
+  .collaborative-native-workbench .mw-objects *::after{transition-duration:.01ms!important;transition-delay:0s!important;animation-duration:.01ms!important;animation-iteration-count:1!important;}
+}
