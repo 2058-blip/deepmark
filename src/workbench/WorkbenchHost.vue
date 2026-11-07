@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed,onMounted,onBeforeUnmount,ref} from 'vue';
+import {computed,onMounted,onBeforeUnmount,ref,watch} from 'vue';
 import Workbench from '../../mimics-workbench/src/mimics/Workbench.vue';
 import {useWorkbench} from '../../mimics-workbench/src/mimics/useWorkbench.ts';
 import {IndexedDBWorkspaceRepository} from '../../mimics-workbench/src/mimics/workspaceRepository.ts';
@@ -9,12 +9,18 @@ import type {AuthUser,Dataset,TransferProgress as Progress} from '../api.ts';
 import TransferProgress from '../TransferProgress.vue';
 import WorkbenchSyncBar from './WorkbenchSyncBar.vue';
 import AnnotationHover from './AnnotationHover.vue';
+import ForeignMaskGrid from './ForeignMaskGrid.vue';
+import WorkbenchDisplaySettings from './WorkbenchDisplaySettings.vue';
+import ViewportControls from './ViewportControls.vue';
 import {useTeamWorkbench} from './useTeamWorkbench.ts';
 import {WORKBENCH_BASE} from './wire.ts';
 import type {SharedWorkbench,HistoryView} from './wire.ts';
 import './workbench.css';
 const props=defineProps<{user:AuthUser;dataset:Dataset;historyView?:HistoryView}>();
 const emit=defineEmits<{back:[];logout:[];inspect:[view:HistoryView]}>();
+const displayPreferenceKey='deepmark:foreign-mask-grid:'+props.user.id;
+const showForeignGrid=ref((()=>{try{return localStorage.getItem(displayPreferenceKey)!=='false';}catch{return true;}})());
+watch(showForeignGrid,value=>{try{localStorage.setItem(displayPreferenceKey,String(value));}catch{/* Storage may be unavailable; the current display still works. */}});
 const loading=ref(true),stage=ref('正在获取团队最新成果…'),error=ref(''),progress=ref<Progress|null>(null),leaving=ref(false),showHistory=ref(false);
 const request=new AbortController(),stored=new IndexedDBWorkspaceRepository('deepmark-native-workspaces-'+props.user.id);
 let projectId='',source:Float32Array|null=null,cachedRevision:number|undefined,rawUnit=0;
@@ -70,10 +76,10 @@ onMounted(()=>{window.addEventListener('keydown',guardKey,true);window.addEventL
 onBeforeUnmount(()=>{request.abort();sync.dispose();window.removeEventListener('keydown',guardKey,true);window.removeEventListener('pointerup',pointerUp,true);window.removeEventListener('pointercancel',pointerUp,true);});
 </script>
 <template>
-  <div class="collaborative-native-workbench" @pointerdown.capture="pointerDown">
+  <div class="collaborative-native-workbench" :class="{'native-history-view':!!historyView&&!sync.localMode.value}" @pointerdown.capture="pointerDown">
     <Workbench :editor="editor" :read-only="readOnly" :team-mode="!sync.localMode.value" :allow-export="allowExport" :mask-delete-reason="sync.localMode.value?'':sync.maskDeletionReason.value" :mask-contributors="sync.localMode.value?undefined:sync.maskContributors.value">
-      <template #collaboration><WorkbenchSyncBar :user="user" :dataset="dataset" :sync="sync" :leaving="leaving" @back="leave()" @logout="leave(true)" @history="openHistory"/></template>
-      <template #annotation-hover="view"><AnnotationHover v-bind="view" :annotations-at="sync.annotationsAt"/></template>
+      <template #collaboration><WorkbenchSyncBar :user="user" :dataset="dataset" :sync="sync" :leaving="leaving" @back="leave()" @logout="leave(true)" @history="openHistory"><template #settings><WorkbenchDisplaySettings v-model:show-foreign-grid="showForeignGrid"/></template></WorkbenchSyncBar></template>
+      <template #annotation-hover="view"><ViewportControls v-bind="view"/><AnnotationHover v-bind="view" :annotations-at="sync.annotationsAt"/><ForeignMaskGrid v-bind="view" :enabled="showForeignGrid" :locked-at="view.plane?sync.foreignMaskAt.value:sync.imageForeignMaskAt.value"/></template>
     </Workbench>
     <div v-if="loading" class="busy-overlay" role="status"><TransferProgress :title="dataset.name" :progress="progress" :stage="stage" cancellable @cancel="request.abort();emit('back')"/></div>
     <div v-if="error" class="native-host-error" role="alert">{{error}}<button @click="error=''">关闭提示</button><button v-if="!editor.volume.value" @click="emit('back')">返回任务列表</button></div>

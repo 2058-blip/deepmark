@@ -13,6 +13,7 @@ import type {VoxelBounds} from './maskRuns.ts';
 import {WORKBENCH_BASE,COLLECTIONS,WorkbenchResources,readMaskSnapshot,maskSnapshotPackets,metadataChanges,hasMetadataChanges,applyMetadata,nativeState} from './wire.ts';
 import type {Manifest,SharedWorkbench,SharedEvent} from './wire.ts';
 import {annotationsAtVoxel} from './hover.ts';
+import {foreignMaskLookup} from './foreignGrid.ts';
 
 function same(a:any,b:any):boolean{
   if(a===b)return true;
@@ -55,6 +56,14 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   const revisionBases=new Map<number,number>();
   const selectionOverrides=new Map<string,string>();
   const canWrite=computed(()=>!initializing.value&&!localMode.value&&!recoveryBlocked.value&&!!project.value?.canWrite&&project.value.datasetStatus!=='completed');
+  const foreignMaskAt=computed(()=>{
+    ownershipRevision.value;editor.revision.value;
+    return initializing.value||localMode.value?null:foreignMaskLookup(editor.state.value.masks,claims,user.id);
+  });
+  const imageForeignMaskAt=computed(()=>{
+    ownershipRevision.value;editor.revision.value;
+    return initializing.value||localMode.value?null:foreignMaskLookup(editor.displayMasks.value,claims,user.id);
+  });
   const maskContributors=computed(()=>{
     ownershipRevision.value;project.value;editor.revision.value;
     const names=new Map(authorNames);for(const member of members.value)names.set(member.id,member.name);
@@ -334,5 +343,5 @@ export function useTeamWorkbench(editor:Editor,user:AuthUser,dataset:Dataset){
   async function markCached(nativeRevision:number){if(project.value)await outbox.mark(project.value.id,revisionBases.get(nativeRevision)??editorBaseRevision,nativeRevision);}
   function dispose(){stopped=true;encodingAbortController.abort();outgoing.dispose();resources?.dispose();socket?.close();if(reconnect)clearTimeout(reconnect);if(poll)clearInterval(poll);}
   onScopeDispose(dispose);
-  return{project,connected,initializing,queueCount,sending,error,notice,localMode,members,maskContributors,maskDeletionReason,history,legacyHistory,viewingHistory,sourceData,encoding,recoveryBlocked,canWrite,pending,load,refresh,flush,dispose,pointerState,markCached,readHistory,annotationsAt,pendingFor:(id:string)=>outbox.list(id)};
+  return{project,connected,initializing,queueCount,sending,error,notice,localMode,members,maskContributors,maskDeletionReason,foreignMaskAt,imageForeignMaskAt,history,legacyHistory,viewingHistory,sourceData,encoding,recoveryBlocked,canWrite,pending,load,refresh,flush,dispose,pointerState,markCached,readHistory,annotationsAt,pendingFor:(id:string)=>outbox.list(id)};
 }

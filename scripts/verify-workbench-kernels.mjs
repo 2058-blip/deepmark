@@ -7,15 +7,16 @@ const root=fileURLToPath(new URL('../',import.meta.url)),require=createRequire(i
 let ts;try{ts=require('typescript');}catch{ts=require('../mimics-workbench/node_modules/typescript');}
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const relative=file=>path.relative(root,file).split(path.sep).join('/');
-// The hover feature adds only these two read-only template slots. Strip their
-// exact lines before comparing the original bytes; never rebaseline tool code.
+// These exact UI slots expose hover geometry and optionally existing viewport
+// navigation. Strip only the explicit bridges; never rebaseline tool code.
 const hoverBridges={
   'mimics-workbench/src/mimics/ImageViewport.vue':`    <slot v-if="$slots?.['annotation-hover']" name="annotation-hover" :locate="locate" :grid="grid" :volume="volume" :axis="axis" :point="point" :view="geometry" :size="size" :revision="revision"/>`,
   'mimics-workbench/src/mimics/MprViewport.vue':`    <slot v-if="$slots?.['annotation-hover']" name="annotation-hover" :pixel-at="eventPixel" :grid="grid" :volume="volume" :plane="plane" :view="geometry" :size="size" :revision="revision" :ready="!loading&&!!samples.data&&!samples.error"/>`,
 };
 function protectedBytes(file){
   const bytes=fs.readFileSync(file),bridge=hoverBridges[relative(file)];if(!bridge)return bytes;
-  const source=bytes.toString('utf8'),lines=[bridge+'\r\n',bridge+'\n'],count=lines.reduce((sum,line)=>sum+source.split(line).length-1,0);
+  const navigation=bridge.replace('name="annotation-hover" ','name="annotation-hover" :zoom="zoom" :zoom-wheel="wheel" ');
+  const source=bytes.toString('utf8'),lines=[bridge,navigation].flatMap(line=>[line+'\r\n',line+'\n']),count=lines.reduce((sum,line)=>sum+source.split(line).length-1,0);
   if(count>1)throw new Error('Duplicate hover bridge: '+relative(file));
   return count?Buffer.from(lines.reduce((text,line)=>text.replace(line,''),source),'utf8'):bytes;
 }

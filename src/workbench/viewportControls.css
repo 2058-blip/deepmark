@@ -1,0 +1,15 @@
+.collaborative-native-workbench .native-viewport-enhanced>header>button{display:none;}
+.native-viewport-actions{display:flex;align-items:center;gap:5px;margin-left:auto;}
+.collaborative-native-workbench .native-viewport-actions button{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;margin:0;padding:0;background:#16273a;color:#cadcea;border:1px solid #476075;border-radius:5px;cursor:pointer;}
+.collaborative-native-workbench .native-viewport-actions button:hover{background:#28455a;color:#fff;border-color:#8fb3c8;}
+.native-viewport-zoom{position:absolute;right:9px;bottom:9px;z-index:4;display:flex;align-items:center;gap:7px;height:30px;box-sizing:border-box;padding:2px 7px 2px 3px;border:1px solid #a8c4d540;border-radius:6px;background:#0d1b2bd9;box-shadow:0 2px 10px #0002;color:#d9e9f4;font:11px/1.4 var(--font-sans);}
+.collaborative-native-workbench .native-viewport-zoom button{display:flex;align-items:center;justify-content:center;width:25px;height:24px;margin:0;padding:0;background:transparent;color:#c5dfed;border:0;border-radius:3px;cursor:pointer;}
+.collaborative-native-workbench .native-viewport-zoom button:hover:not(:disabled){background:#365266;color:#fff;}
+.native-viewport-zoom input[type=range]{width:94px!important;min-width:45px;height:4px;margin:0;accent-color:#7ed6c5;cursor:pointer;}
+.native-viewport-zoom output{min-width:38px;text-align:right;font-variant-numeric:tabular-nums;}
+.native-view-expanded .mw-objects{position:fixed;left:0;top:0;bottom:0;z-index:2200;width:var(--native-objects-width);box-sizing:border-box;}
+.native-view-expanded .image-viewport:not(.native-maximized-viewport),.native-view-expanded .mpr-viewport:not(.native-maximized-viewport){visibility:hidden;}
+.collaborative-native-workbench .native-maximized-viewport{position:fixed;left:var(--native-objects-width,0px);right:0;top:var(--native-expanded-top,0px);bottom:0;z-index:2100;min-width:0;min-height:0;border-radius:0;}
+.native-view-expanded .native-history-return{position:fixed;left:var(--native-objects-width,0px);right:0;top:0;z-index:2300;box-sizing:border-box;}
+.native-view-expanded .native-maximized-viewport .native-viewport-zoom{right:18px;bottom:18px;}
+@media(max-width:700px){.native-viewport-zoom{right:5px;bottom:6px;gap:4px;}.native-viewport-zoom input[type=range]{width:65px!important;}.native-viewport-actions{gap:3px;}}

@@ -24,6 +24,28 @@
 .native-sync-notice{position:absolute;top:calc(100% + 4px);right:15px;padding:8px 12px;background:var(--success-soft);color:var(--success);border:1px solid var(--success-line);border-radius:5px;z-index:200;max-width:500px;box-shadow:var(--shadow);font-size:13px}
 .native-sync-notice.error{background:var(--danger-soft);border-color:var(--danger-line);color:var(--danger)}
 
+/* History has a dedicated, centred exit; it never competes with account controls. */
+.native-history-return{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;min-height:56px;padding:8px 18px;flex-shrink:0;box-sizing:border-box;border-bottom:1px solid #bad9d1;background:#eaf4f1;color:#285d53;font:13px/1.4 var(--font-sans)}
+.native-history-return>span{display:flex;align-items:center;gap:7px;min-width:0;font-weight:600}
+.native-history-return>span i{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#56887d}
+.collaborative-native-workbench .mimics-workbench .native-return-live{grid-column:2;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-width:182px;height:40px;padding:0 20px;border:1px solid #075c51;border-radius:7px;background:#08695d;color:#fff;font-size:14px;font-weight:600;box-shadow:0 2px 5px #07544824}
+.collaborative-native-workbench .mimics-workbench .native-return-live:hover:not(:disabled){background:#045548;border-color:#034c40;color:#fff}
+.collaborative-native-workbench .mimics-workbench .native-return-live:focus-visible{outline:3px solid #77bdad;outline-offset:3px}
+.native-return-live:disabled{opacity:.6}
+
+/* History uses the entire remaining width; retain the native responsive left track. */
+.collaborative-native-workbench.native-history-view .mw-layout>.mw-inspector{display:none}
+.collaborative-native-workbench.native-history-view .mw-layout>.mw-view-area{grid-column:2/-1}
+
+/* Read-only review keeps image/MPR navigation, but hides editing tools and parameters. */
+.collaborative-native-workbench .mimics-workbench[data-readonly=true] .mw-inspector>.mw-panel-title,
+.collaborative-native-workbench .mimics-workbench[data-readonly=true] .mw-inspector>.mw-tool-grid,
+.collaborative-native-workbench .mimics-workbench[data-readonly=true] .mw-inspector>.mw-divider,
+.collaborative-native-workbench .mimics-workbench[data-readonly=true] .mw-inspector>.mw-options,
+.collaborative-native-workbench .mimics-workbench[data-readonly=true] .mw-inspector>.mw-rp-modify-controls,
+.collaborative-native-workbench .mimics-workbench[data-readonly=true] .mw-inspector>.mw-interactive-mpr-controls{display:none}
+@media(max-width:640px){.native-history-return{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);padding:8px;gap:4px}.native-history-return>span{font-size:10px;line-height:1.4}.native-history-return>span i{display:none}.collaborative-native-workbench .mimics-workbench .native-return-live{min-width:150px;padding:0 12px}}
+
 /* ---- Editor top bar: compact, because the sync bar above already carries the task context ---- */
 .collaborative-native-workbench .mw-topbar{height:52px;gap:20px;padding:0 16px;background:var(--panel-2);border-bottom-color:var(--border)}
 .collaborative-native-workbench .mw-brand{font-size:16px;color:var(--text)}
